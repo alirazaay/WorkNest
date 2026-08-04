@@ -39,7 +39,7 @@ WorkNest solves all of the above with an affordable, intuitive SaaS platform.
 |-------|------------|
 | Frontend | React JS (Vite), React Router, Context API, Axios, Recharts, Tailwind CSS |
 | Backend | Node.js, Express JS |
-| Database | MongoDB (Mongoose ODM) |
+| Database | MySQL |
 | Auth | JWT (Access + Refresh Tokens) |
 | Email | Nodemailer |
 | File Storage | Multer (local) or Cloudinary |
@@ -1305,7 +1305,7 @@ worknest/
 ├── backend/                           (Node.js + Express JS)
 │   ├── src/
 │   │   ├── config/
-│   │   │   ├── db.js                  (MongoDB connection)
+│   │   │   ├── db.js                  (mysql connection)
 │   │   │   └── env.js                 (environment config)
 │   │   │
 │   │   ├── middleware/
@@ -1353,7 +1353,7 @@ VITE_API_BASE_URL=http://localhost:5000/api
 ### Backend (.env)
 ```
 PORT=5000
-MONGODB_URI=mongodb://localhost:27017/worknest
+sql_URI=sql://localhost:27017/worknest
 JWT_SECRET=your_jwt_secret_key
 JWT_EXPIRES_IN=15m
 JWT_REFRESH_SECRET=your_refresh_secret
@@ -1389,7 +1389,7 @@ CLOUDINARY_API_SECRET=
 | DELETE API | ✅ Remove employee, cancel leave |
 | HTTP Status Codes | ✅ 200, 201, 400, 401, 403, 404, 500 |
 | Error Handling | ✅ Global middleware + frontend error states |
-| Database Integration | ✅ MongoDB with Mongoose |
+| Database Integration | ✅ sql  |
 | Authentication | ✅ JWT with role-based access |
 | Admin Panel | ✅ Full Company Admin + Super Admin |
 | Search & Filter | ✅ Employee directory |
