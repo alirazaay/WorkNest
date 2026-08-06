@@ -16,6 +16,7 @@ import { Notification } from './Notification.js';
 import { PayrollRun } from './PayrollRun.js';
 import { PayrollItem } from './PayrollItem.js';
 import { PayrollItemLine } from './PayrollItemLine.js';
+import { AuditLog } from './AuditLog.js';
 
 Tenant.hasOne(TenantSetting, { foreignKey: 'tenantId', as: 'settings' });
 Tenant.hasMany(User, { foreignKey: 'tenantId', as: 'users' });
@@ -67,5 +68,7 @@ PayrollItem.belongsTo(PayrollRun, { foreignKey: 'payrollRunId', as: 'run' });
 PayrollItem.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
 PayrollItem.hasMany(PayrollItemLine, { foreignKey: 'payrollItemId', as: 'lines' });
 PayrollItemLine.belongsTo(PayrollItem, { foreignKey: 'payrollItemId', as: 'item' });
+AuditLog.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
+AuditLog.belongsTo(User, { foreignKey: 'actorUserId', as: 'actor' });
 
-export { Tenant, TenantSetting, User, UserSession, Invitation, PasswordResetToken, Department, Employee, EmployeeSalaryStructure, EmployeeDocument, AttendanceRecord, LeaveType, LeaveBalance, LeaveRequest, Notification, PayrollRun, PayrollItem, PayrollItemLine };
+export { Tenant, TenantSetting, User, UserSession, Invitation, PasswordResetToken, Department, Employee, EmployeeSalaryStructure, EmployeeDocument, AttendanceRecord, LeaveType, LeaveBalance, LeaveRequest, Notification, PayrollRun, PayrollItem, PayrollItemLine, AuditLog };

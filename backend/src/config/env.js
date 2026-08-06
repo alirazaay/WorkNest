@@ -22,7 +22,11 @@ const schema = z.object({
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
   REFRESH_COOKIE_NAME: z.string().default('worknest_refresh'),
   RESET_TOKEN_EXPIRES_MINUTES: z.coerce.number().int().positive().default(30),
-  INVITE_TOKEN_EXPIRES_HOURS: z.coerce.number().int().positive().default(72)
+  INVITE_TOKEN_EXPIRES_HOURS: z.coerce.number().int().positive().default(72),
+  RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(900000),
+  RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
+  AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
+  APP_VERSION: z.string().default('0.1.0')
 });
 
 const parsed = schema.safeParse(process.env);

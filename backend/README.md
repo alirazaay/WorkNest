@@ -106,3 +106,27 @@ Dashboard responses are tenant-scoped and narrowed to the manager's department o
 - `PATCH /api/v1/super/tenants/:id/reactivate`
 
 Super Admin tenant detail returns workspace metadata and aggregate counts only; it does not expose individual employee records.
+
+## Phase 9 hardening
+
+- `GET /api/v1/health/live` — process liveness
+- `GET /api/v1/health/ready` — database readiness
+- `GET /api/v1/docs/openapi.json` — OpenAPI document
+- Global and authentication-specific rate limits
+- Request IDs returned through `x-request-id`
+- Audit log migration for sensitive actions
+- Docker image definition in `Dockerfile`
+- MySQL backup script in `scripts/backup.ps1`
+- GitHub Actions backend checks in `.github/workflows/backend.yml`
+
+Apply the audit-log migration with:
+
+```powershell
+npm run db:migrate
+```
+
+Run backups from an environment with `mysqldump` installed:
+
+```powershell
+./scripts/backup.ps1 -OutputDirectory ./backups
+```

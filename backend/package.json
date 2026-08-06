@@ -14,6 +14,7 @@
   "dependencies": {
     "bcryptjs": "latest",
     "cookie-parser": "latest",
+    "compression": "latest",
     "cors": "latest",
     "dotenv": "latest",
     "express": "latest",
@@ -25,6 +26,7 @@
     "jsonwebtoken": "latest",
     "multer": "latest",
     "sequelize": "latest",
+    "express-rate-limit": "latest",
     "zod": "latest"
   },
   "devDependencies": {

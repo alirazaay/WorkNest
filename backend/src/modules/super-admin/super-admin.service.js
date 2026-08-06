@@ -2,6 +2,7 @@ import { Op } from 'sequelize';
 import { sequelize } from '../../config/database.js';
 import { Department, Employee, Tenant, TenantSetting, User, UserSession } from '../../database/models/index.js';
 import { AppError } from '../../middleware/error.js';
+import { recordAudit } from '../../services/audit.service.js';
 
 const PLAN_PRICES = { starter: 0, growth: 29, enterprise: 99 };
 
@@ -31,15 +32,16 @@ export async function getTenant(id) {
   const tenant = await Tenant.findByPk(id); if (!tenant) throw new AppError('Tenant not found', 404, 'TENANT_NOT_FOUND'); const counts = await tenantCounts(id); const settings = await TenantSetting.findOne({ where: { tenantId: id }, attributes: ['timezone', 'currency', 'workStartTime', 'workEndTime', 'lateThreshold'] }); return { ...tenantShape(tenant, counts.employeeCount, counts.departmentCount), settings };
 }
 
-async function setTenantStatus(id, isActive) {
+async function setTenantStatus(id, isActive, authContext) {
   return sequelize.transaction(async (transaction) => {
     const tenant = await Tenant.findByPk(id, { transaction, lock: transaction.LOCK.UPDATE }); if (!tenant) throw new AppError('Tenant not found', 404, 'TENANT_NOT_FOUND');
     if (tenant.isActive === isActive) throw new AppError(`Tenant is already ${isActive ? 'active' : 'inactive'}`, 409, 'TENANT_ALREADY_IN_STATE');
     tenant.isActive = isActive; await tenant.save({ fields: ['isActive'], transaction });
     if (!isActive) await UserSession.update({ revokedAt: new Date() }, { where: { tenantId: id, revokedAt: null }, transaction });
+    await recordAudit({ tenantId: id, actorUserId: authContext.userId, action: isActive ? 'tenant.reactivated' : 'tenant.deactivated', entityType: 'tenant', entityId: id, beforeData: { isActive: !isActive }, afterData: { isActive }, req: authContext.req, transaction });
     return tenant;
   });
 }
 
-export async function deactivateTenant(id) { return setTenantStatus(id, false); }
-export async function reactivateTenant(id) { return setTenantStatus(id, true); }
+export async function deactivateTenant(id, authContext) { return setTenantStatus(id, false, authContext); }
+export async function reactivateTenant(id, authContext) { return setTenantStatus(id, true, authContext); }
