@@ -1,0 +1,27 @@
+{
+  "name": "worknest-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "db:migrate": "sequelize-cli db:migrate",
+    "db:migrate:undo": "sequelize-cli db:migrate:undo",
+    "db:seed": "sequelize-cli db:seed:all"
+  },
+  "dependencies": {
+    "cors": "latest",
+    "dotenv": "latest",
+    "express": "latest",
+    "helmet": "latest",
+    "mysql2": "latest",
+    "pino": "latest",
+    "pino-http": "latest",
+    "sequelize": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "sequelize-cli": "latest"
+  }
+}
