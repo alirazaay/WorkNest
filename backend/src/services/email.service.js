@@ -9,3 +9,11 @@ export async function sendPasswordResetEmail({ email, resetUrl }) {
 export async function sendInvitationEmail({ email, inviteUrl }) {
   logger.info({ email, inviteUrl }, 'Invitation email queued (development adapter)');
 }
+
+export async function sendLeaveRequestEmail({ tenantId, employeeEmail }) {
+  logger.info({ tenantId, employeeEmail }, 'Leave request email queued (development adapter)');
+}
+
+export async function sendLeaveDecisionEmail({ email, status, comment }) {
+  logger.info({ email, status, comment }, 'Leave decision email queued (development adapter)');
+}

@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import { Op } from 'sequelize';
 import { env } from '../../config/env.js';
 import { sequelize } from '../../config/database.js';
-import { Department, Employee, Invitation, PasswordResetToken, Tenant, TenantSetting, User, UserSession } from '../../database/models/index.js';
+import { Department, Employee, Invitation, LeaveType, PasswordResetToken, Tenant, TenantSetting, User, UserSession } from '../../database/models/index.js';
 import { AppError } from '../../middleware/error.js';
 import { sendInvitationEmail, sendPasswordResetEmail } from '../../services/email.service.js';
 import { hashToken, parseDuration, randomToken, signAccessToken, signRefreshToken, verifyRefreshToken } from '../../utils/tokens.js';
@@ -39,6 +39,12 @@ export async function registerCompany(input, req) {
     if (existing) throw new AppError('Unable to create workspace with those details', 409, 'EMAIL_IN_USE');
     const tenant = await Tenant.create({ companyName: input.companyName, slug: await uniqueSlug(input.companyName, transaction), industry: input.industry }, { transaction });
     await TenantSetting.create({ tenantId: tenant.id }, { transaction });
+    await LeaveType.bulkCreate([
+      { tenantId: tenant.id, name: 'Annual Leave', code: 'annual', isPaid: true, annualAllowance: 20, requiresApproval: true, isActive: true },
+      { tenantId: tenant.id, name: 'Sick Leave', code: 'sick', isPaid: true, annualAllowance: 10, requiresApproval: true, isActive: true },
+      { tenantId: tenant.id, name: 'Casual Leave', code: 'casual', isPaid: true, annualAllowance: 6, requiresApproval: true, isActive: true },
+      { tenantId: tenant.id, name: 'Unpaid Leave', code: 'unpaid', isPaid: false, annualAllowance: 365, requiresApproval: true, isActive: true }
+    ], { transaction });
     const user = await User.create({ tenantId: tenant.id, name: input.adminName, email: input.adminEmail, passwordHash: await bcrypt.hash(input.password, SALT_ROUNDS), role: 'admin', status: 'active', emailVerifiedAt: new Date() }, { transaction });
     return { tenant, user, tokens: await issueSession(user, req, transaction) };
   });

@@ -58,3 +58,17 @@ Employee document uploads currently use local storage under `backend/uploads/doc
 - `GET /api/v1/attendance`
 - `GET /api/v1/attendance/:employeeId`
 - `GET /api/v1/attendance/summary`
+
+## Phase 5 leave and notification endpoints
+
+- `GET|POST /api/v1/leaves/types`
+- `GET /api/v1/leaves/balances/me`
+- `GET /api/v1/leaves/balances/:employeeId`
+- `GET /api/v1/leaves/requests`
+- `POST /api/v1/leaves/requests`
+- `PATCH /api/v1/leaves/requests/:id/approve`
+- `PATCH /api/v1/leaves/requests/:id/reject`
+- `PATCH /api/v1/leaves/requests/:id/cancel`
+- `GET /api/v1/leaves/calendar`
+- `GET /api/v1/leaves/notifications`
+- `PATCH /api/v1/leaves/notifications/:id/read`
