@@ -7,6 +7,7 @@ import {
   UserRound, Users, WalletCards, X, Zap
 } from 'lucide-react';
 import './styles.css';
+import { Login, Workspace } from './workspace-ui.jsx';
 
 const features = [
   ['Employee management', 'A clear home for every profile, document, and employment detail.', Users],
@@ -52,5 +53,5 @@ function Overview({ onAdd, active, onAction }) { return <><div className="page-h
 
 function Departments({ departments, onAdd, onDelete, query }) { return <><div className="page-heading"><div><div className="eyebrow">Workspace / Manage</div><h1>Departments</h1><p>Shape the teams and spaces that make your organization work.</p></div><button className="primary-button small" onClick={onAdd}><Plus size={16}/> Add department</button></div><div className="department-toolbar"><span>{departments.length} departments</span><button className="select-button"><Command size={14}/> Sort by <strong>Most people</strong><ChevronDown size={14}/></button></div>{departments.length===0?<div className="empty-state"><BriefcaseBusiness size={28}/><h2>No departments found</h2><p>{query ? `No results for “${query}”` : 'Add your first department to organize your people.'}</p><button className="primary-button" onClick={onAdd}><Plus size={16}/> Add department</button></div>:<div className="department-grid">{departments.map(d=><div className="department-card" key={d.name}><div className={`department-art ${d.color}`}>{d.icon}</div><div className="dept-top"><div className="department-icon"><BriefcaseBusiness size={19}/></div><button className="icon-button" onClick={()=>onDelete(d.name)}><MoreHorizontal size={17}/></button></div><h2>{d.name}</h2><p>{d.desc}</p><div className="dept-meta"><span><small>Department lead</small><strong>{d.lead}</strong></span><span><small>People</small><strong>{d.count}</strong></span></div></div>)}</div>}</> }
 
-function App(){ const [view,setView]=useState('landing'); return view==='landing'?<Landing onLaunch={()=>setView('app')}/>:<Dashboard onExit={()=>setView('landing')}/> }
+function App(){ const [view,setView]=useState('landing'); const [user,setUser]=useState(null); if(view==='login') return <Login onBack={()=>setView('landing')} onSuccess={(session)=>{setUser(session); setView('app');}}/>; return view==='landing'?<Landing onLaunch={()=>setView('login')}/>:<Workspace user={user} onExit={()=>{setUser(null); setView('landing');}}/>; }
 createRoot(document.getElementById('root')).render(<App/>);
