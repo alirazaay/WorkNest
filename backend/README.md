@@ -15,6 +15,8 @@ To create the Phase 2 auth tables after configuring MySQL:
 npm run db:migrate
 ```
 
+The Phase 3 migration adds departments, employees, salary structures, and employee documents. Run the same command after the Phase 2 migration to apply it in order.
+
 Run foundation tests with `npm test`.
 
 ## Endpoints
@@ -35,3 +37,15 @@ The health endpoint intentionally checks MySQL connectivity. It returns `503` wh
 - `POST /api/v1/auth/reset-password`
 - `POST /api/v1/auth/invitations`
 - `POST /api/v1/auth/invitations/accept`
+
+## Phase 3 organization endpoints
+
+- `GET|POST /api/v1/departments`
+- `PATCH|DELETE /api/v1/departments/:id`
+- `GET|POST /api/v1/employees`
+- `GET|PATCH|DELETE /api/v1/employees/:id`
+- `PATCH /api/v1/employees/:id/status`
+- `POST /api/v1/employees/:id/salary-structures`
+- `POST|GET /api/v1/employees/:id/documents`
+
+Employee document uploads currently use local storage under `backend/uploads/documents`; this should be replaced with object storage before production deployment.

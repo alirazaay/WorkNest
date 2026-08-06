@@ -18,8 +18,8 @@ export function notFoundHandler(req, res) {
 export function errorHandler(error, req, res, next) {
   if (res.headersSent) return next(error);
 
-  const statusCode = error.statusCode || 500;
-  const code = error.code || 'INTERNAL_ERROR';
+  const statusCode = error.statusCode || (String(error.code || '').startsWith('LIMIT_') ? 413 : 500);
+  const code = String(error.code || '').startsWith('LIMIT_') ? 'UPLOAD_LIMIT_EXCEEDED' : (error.code || 'INTERNAL_ERROR');
   const payload = {
     success: false,
     error: { code, message: statusCode >= 500 ? 'Internal server error' : error.message }

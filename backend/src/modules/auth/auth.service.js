@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import { Op } from 'sequelize';
 import { env } from '../../config/env.js';
 import { sequelize } from '../../config/database.js';
-import { Invitation, PasswordResetToken, Tenant, TenantSetting, User, UserSession } from '../../database/models/index.js';
+import { Department, Employee, Invitation, PasswordResetToken, Tenant, TenantSetting, User, UserSession } from '../../database/models/index.js';
 import { AppError } from '../../middleware/error.js';
 import { sendInvitationEmail, sendPasswordResetEmail } from '../../services/email.service.js';
 import { hashToken, parseDuration, randomToken, signAccessToken, signRefreshToken, verifyRefreshToken } from '../../utils/tokens.js';
@@ -96,6 +96,10 @@ export async function resetPassword({ token, password }) {
 }
 
 export async function inviteUser(input, auth, req) {
+  if (input.departmentId && !await Department.findOne({ where: { id: input.departmentId, tenantId: auth.tenantId } })) throw new AppError('Department does not belong to this workspace', 422, 'INVALID_DEPARTMENT');
+  const tenant = await Tenant.findByPk(auth.tenantId);
+  const activeEmployeeCount = await Employee.count({ where: { tenantId: auth.tenantId, employmentStatus: { [Op.ne]: 'terminated' } } });
+  if (activeEmployeeCount >= tenant.employeeLimit) throw new AppError(`Your ${tenant.plan} plan allows up to ${tenant.employeeLimit} active employees`, 409, 'EMPLOYEE_LIMIT_REACHED');
   const existing = await User.findOne({ where: { email: input.email } });
   if (existing) throw new AppError('A user with this email already exists', 409, 'EMAIL_IN_USE');
   const rawToken = randomToken();
@@ -110,7 +114,15 @@ export async function acceptInvitation({ token, name, password }) {
   const existing = await User.findOne({ where: { email: invitation.email } });
   if (existing) throw new AppError('A user with this email already exists', 409, 'EMAIL_IN_USE');
   return sequelize.transaction(async (transaction) => {
+    const tenant = await Tenant.findByPk(invitation.tenantId, { transaction, lock: transaction.LOCK.UPDATE });
+    const activeEmployeeCount = await Employee.count({ where: { tenantId: invitation.tenantId, employmentStatus: { [Op.ne]: 'terminated' } }, transaction });
+    if (activeEmployeeCount >= tenant.employeeLimit) throw new AppError(`Your ${tenant.plan} plan allows up to ${tenant.employeeLimit} active employees`, 409, 'EMPLOYEE_LIMIT_REACHED');
+    if (invitation.departmentId && !await Department.findOne({ where: { id: invitation.departmentId, tenantId: invitation.tenantId }, transaction })) throw new AppError('Invitation department is no longer available', 409, 'INVALID_DEPARTMENT');
     const user = await User.create({ tenantId: invitation.tenantId, name: name || invitation.name, email: invitation.email, passwordHash: await bcrypt.hash(password, SALT_ROUNDS), role: invitation.role, status: 'active', emailVerifiedAt: new Date() }, { transaction });
+    const prefix = tenant.companyName.replace(/[^a-zA-Z0-9]/g, '').slice(0, 3).toUpperCase() || 'EMP';
+    const lastEmployee = await Employee.findOne({ where: { tenantId: invitation.tenantId }, order: [['id', 'DESC']], transaction, lock: transaction.LOCK.UPDATE });
+    const sequence = lastEmployee?.employeeCode?.match(/(\d+)$/)?.[1];
+    await Employee.create({ tenantId: invitation.tenantId, userId: user.id, departmentId: invitation.departmentId, employeeCode: `${prefix}-${String(Number(sequence || 0) + 1).padStart(4, '0')}`, joiningDate: new Date(), employmentType: 'full-time', employmentStatus: 'active' }, { transaction });
     invitation.acceptedAt = new Date(); await invitation.save({ fields: ['acceptedAt'], transaction });
     return user;
   });
