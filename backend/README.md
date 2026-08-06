@@ -49,3 +49,12 @@ The health endpoint intentionally checks MySQL connectivity. It returns `503` wh
 - `POST|GET /api/v1/employees/:id/documents`
 
 Employee document uploads currently use local storage under `backend/uploads/documents`; this should be replaced with object storage before production deployment.
+
+## Phase 4 attendance endpoints
+
+- `POST /api/v1/attendance/clock-in`
+- `PATCH /api/v1/attendance/:id/clock-out`
+- `GET /api/v1/attendance/me`
+- `GET /api/v1/attendance`
+- `GET /api/v1/attendance/:employeeId`
+- `GET /api/v1/attendance/summary`

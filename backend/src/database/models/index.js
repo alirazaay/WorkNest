@@ -8,6 +8,7 @@ import { Department } from './Department.js';
 import { Employee } from './Employee.js';
 import { EmployeeSalaryStructure } from './EmployeeSalaryStructure.js';
 import { EmployeeDocument } from './EmployeeDocument.js';
+import { AttendanceRecord } from './AttendanceRecord.js';
 
 Tenant.hasOne(TenantSetting, { foreignKey: 'tenantId', as: 'settings' });
 Tenant.hasMany(User, { foreignKey: 'tenantId', as: 'users' });
@@ -33,5 +34,8 @@ Employee.hasMany(EmployeeDocument, { foreignKey: 'employeeId', as: 'documents' }
 EmployeeSalaryStructure.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
 EmployeeDocument.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
 EmployeeDocument.belongsTo(User, { foreignKey: 'uploadedBy', as: 'uploader' });
+Employee.hasMany(AttendanceRecord, { foreignKey: 'employeeId', as: 'attendanceRecords' });
+AttendanceRecord.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
+AttendanceRecord.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
 
-export { Tenant, TenantSetting, User, UserSession, Invitation, PasswordResetToken, Department, Employee, EmployeeSalaryStructure, EmployeeDocument };
+export { Tenant, TenantSetting, User, UserSession, Invitation, PasswordResetToken, Department, Employee, EmployeeSalaryStructure, EmployeeDocument, AttendanceRecord };
