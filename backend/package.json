@@ -6,10 +6,15 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
-    "db:migrate": "sequelize-cli db:migrate",
-    "db:migrate:undo": "sequelize-cli db:migrate:undo",
-    "db:seed": "sequelize-cli db:seed:all",
+    "db:migrate": "node scripts/migrate.js up",
+    "db:migrate:undo": "node scripts/migrate.js down",
+    "db:seed": "node src/database/seed-demo.js",
     "db:seed:demo": "node src/database/seed-demo.js",
+    "db:verify": "node scripts/verify-database.js",
+    "db:fresh": "node scripts/migrate.js fresh",
+    "db:rollback:test": "node scripts/rollback-test.js",
+    "db:backup": "powershell -ExecutionPolicy Bypass -File scripts/backup.ps1",
+    "db:restore": "powershell -ExecutionPolicy Bypass -File scripts/restore.ps1",
     "test": "node --test"
   },
   "dependencies": {

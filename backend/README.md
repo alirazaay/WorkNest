@@ -143,3 +143,20 @@ npm run db:migrate
 npm run db:seed:demo
 ./scripts/verify-environment.ps1
 ```
+
+## Phase 12 database initialization and verification
+
+```powershell
+npm run db:migrate
+npm run db:seed:demo
+npm run db:verify
+```
+
+The verification command checks the expected tables, indexes, foreign keys, and core constraints. To test a fresh local database, set `ALLOW_FRESH_DB=true` and run `npm run db:fresh`. To test the latest migration rollback/re-apply, set `ALLOW_ROLLBACK_TEST=true` and run `npm run db:rollback:test`.
+
+Create and restore backups with:
+
+```powershell
+npm run db:backup
+npm run db:restore -- -BackupFile ./backups/worknest-YYYYMMDD-HHMMSS.sql -ConfirmRestore
+```
