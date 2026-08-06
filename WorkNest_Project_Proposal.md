@@ -39,7 +39,7 @@ WorkNest solves all of the above with an affordable, intuitive SaaS platform.
 |-------|------------|
 | Frontend | React JS (Vite), React Router, Context API, Axios, Recharts, Tailwind CSS |
 | Backend | Node.js, Express JS |
-| Database | MySQL |
+| Database | MySQL (via Sequelize ORM) |
 | Auth | JWT (Access + Refresh Tokens) |
 | Email | Nodemailer |
 | File Storage | Multer (local) or Cloudinary |
@@ -67,7 +67,7 @@ Platform (WorkNest)
     └── Data fully isolated
 ```
 
-Every database document contains a `tenantId` field. A middleware layer on the backend automatically injects the tenant context from the JWT token — no manual filtering needed per API.
+Every database table contains a `tenant_id` foreign key column. A middleware layer on the backend automatically injects the tenant context from the JWT token — no manual filtering needed per API.
 
 ### 2.2 Subscription Plans (Simulated)
 | Plan | Max Employees | Price | Features |
@@ -856,170 +856,356 @@ Data retained for records
 
 ---
 
-## 7. DATABASE SCHEMA
+## 7. DATABASE SCHEMA (MySQL)
 
-### tenants
-```json
-{
-  "_id": "ObjectId",
-  "companyName": "Acme Corporation",
-  "industry": "Technology",
-  "plan": "growth",
-  "employeeLimit": 50,
-  "logoUrl": "https://...",
-  "address": "Karachi, Pakistan",
-  "workStartTime": "09:00",
-  "workEndTime": "17:00",
-  "createdAt": "2026-01-15T00:00:00Z",
-  "isActive": true
-}
+### Entity Relationship Overview
+```
+tenants ──< users ──< employees ──< attendance
+                │              └──< leave_requests
+                │              └──< leave_balances
+                │              └──< payroll
+                │              └──< employee_documents
+                └──< departments (employees.department_id → departments)
+                └──< notifications
 ```
 
-### users
-```json
-{
-  "_id": "ObjectId",
-  "tenantId": "ObjectId",
-  "name": "Ali Raza",
-  "email": "ali@acme.com",
-  "password": "hashed",
-  "role": "admin | manager | employee",
-  "status": "active | pending | inactive",
-  "inviteToken": "string | null",
-  "createdAt": "2026-01-15T00:00:00Z"
-}
+> Run all scripts inside a MySQL client (MySQL Workbench, DBeaver, or CLI).
+> Engine is InnoDB on all tables to support foreign keys.
+
+---
+
+### Table: tenants
+```sql
+CREATE TABLE tenants (
+    id              INT           NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    company_name    VARCHAR(150)  NOT NULL,
+    industry        VARCHAR(100)  DEFAULT NULL,
+    plan            VARCHAR(20)   NOT NULL DEFAULT 'starter',   -- 'starter' | 'growth' | 'enterprise'
+    employee_limit  INT           NOT NULL DEFAULT 10,
+    logo_url        TEXT          DEFAULT NULL,
+    address         TEXT          DEFAULT NULL,
+    work_start      TIME          NOT NULL DEFAULT '09:00:00',
+    work_end        TIME          NOT NULL DEFAULT '17:00:00',
+    late_threshold  TIME          NOT NULL DEFAULT '09:15:00',
+    is_active       TINYINT(1)    NOT NULL DEFAULT 1,
+    created_at      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
-### employees
-```json
-{
-  "_id": "ObjectId",
-  "tenantId": "ObjectId",
-  "userId": "ObjectId",
-  "employeeId": "ACM-0023",
-  "departmentId": "ObjectId",
-  "designation": "Backend Developer",
-  "phone": "+92 300 0000000",
-  "cnic": "42101-XXXXXXX-X",
-  "dob": "2000-01-01",
-  "gender": "male",
-  "address": "Karachi",
-  "joiningDate": "2024-01-01",
-  "employmentType": "full-time",
-  "employmentStatus": "active | terminated | on-leave",
-  "salary": {
-    "base": 80000,
-    "houseAllowance": 15000,
-    "transportAllowance": 5000,
-    "medicalAllowance": 5000,
-    "taxDeduction": 5000,
-    "otherDeductions": 3000
-  },
-  "documents": [
-    { "type": "cnic", "url": "https://..." },
-    { "type": "contract", "url": "https://..." }
-  ],
-  "createdAt": "2026-01-15T00:00:00Z"
-}
+---
+
+### Table: users
+```sql
+CREATE TABLE users (
+    id                INT           NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    tenant_id         INT           NOT NULL,
+    name              VARCHAR(150)  NOT NULL,
+    email             VARCHAR(255)  NOT NULL,
+    password_hash     TEXT          NOT NULL,
+    role              VARCHAR(20)   NOT NULL DEFAULT 'employee',  -- 'super_admin' | 'admin' | 'manager' | 'employee'
+    status            VARCHAR(20)   NOT NULL DEFAULT 'active',    -- 'active' | 'pending' | 'inactive'
+    invite_token      TEXT          DEFAULT NULL,
+    invite_expires_at DATETIME      DEFAULT NULL,
+    created_at        DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE KEY uq_users_email (email),
+    INDEX idx_users_tenant (tenant_id),
+
+    CONSTRAINT fk_users_tenant
+        FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
-### departments
-```json
-{
-  "_id": "ObjectId",
-  "tenantId": "ObjectId",
-  "name": "Engineering",
-  "headId": "ObjectId (userId)",
-  "createdAt": "2026-01-15T00:00:00Z"
-}
+---
+
+### Table: departments
+```sql
+CREATE TABLE departments (
+    id            INT           NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    tenant_id     INT           NOT NULL,
+    name          VARCHAR(150)  NOT NULL,
+    head_user_id  INT           DEFAULT NULL,
+    created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_departments_tenant (tenant_id),
+
+    CONSTRAINT fk_departments_tenant
+        FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_departments_head
+        FOREIGN KEY (head_user_id) REFERENCES users(id)
+        ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
-### attendance
-```json
-{
-  "_id": "ObjectId",
-  "tenantId": "ObjectId",
-  "employeeId": "ObjectId",
-  "date": "2026-08-04",
-  "clockIn": "2026-08-04T08:55:00Z",
-  "clockOut": "2026-08-04T17:10:00Z",
-  "totalHours": 8.25,
-  "status": "present | late | absent | on-leave",
-  "createdAt": "2026-08-04T08:55:00Z"
-}
+---
+
+### Table: employees
+```sql
+CREATE TABLE employees (
+    id                  INT           NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    tenant_id           INT           NOT NULL,
+    user_id             INT           NOT NULL,
+    department_id       INT           DEFAULT NULL,
+    employee_code       VARCHAR(20)   NOT NULL,          -- e.g. ACM-0023
+    designation         VARCHAR(150)  DEFAULT NULL,
+    phone               VARCHAR(20)   DEFAULT NULL,
+    cnic                VARCHAR(20)   DEFAULT NULL,
+    date_of_birth       DATE          DEFAULT NULL,
+    gender              VARCHAR(10)   DEFAULT NULL,      -- 'male' | 'female' | 'other'
+    address             TEXT          DEFAULT NULL,
+    joining_date        DATE          DEFAULT NULL,
+    employment_type     VARCHAR(20)   NOT NULL DEFAULT 'full-time',   -- 'full-time' | 'part-time' | 'contract'
+    employment_status   VARCHAR(20)   NOT NULL DEFAULT 'active',      -- 'active' | 'terminated' | 'on-leave'
+
+    -- Salary structure (stored flat)
+    base_salary           DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    house_allowance       DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    transport_allowance   DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    medical_allowance     DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    tax_deduction         DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    other_deductions      DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+
+    created_at          DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE KEY uq_employee_user (user_id),
+    UNIQUE KEY uq_employee_code_tenant (tenant_id, employee_code),
+    INDEX idx_employees_tenant (tenant_id),
+    INDEX idx_employees_department (department_id),
+
+    CONSTRAINT fk_employees_tenant
+        FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_employees_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_employees_department
+        FOREIGN KEY (department_id) REFERENCES departments(id)
+        ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
-### leaveRequests
-```json
-{
-  "_id": "ObjectId",
-  "tenantId": "ObjectId",
-  "employeeId": "ObjectId",
-  "type": "annual | sick | casual | unpaid | maternity",
-  "fromDate": "2026-08-10",
-  "toDate": "2026-08-12",
-  "totalDays": 3,
-  "reason": "Fever and medical appointment",
-  "status": "pending | approved | rejected",
-  "managerComment": "",
-  "reviewedBy": "ObjectId | null",
-  "reviewedAt": "Date | null",
-  "appliedAt": "2026-08-04T09:00:00Z"
-}
+---
+
+### Table: employee_documents
+```sql
+CREATE TABLE employee_documents (
+    id            INT           NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    tenant_id     INT           NOT NULL,
+    employee_id   INT           NOT NULL,
+    doc_type      VARCHAR(50)   NOT NULL,    -- 'cnic' | 'contract' | 'other'
+    file_url      TEXT          NOT NULL,
+    uploaded_at   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_emp_docs_employee (employee_id),
+
+    CONSTRAINT fk_emp_docs_tenant
+        FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_emp_docs_employee
+        FOREIGN KEY (employee_id) REFERENCES employees(id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
-### leaveBalances
-```json
-{
-  "_id": "ObjectId",
-  "tenantId": "ObjectId",
-  "employeeId": "ObjectId",
-  "year": 2026,
-  "annual": { "total": 20, "used": 12, "remaining": 8 },
-  "sick": { "total": 10, "used": 5, "remaining": 5 },
-  "casual": { "total": 6, "used": 3, "remaining": 3 },
-  "unpaid": { "total": 999, "used": 0, "remaining": 999 }
-}
+---
+
+### Table: attendance
+```sql
+CREATE TABLE attendance (
+    id            INT           NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    tenant_id     INT           NOT NULL,
+    employee_id   INT           NOT NULL,
+    date          DATE          NOT NULL,
+    clock_in      DATETIME      DEFAULT NULL,
+    clock_out     DATETIME      DEFAULT NULL,
+    total_hours   DECIMAL(4,2)  DEFAULT NULL,    -- computed on clock-out
+    status        VARCHAR(20)   NOT NULL DEFAULT 'absent',
+                                                  -- 'present' | 'late' | 'absent' | 'on-leave' | 'half-day'
+    created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE KEY uq_attendance_employee_date (tenant_id, employee_id, date),
+    INDEX idx_attendance_tenant_date (tenant_id, date),
+    INDEX idx_attendance_employee (employee_id),
+
+    CONSTRAINT fk_attendance_tenant
+        FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_attendance_employee
+        FOREIGN KEY (employee_id) REFERENCES employees(id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
-### payroll
-```json
-{
-  "_id": "ObjectId",
-  "tenantId": "ObjectId",
-  "employeeId": "ObjectId",
-  "month": 8,
-  "year": 2026,
-  "baseSalary": 80000,
-  "allowances": {
-    "house": 15000,
-    "transport": 5000,
-    "medical": 5000
-  },
-  "deductions": {
-    "tax": 5000,
-    "other": 3000,
-    "unpaidLeave": 0
-  },
-  "grossSalary": 105000,
-  "netSalary": 97000,
-  "generatedAt": "2026-08-01T00:00:00Z",
-  "generatedBy": "ObjectId (adminUserId)"
-}
+---
+
+### Table: leave_requests
+```sql
+CREATE TABLE leave_requests (
+    id              INT           NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    tenant_id       INT           NOT NULL,
+    employee_id     INT           NOT NULL,
+    leave_type      VARCHAR(20)   NOT NULL,   -- 'annual' | 'sick' | 'casual' | 'unpaid' | 'maternity' | 'paternity'
+    from_date       DATE          NOT NULL,
+    to_date         DATE          NOT NULL,
+    total_days      INT           NOT NULL,
+    reason          TEXT          DEFAULT NULL,
+    status          VARCHAR(20)   NOT NULL DEFAULT 'pending',   -- 'pending' | 'approved' | 'rejected' | 'cancelled'
+    manager_comment TEXT          DEFAULT NULL,
+    reviewed_by     INT           DEFAULT NULL,
+    reviewed_at     DATETIME      DEFAULT NULL,
+    applied_at      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_leave_req_tenant (tenant_id),
+    INDEX idx_leave_req_employee (employee_id),
+    INDEX idx_leave_req_status (status),
+
+    CONSTRAINT fk_leave_req_tenant
+        FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_leave_req_employee
+        FOREIGN KEY (employee_id) REFERENCES employees(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_leave_req_reviewer
+        FOREIGN KEY (reviewed_by) REFERENCES users(id)
+        ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
-### notifications
-```json
-{
-  "_id": "ObjectId",
-  "tenantId": "ObjectId",
-  "userId": "ObjectId",
-  "type": "leave_approved | leave_rejected | payroll_generated | employee_added",
-  "message": "Your leave request has been approved",
-  "isRead": false,
-  "createdAt": "2026-08-04T09:00:00Z"
-}
+---
+
+### Table: leave_balances
+```sql
+CREATE TABLE leave_balances (
+    id              INT  NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    tenant_id       INT  NOT NULL,
+    employee_id     INT  NOT NULL,
+    year            INT  NOT NULL,
+    annual_total    INT  NOT NULL DEFAULT 20,
+    annual_used     INT  NOT NULL DEFAULT 0,
+    sick_total      INT  NOT NULL DEFAULT 10,
+    sick_used       INT  NOT NULL DEFAULT 0,
+    casual_total    INT  NOT NULL DEFAULT 6,
+    casual_used     INT  NOT NULL DEFAULT 0,
+    unpaid_used     INT  NOT NULL DEFAULT 0,
+
+    UNIQUE KEY uq_leave_bal_emp_year (tenant_id, employee_id, year),
+
+    CONSTRAINT fk_leave_bal_tenant
+        FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_leave_bal_employee
+        FOREIGN KEY (employee_id) REFERENCES employees(id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
+
+---
+
+### Table: payroll
+```sql
+CREATE TABLE payroll (
+    id                      INT           NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    tenant_id               INT           NOT NULL,
+    employee_id             INT           NOT NULL,
+    month                   TINYINT       NOT NULL,   -- 1–12
+    year                    SMALLINT      NOT NULL,
+    base_salary             DECIMAL(12,2) NOT NULL,
+    house_allowance         DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    transport_allowance     DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    medical_allowance       DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    gross_salary            DECIMAL(12,2) NOT NULL,
+    tax_deduction           DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    other_deductions        DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    unpaid_leave_deduction  DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    net_salary              DECIMAL(12,2) NOT NULL,
+    generated_by            INT           DEFAULT NULL,
+    generated_at            DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE KEY uq_payroll_emp_period (tenant_id, employee_id, month, year),
+    INDEX idx_payroll_tenant_period (tenant_id, year, month),
+    INDEX idx_payroll_employee (employee_id),
+
+    CONSTRAINT fk_payroll_tenant
+        FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_payroll_employee
+        FOREIGN KEY (employee_id) REFERENCES employees(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_payroll_generated_by
+        FOREIGN KEY (generated_by) REFERENCES users(id)
+        ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+---
+
+### Table: notifications
+```sql
+CREATE TABLE notifications (
+    id          INT           NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    tenant_id   INT           NOT NULL,
+    user_id     INT           NOT NULL,
+    type        VARCHAR(50)   NOT NULL,
+                              -- 'leave_approved' | 'leave_rejected' | 'payroll_generated' | 'employee_added'
+    message     TEXT          NOT NULL,
+    is_read     TINYINT(1)    NOT NULL DEFAULT 0,
+    created_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_notifications_user (user_id),
+    INDEX idx_notifications_tenant (tenant_id),
+
+    CONSTRAINT fk_notif_tenant
+        FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_notif_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+---
+
+### Full Relationship Summary
+```
+tenants          (1) ──< (many) users
+tenants          (1) ──< (many) departments
+tenants          (1) ──< (many) employees
+tenants          (1) ──< (many) attendance
+tenants          (1) ──< (many) leave_requests
+tenants          (1) ──< (many) payroll
+tenants          (1) ──< (many) notifications
+
+users            (1) ──< (1)    employees           [user_id FK]
+users            (1) ──< (many) notifications       [user_id FK]
+departments      (1) ──< (many) employees           [department_id FK]
+departments      (1) ── (1)     users (head)        [head_user_id FK]
+employees        (1) ──< (many) attendance          [employee_id FK]
+employees        (1) ──< (many) leave_requests      [employee_id FK]
+employees        (1) ──< (many) leave_balances      [employee_id FK]
+employees        (1) ──< (many) payroll             [employee_id FK]
+employees        (1) ──< (many) employee_documents  [employee_id FK]
+```
+
+### MySQL-Specific Notes
+- All tables use `ENGINE=InnoDB` — required for foreign key support in MySQL.
+- `TINYINT(1)` is used for boolean columns (`is_active`, `is_read`) — MySQL has no native BOOLEAN type; this is the standard convention.
+- `DECIMAL(12,2)` is used instead of `NUMERIC` for currency — both work in MySQL but `DECIMAL` is the conventional choice.
+- `DATETIME` is used instead of `TIMESTAMP` for `created_at` fields to avoid timezone auto-conversion behaviour in MySQL.
+- Character set `utf8mb4` supports full Unicode including emojis.
+- All foreign key constraint names are unique across the schema (MySQL requirement).
 
 ---
 
@@ -1305,12 +1491,25 @@ worknest/
 ├── backend/                           (Node.js + Express JS)
 │   ├── src/
 │   │   ├── config/
-│   │   │   ├── db.js                  (mysql connection)
+│   │   │   ├── db.js                  (Sequelize instance + PostgreSQL connection)
 │   │   │   └── env.js                 (environment config)
+│   │   │
+│   │   ├── models/                    (Sequelize models — one per table)
+│   │   │   ├── index.js               (loads all models + associations)
+│   │   │   ├── Tenant.js
+│   │   │   ├── User.js
+│   │   │   ├── Department.js
+│   │   │   ├── Employee.js
+│   │   │   ├── EmployeeDocument.js
+│   │   │   ├── Attendance.js
+│   │   │   ├── LeaveRequest.js
+│   │   │   ├── LeaveBalance.js
+│   │   │   ├── Payroll.js
+│   │   │   └── Notification.js
 │   │   │
 │   │   ├── middleware/
 │   │   │   ├── auth.js                (JWT verify)
-│   │   │   ├── tenantScope.js         (inject tenantId from JWT)
+│   │   │   ├── tenantScope.js         (inject tenant_id from JWT)
 │   │   │   ├── roleGuard.js           (role permission check)
 │   │   │   └── errorHandler.js        (global error handler)
 │   │   │
@@ -1322,8 +1521,7 @@ worknest/
 │   │   │   ├── employees/
 │   │   │   │   ├── employee.routes.js
 │   │   │   │   ├── employee.controller.js
-│   │   │   │   ├── employee.service.js
-│   │   │   │   └── employee.model.js
+│   │   │   │   └── employee.service.js
 │   │   │   ├── departments/
 │   │   │   ├── attendance/
 │   │   │   ├── leaves/
@@ -1335,6 +1533,8 @@ worknest/
 │   │   │
 │   │   └── app.js
 │   │
+│   ├── migrations/                    (optional: Sequelize migration files)
+│   ├── seeders/                       (optional: seed demo data)
 │   ├── .env.example
 │   └── package.json
 │
@@ -1353,7 +1553,17 @@ VITE_API_BASE_URL=http://localhost:5000/api
 ### Backend (.env)
 ```
 PORT=5000
-sql_URI=sql://localhost:27017/worknest
+
+# MySQL connection
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=worknest
+DB_USER=root
+DB_PASSWORD=your_mysql_password
+
+# Sequelize auto-sync (set to false in production)
+DB_SYNC=true
+
 JWT_SECRET=your_jwt_secret_key
 JWT_EXPIRES_IN=15m
 JWT_REFRESH_SECRET=your_refresh_secret
@@ -1389,7 +1599,7 @@ CLOUDINARY_API_SECRET=
 | DELETE API | ✅ Remove employee, cancel leave |
 | HTTP Status Codes | ✅ 200, 201, 400, 401, 403, 404, 500 |
 | Error Handling | ✅ Global middleware + frontend error states |
-| Database Integration | ✅ sql  |
+| Database Integration | ✅ MySQL with Sequelize ORM |
 | Authentication | ✅ JWT with role-based access |
 | Admin Panel | ✅ Full Company Admin + Super Admin |
 | Search & Filter | ✅ Employee directory |
