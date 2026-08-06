@@ -21,7 +21,7 @@ export function Login({ onSuccess, onBack }) {
       const session = await loginUser({ email, password });
       onSuccess(session);
     } catch (err) {
-      setError(err.response?.data?.message || 'Unable to sign in. Check your email and password.');
+      setError(err.response?.data?.error?.message || (err.request ? 'Unable to reach the backend. Start the backend server and try again.' : 'Unable to sign in. Check your email and password.'));
     } finally {
       setBusy(false);
     }

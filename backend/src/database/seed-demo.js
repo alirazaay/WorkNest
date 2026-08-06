@@ -9,6 +9,7 @@ async function seed() {
   const leaveDefaults = [['Annual Leave', 'annual', true, 20], ['Sick Leave', 'sick', true, 10], ['Casual Leave', 'casual', true, 6], ['Unpaid Leave', 'unpaid', false, 365]];
   for (const [name, code, isPaid, annualAllowance] of leaveDefaults) await LeaveType.findOrCreate({ where: { tenantId: tenant.id, code }, defaults: { tenantId: tenant.id, name, code, isPaid, annualAllowance, requiresApproval: true, isActive: true } });
   const [admin] = await User.findOrCreate({ where: { email: 'admin@acme-demo.local' }, defaults: { tenantId: tenant.id, name: 'Amara Mensah', email: 'admin@acme-demo.local', passwordHash: await bcrypt.hash('ChangeMe123!', 12), role: 'admin', status: 'active', emailVerifiedAt: new Date() } });
+  await admin.update({ tenantId: tenant.id, name: 'Amara Mensah', passwordHash: await bcrypt.hash('ChangeMe123!', 12), role: 'admin', status: 'active', emailVerifiedAt: admin.emailVerifiedAt || new Date() });
   const [engineering] = await Department.findOrCreate({ where: { tenantId: tenant.id, name: 'Engineering' }, defaults: { tenantId: tenant.id, name: 'Engineering' } });
   const people = [['Jordan Rivera', 'jordan@acme-demo.local', 'JR-0001', 'Senior Engineer', 180000], ['Maya Chen', 'maya@acme-demo.local', 'MC-0002', 'Product Designer', 145000]];
   for (const [name, email, code, designation, salary] of people) {
