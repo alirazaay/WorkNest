@@ -15,6 +15,7 @@
     "db:rollback:test": "node scripts/rollback-test.js",
     "db:backup": "powershell -ExecutionPolicy Bypass -File scripts/backup.ps1",
     "db:restore": "powershell -ExecutionPolicy Bypass -File scripts/restore.ps1",
+    "qa": "powershell -ExecutionPolicy Bypass -File scripts/phase13-qa.ps1",
     "test": "node --test"
   },
   "dependencies": {
