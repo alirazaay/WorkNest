@@ -15,6 +15,7 @@ const schema = z.object({
   DB_POOL_MAX: z.coerce.number().int().positive().default(10),
   DB_POOL_MIN: z.coerce.number().int().min(0).default(0),
   CLIENT_URL: z.string().url().default('http://localhost:5173'),
+  CORS_ORIGINS: z.string().default('http://localhost:5173'),
   LOG_LEVEL: z.string().default('info'),
   JWT_ACCESS_SECRET: z.string().min(32).default('development-access-secret-change-me-32chars'),
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
@@ -26,7 +27,18 @@ const schema = z.object({
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(900000),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
-  APP_VERSION: z.string().default('0.1.0')
+  APP_VERSION: z.string().default('0.1.0'),
+  REDIS_URL: z.string().optional(),
+  EMAIL_ENABLED: z.enum(['true', 'false']).default('false'),
+  EMAIL_FROM: z.string().default('WorkNest <no-reply@localhost>'),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_SECURE: z.enum(['true', 'false']).default('false'),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASSWORD: z.string().optional(),
+  FILE_STORAGE_DRIVER: z.enum(['local', 'cloudinary']).default('local'),
+  FILE_STORAGE_ROOT: z.string().default('./uploads/documents'),
+  FILE_MAX_BYTES: z.coerce.number().int().positive().default(5242880)
 });
 
 const parsed = schema.safeParse(process.env);
@@ -38,5 +50,8 @@ if (!parsed.success) {
 
 export const env = {
   ...parsed.data,
-  DB_LOG_SQL: parsed.data.DB_LOG_SQL === 'true'
+  DB_LOG_SQL: parsed.data.DB_LOG_SQL === 'true',
+  EMAIL_ENABLED: parsed.data.EMAIL_ENABLED === 'true',
+  SMTP_SECURE: parsed.data.SMTP_SECURE === 'true',
+  CORS_ORIGINS: parsed.data.CORS_ORIGINS.split(',').map((origin) => origin.trim()).filter(Boolean)
 };

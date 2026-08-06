@@ -21,6 +21,7 @@
     "express": "latest",
     "helmet": "latest",
     "mysql2": "latest",
+    "nodemailer": "latest",
     "pino": "latest",
     "pino-http": "latest",
     "pdfkit": "latest",

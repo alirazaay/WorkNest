@@ -130,3 +130,16 @@ Run backups from an environment with `mysqldump` installed:
 ```powershell
 ./scripts/backup.ps1 -OutputDirectory ./backups
 ```
+
+## Phase 11 environment setup
+
+Use `.env.example` for a local host setup or `.env.docker.example` when running Docker Compose. SMTP, Redis, and cloud storage are optional; email falls back to structured logging when `EMAIL_ENABLED=false`, and Redis is available through the Compose `redis` profile.
+
+```powershell
+docker compose up --build -d
+docker compose --profile redis up -d redis
+Copy-Item .env.docker.example .env
+npm run db:migrate
+npm run db:seed:demo
+./scripts/verify-environment.ps1
+```

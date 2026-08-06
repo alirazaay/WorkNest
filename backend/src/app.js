@@ -18,7 +18,7 @@ export function createApp() {
   app.disable('x-powered-by');
   app.set('trust proxy', 1);
   app.use(helmet());
-  app.use(cors({ origin: env.CLIENT_URL, credentials: true }));
+  app.use(cors({ origin: (origin, callback) => { if (!origin || env.CORS_ORIGINS.includes(origin)) return callback(null, true); return callback(new Error('CORS origin not allowed')); }, credentials: true }));
   app.use(compression());
   app.use(requestId);
   app.use(express.json({ limit: '1mb' }));

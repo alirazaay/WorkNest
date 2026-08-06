@@ -2,17 +2,18 @@ import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import multer from 'multer';
 import { Router } from 'express';
+import { env } from '../../config/env.js';
 import { authenticate } from '../../middleware/authenticate.js';
 import { authorize } from '../../middleware/authorize.js';
 import { validate } from '../../middleware/validate.js';
 import { departmentCreateSchema, departmentUpdateSchema, documentUploadSchema, employeeCreateSchema, employeeStatusSchema, employeeUpdateSchema, salarySchema } from './organization.schemas.js';
 import { departmentsCreate, departmentsDelete, departmentsList, departmentsUpdate, documentCreate, documentsList, employeesCreate, employeesDelete, employeesGet, employeesList, employeesStatus, employeesUpdate, salaryCreate } from './organization.controller.js';
 
-const uploadRoot = path.resolve('uploads', 'documents');
+const uploadRoot = path.resolve(env.FILE_STORAGE_ROOT);
 mkdirSync(uploadRoot, { recursive: true });
 const upload = multer({
   storage: multer.diskStorage({ destination: uploadRoot, filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_')}`) }),
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: env.FILE_MAX_BYTES },
   fileFilter: (req, file, cb) => cb(null, ['application/pdf', 'image/jpeg', 'image/png'].includes(file.mimetype))
 });
 
