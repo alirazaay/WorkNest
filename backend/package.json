@@ -8,9 +8,12 @@
     "start": "node src/server.js",
     "db:migrate": "sequelize-cli db:migrate",
     "db:migrate:undo": "sequelize-cli db:migrate:undo",
-    "db:seed": "sequelize-cli db:seed:all"
+    "db:seed": "sequelize-cli db:seed:all",
+    "test": "node --test"
   },
   "dependencies": {
+    "bcryptjs": "latest",
+    "cookie-parser": "latest",
     "cors": "latest",
     "dotenv": "latest",
     "express": "latest",
@@ -18,6 +21,7 @@
     "mysql2": "latest",
     "pino": "latest",
     "pino-http": "latest",
+    "jsonwebtoken": "latest",
     "sequelize": "latest",
     "zod": "latest"
   },
