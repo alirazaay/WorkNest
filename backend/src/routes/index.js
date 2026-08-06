@@ -7,6 +7,7 @@ import leaveRoutes from '../modules/leaves/leave.routes.js';
 import notificationRoutes from '../modules/notifications/notification.routes.js';
 import payrollRoutes from '../modules/payroll/payroll.routes.js';
 import dashboardRoutes from '../modules/dashboard/dashboard.routes.js';
+import superAdminRoutes from '../modules/super-admin/super-admin.routes.js';
 
 const router = Router();
 router.use('/health', healthRoutes);
@@ -17,5 +18,6 @@ router.use('/leaves', leaveRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/payroll', payrollRoutes);
 router.use('/dashboard', dashboardRoutes);
+router.use('/super', superAdminRoutes);
 
 export default router;

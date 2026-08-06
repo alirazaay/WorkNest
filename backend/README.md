@@ -96,3 +96,13 @@ Payroll is generated once per tenant/month/year. After approval and locking, the
 - `GET /api/v1/dashboard/activity`
 
 Dashboard responses are tenant-scoped and narrowed to the manager's department or the employee's own records where applicable. Notification list responses include `items` and `unreadCount`.
+
+## Phase 8 Super Admin endpoints
+
+- `GET /api/v1/super/stats`
+- `GET /api/v1/super/tenants`
+- `GET /api/v1/super/tenants/:id`
+- `PATCH /api/v1/super/tenants/:id/deactivate`
+- `PATCH /api/v1/super/tenants/:id/reactivate`
+
+Super Admin tenant detail returns workspace metadata and aggregate counts only; it does not expose individual employee records.
