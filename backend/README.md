@@ -86,3 +86,13 @@ Employee document uploads currently use local storage under `backend/uploads/doc
 - `GET /api/v1/payroll/export/csv?runId=:id`
 
 Payroll is generated once per tenant/month/year. After approval and locking, the run and its item snapshots are immutable through the Phase 6 API. PDF payslips are generated with PDFKit.
+
+## Phase 7 dashboard endpoints
+
+- `GET /api/v1/dashboard/summary`
+- `GET /api/v1/dashboard/attendance-trend`
+- `GET /api/v1/dashboard/headcount`
+- `GET /api/v1/dashboard/payroll-trend`
+- `GET /api/v1/dashboard/activity`
+
+Dashboard responses are tenant-scoped and narrowed to the manager's department or the employee's own records where applicable. Notification list responses include `items` and `unreadCount`.

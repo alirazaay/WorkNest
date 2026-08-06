@@ -151,7 +151,7 @@ export async function leaveCalendar(auth, query) {
 }
 
 export async function listNotifications(auth, query = {}) {
-  const limit = Math.min(100, Math.max(1, Number(query.limit || 30))); return Notification.findAll({ where: { tenantId: auth.tenantId, userId: auth.userId }, order: [['createdAt', 'DESC']], limit });
+  const limit = Math.min(100, Math.max(1, Number(query.limit || 30))); const where = { tenantId: auth.tenantId, userId: auth.userId }; const [items, unreadCount] = await Promise.all([Notification.findAll({ where, order: [['createdAt', 'DESC']], limit }), Notification.count({ where: { ...where, isRead: false } })]); return { items, unreadCount };
 }
 export async function markNotificationRead(auth, id) { const notification = await Notification.findOne({ where: { id, tenantId: auth.tenantId, userId: auth.userId } }); if (!notification) throw new AppError('Notification not found', 404, 'NOTIFICATION_NOT_FOUND'); notification.isRead = true; notification.readAt = new Date(); await notification.save({ fields: ['isRead', 'readAt'] }); return notification; }
 export async function markAllNotificationsRead(auth) { await Notification.update({ isRead: true, readAt: new Date() }, { where: { tenantId: auth.tenantId, userId: auth.userId, isRead: false } }); }
