@@ -13,6 +13,9 @@ import { LeaveType } from './LeaveType.js';
 import { LeaveBalance } from './LeaveBalance.js';
 import { LeaveRequest } from './LeaveRequest.js';
 import { Notification } from './Notification.js';
+import { PayrollRun } from './PayrollRun.js';
+import { PayrollItem } from './PayrollItem.js';
+import { PayrollItemLine } from './PayrollItemLine.js';
 
 Tenant.hasOne(TenantSetting, { foreignKey: 'tenantId', as: 'settings' });
 Tenant.hasMany(User, { foreignKey: 'tenantId', as: 'users' });
@@ -55,5 +58,14 @@ LeaveRequest.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
 LeaveRequest.belongsTo(LeaveType, { foreignKey: 'leaveTypeId', as: 'leaveType' });
 LeaveRequest.belongsTo(User, { foreignKey: 'reviewedBy', as: 'reviewer' });
 Notification.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+Tenant.hasMany(PayrollRun, { foreignKey: 'tenantId', as: 'payrollRuns' });
+PayrollRun.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
+PayrollRun.belongsTo(User, { foreignKey: 'generatedBy', as: 'generator' });
+PayrollRun.belongsTo(User, { foreignKey: 'approvedBy', as: 'approver' });
+PayrollRun.hasMany(PayrollItem, { foreignKey: 'payrollRunId', as: 'items' });
+PayrollItem.belongsTo(PayrollRun, { foreignKey: 'payrollRunId', as: 'run' });
+PayrollItem.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
+PayrollItem.hasMany(PayrollItemLine, { foreignKey: 'payrollItemId', as: 'lines' });
+PayrollItemLine.belongsTo(PayrollItem, { foreignKey: 'payrollItemId', as: 'item' });
 
-export { Tenant, TenantSetting, User, UserSession, Invitation, PasswordResetToken, Department, Employee, EmployeeSalaryStructure, EmployeeDocument, AttendanceRecord, LeaveType, LeaveBalance, LeaveRequest, Notification };
+export { Tenant, TenantSetting, User, UserSession, Invitation, PasswordResetToken, Department, Employee, EmployeeSalaryStructure, EmployeeDocument, AttendanceRecord, LeaveType, LeaveBalance, LeaveRequest, Notification, PayrollRun, PayrollItem, PayrollItemLine };

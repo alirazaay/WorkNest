@@ -21,6 +21,7 @@
     "mysql2": "latest",
     "pino": "latest",
     "pino-http": "latest",
+    "pdfkit": "latest",
     "jsonwebtoken": "latest",
     "multer": "latest",
     "sequelize": "latest",

@@ -72,3 +72,17 @@ Employee document uploads currently use local storage under `backend/uploads/doc
 - `GET /api/v1/leaves/calendar`
 - `GET /api/v1/leaves/notifications`
 - `PATCH /api/v1/leaves/notifications/:id/read`
+
+## Phase 6 payroll endpoints
+
+- `POST /api/v1/payroll/generate`
+- `GET /api/v1/payroll/runs`
+- `GET /api/v1/payroll/runs/:id`
+- `POST /api/v1/payroll/runs/:id/approve`
+- `POST /api/v1/payroll/runs/:id/lock`
+- `GET /api/v1/payroll/me`
+- `GET /api/v1/payroll/items/:id/payslip`
+- `GET /api/v1/payroll/items/:id/pdf`
+- `GET /api/v1/payroll/export/csv?runId=:id`
+
+Payroll is generated once per tenant/month/year. After approval and locking, the run and its item snapshots are immutable through the Phase 6 API. PDF payslips are generated with PDFKit.

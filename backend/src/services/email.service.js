@@ -17,3 +17,7 @@ export async function sendLeaveRequestEmail({ tenantId, employeeEmail }) {
 export async function sendLeaveDecisionEmail({ email, status, comment }) {
   logger.info({ email, status, comment }, 'Leave decision email queued (development adapter)');
 }
+
+export async function sendPayrollGeneratedEmail({ email, month, year }) {
+  logger.info({ email, month, year }, 'Payroll notification email queued (development adapter)');
+}
