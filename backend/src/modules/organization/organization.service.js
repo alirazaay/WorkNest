@@ -64,7 +64,7 @@ export async function deleteDepartment(tenantId, id) {
   await department.destroy();
 }
 
-const employeeInclude = [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'role', 'status'] }, { model: Department, as: 'department', attributes: ['id', 'name'] }, { model: EmployeeSalaryStructure, as: 'salaryStructures', separate: true, order: [['effectiveFrom', 'DESC']] }];
+const employeeInclude = [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatarUrl', 'role', 'status'] }, { model: Department, as: 'department', attributes: ['id', 'name'] }, { model: EmployeeSalaryStructure, as: 'salaryStructures', separate: true, order: [['effectiveFrom', 'DESC']] }];
 
 async function managerScope(auth) {
   if (auth.role !== 'manager') return {};
@@ -94,7 +94,7 @@ export async function createEmployee(tenantId, input) {
   return sequelize.transaction(async (transaction) => {
     await assertPlanCapacity(tenantId, transaction); await assertDepartment(tenantId, input.departmentId, transaction);
     if (await User.findOne({ where: { email: input.email }, transaction })) throw new AppError('A user with this email already exists', 409, 'EMAIL_IN_USE');
-    const user = await User.create({ tenantId, name: input.name, email: input.email, passwordHash: await bcrypt.hash(input.password, 12), role: input.role, status: 'active', emailVerifiedAt: new Date() }, { transaction });
+    const user = await User.create({ tenantId, name: input.name, email: input.email, avatarUrl: input.avatarUrl || null, passwordHash: await bcrypt.hash(input.password, 12), role: input.role, status: 'active', emailVerifiedAt: new Date() }, { transaction });
     const employee = await Employee.create({ tenantId, userId: user.id, employeeCode: await nextEmployeeCode(tenantId, transaction), departmentId: input.departmentId ?? null, designation: input.designation, phone: input.phone, cnic: input.cnic, dateOfBirth: input.dateOfBirth, gender: input.gender, address: input.address, joiningDate: input.joiningDate || new Date().toISOString().slice(0, 10), employmentType: input.employmentType }, { transaction });
     if (input.salary) await EmployeeSalaryStructure.create({ tenantId, employeeId: employee.id, effectiveFrom: input.salary.effectiveFrom || employee.joiningDate, ...input.salary }, { transaction });
     return serializeEmployee(await Employee.findByPk(employee.id, { include: employeeInclude, transaction }));
@@ -105,8 +105,8 @@ export async function updateEmployee(auth, id, input) {
   const employee = await Employee.findOne({ where: { id, tenantId: auth.tenantId } });
   if (!employee) throw new AppError('Employee not found', 404, 'EMPLOYEE_NOT_FOUND');
   await assertDepartment(auth.tenantId, input.departmentId, null);
-  const { name, role, salary, ...employeeFields } = input; Object.assign(employee, employeeFields); await employee.save();
-  if (name || role) { const user = await User.findOne({ where: { id: employee.userId, tenantId: auth.tenantId } }); if (name) user.name = name; if (role) user.role = role; await user.save(); }
+  const { name, role, avatarUrl, salary, ...employeeFields } = input; Object.assign(employee, employeeFields); await employee.save();
+  if (name || role || avatarUrl !== undefined) { const user = await User.findOne({ where: { id: employee.userId, tenantId: auth.tenantId } }); if (name) user.name = name; if (role) user.role = role; if (avatarUrl !== undefined) user.avatarUrl = avatarUrl || null; await user.save(); }
   if (salary) await addSalaryStructure(auth, id, salary);
   return getEmployee(auth, id);
 }

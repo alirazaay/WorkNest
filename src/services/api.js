@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { appConfig } from '../config/app.js';
+import { cleanParams } from '../utils/cleanParams.js';
 
 const api = axios.create({
   baseURL: appConfig.apiBaseUrl,
@@ -15,6 +16,7 @@ export function clearAccessToken() { accessToken = null; }
 
 api.interceptors.request.use((config) => {
   if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`;
+  if (config.params) config.params = cleanParams(config.params);
   return config;
 });
 

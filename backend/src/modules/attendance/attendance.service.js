@@ -4,7 +4,7 @@ import { TenantSetting } from '../../database/models/TenantSetting.js';
 import { AttendanceRecord, Department, Employee, User } from '../../database/models/index.js';
 import { AppError } from '../../middleware/error.js';
 
-const employeeInclude = { model: Employee, as: 'employee', attributes: ['id', 'employeeCode', 'departmentId', 'employmentStatus'], include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email'] }, { model: Department, as: 'department', attributes: ['id', 'name'] }] };
+const employeeInclude = { model: Employee, as: 'employee', attributes: ['id', 'employeeCode', 'departmentId', 'employmentStatus'], include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatarUrl'] }, { model: Department, as: 'department', attributes: ['id', 'name'] }] };
 
 function localParts(date, timezone) {
   const parts = new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(date);

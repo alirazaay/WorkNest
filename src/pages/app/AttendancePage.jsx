@@ -10,6 +10,7 @@ import Pagination from '../../components/common/Pagination.jsx';
 import LoadingState from '../../components/common/LoadingState.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import Toast from '../../components/common/Toast.jsx';
+import { cleanParams } from '../../utils/cleanParams.js';
 
 const paths = { Overview: '/dashboard', People: '/employees', Attendance: '/attendance', 'Time off': '/leaves', Payroll: '/payroll', Departments: '/departments', Settings: '/settings' };
 const today = () => new Date().toISOString().slice(0, 10);
@@ -23,7 +24,7 @@ export default function AttendancePage({ user, onExit }) {
   const isEmployee = role === 'employee';
   const [records, setRecords] = useState([]); const [pagination, setPagination] = useState({ page: 1, totalPages: 1 }); const [summary, setSummary] = useState(null);
   const [filters, setFilters] = useState({ fromDate: `${month()}-01`, toDate: today(), status: '' }); const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const [message, setMessage] = useState(''); const [mobileOpen, setMobileOpen] = useState(false); const [actionLoading, setActionLoading] = useState(false);
-  async function load(page = 1) { setLoading(true); setError(''); try { const query = { ...filters, page, pageSize: 25 }; const response = await api.get(isEmployee ? '/attendance/me' : '/attendance', { params: query }); const data = response.data.data || {}; setRecords(data.items || []); setPagination(data.pagination || { page, totalPages: 1 }); if (!isEmployee) { const summaryResponse = await api.get('/attendance/summary', { params: { month: filters.fromDate.slice(0, 7) } }); setSummary(summaryResponse.data.data); } } catch (requestError) { setError(requestError.response?.data?.error?.message || 'Could not load attendance.'); } finally { setLoading(false); } }
+  async function load(page = 1) { setLoading(true); setError(''); try { const query = cleanParams({ ...filters, page, pageSize: 25 }); const response = await api.get(isEmployee ? '/attendance/me' : '/attendance', { params: query }); const data = response.data.data || {}; setRecords(data.items || []); setPagination(data.pagination || { page, totalPages: 1 }); if (!isEmployee) { const summaryResponse = await api.get('/attendance/summary', { params: cleanParams({ month: filters.fromDate.slice(0, 7) }) }); setSummary(summaryResponse.data.data); } } catch (requestError) { setError(requestError.response?.data?.error?.message || 'Could not load attendance.'); } finally { setLoading(false); } }
   useEffect(() => { load(1); }, [filters.fromDate, filters.toDate, filters.status]);
   const todayRecord = useMemo(() => records.find(record => String(record.attendanceDate).slice(0, 10) === today()), [records]);
   async function clockIn() { setActionLoading(true); try { await api.post('/attendance/clock-in'); setMessage('Clocked in successfully'); await load(1); } catch (requestError) { setError(requestError.response?.data?.error?.message || 'Could not clock in.'); } finally { setActionLoading(false); } }

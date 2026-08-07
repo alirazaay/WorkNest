@@ -11,7 +11,7 @@ function daysInclusive(fromDate, toDate) {
 }
 
 function employeeInclude() {
-  return { model: Employee, as: 'employee', attributes: ['id', 'employeeCode', 'departmentId'], include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email'] }, { model: Department, as: 'department', attributes: ['id', 'name'] }] };
+  return { model: Employee, as: 'employee', attributes: ['id', 'employeeCode', 'departmentId'], include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatarUrl'] }, { model: Department, as: 'department', attributes: ['id', 'name'] }] };
 }
 
 async function employeeForUser(auth) {

@@ -11,6 +11,7 @@ import Pagination from '../../components/common/Pagination.jsx';
 import LoadingState from '../../components/common/LoadingState.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import Toast from '../../components/common/Toast.jsx';
+import { cleanParams } from '../../utils/cleanParams.js';
 
 const paths = { Overview: '/dashboard', People: '/employees', Attendance: '/attendance', 'Time off': '/leaves', Payroll: '/payroll', Departments: '/departments', Settings: '/settings' };
 const isoToday = () => new Date().toISOString().slice(0, 10);
@@ -18,7 +19,7 @@ const isoToday = () => new Date().toISOString().slice(0, 10);
 export default function LeavesPage({ user, onExit }) {
   const navigate = useNavigate(); const role = user?.user?.role || 'employee'; const canReview = role === 'admin' || role === 'manager';
   const [requests, setRequests] = useState([]); const [types, setTypes] = useState([]); const [balances, setBalances] = useState([]); const [pagination, setPagination] = useState({ page: 1, totalPages: 1 }); const [status, setStatus] = useState(''); const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const [message, setMessage] = useState(''); const [modal, setModal] = useState(null); const [mobileOpen, setMobileOpen] = useState(false);
-  async function load(page = 1) { setLoading(true); setError(''); try { const list = await api.get('/leaves/requests', { params: { status: status || undefined, page, pageSize: 10 } }); setRequests(list.data.data?.items || []); setPagination(list.data.data?.pagination || { page, totalPages: 1 }); const [typeResponse, balanceResponse] = await Promise.all([api.get('/leaves/types'), api.get('/leaves/balances/me')]); setTypes(typeResponse.data.data || []); setBalances(balanceResponse.data.data || []); } catch (requestError) { setError(requestError.response?.data?.error?.message || 'Could not load leave data.'); } finally { setLoading(false); } }
+  async function load(page = 1) { setLoading(true); setError(''); try { const list = await api.get('/leaves/requests', { params: cleanParams({ status, page, pageSize: 10 }) }); setRequests(list.data.data?.items || []); setPagination(list.data.data?.pagination || { page, totalPages: 1 }); const [typeResponse, balanceResponse] = await Promise.all([api.get('/leaves/types'), api.get('/leaves/balances/me')]); setTypes(typeResponse.data.data || []); setBalances(balanceResponse.data.data || []); } catch (requestError) { setError(requestError.response?.data?.error?.message || 'Could not load leave data.'); } finally { setLoading(false); } }
   useEffect(() => { load(1); }, [status]);
   function notify(text) { setMessage(text); window.setTimeout(() => setMessage(''), 2400); }
   async function submitRequest(event) { event.preventDefault(); const form = new FormData(event.currentTarget); try { await api.post('/leaves/requests', { leaveTypeId: Number(form.get('leaveTypeId')), fromDate: form.get('fromDate'), toDate: form.get('toDate'), reason: form.get('reason') || undefined }); notify('Leave request submitted'); setModal(null); await load(1); } catch (requestError) { setError(requestError.response?.data?.error?.message || 'Could not submit leave request.'); } }

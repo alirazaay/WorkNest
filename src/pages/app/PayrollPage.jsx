@@ -11,6 +11,7 @@ import Pagination from '../../components/common/Pagination.jsx';
 import LoadingState from '../../components/common/LoadingState.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import Toast from '../../components/common/Toast.jsx';
+import { cleanParams } from '../../utils/cleanParams.js';
 
 const paths = { Overview: '/dashboard', People: '/employees', Attendance: '/attendance', 'Time off': '/leaves', Payroll: '/payroll', Departments: '/departments', Settings: '/settings' };
 const money = value => `PKR ${Number(value || 0).toLocaleString('en-PK', { minimumFractionDigits: 2 })}`;
@@ -19,7 +20,7 @@ const currentPeriod = () => { const date = new Date(); return { month: date.getM
 export default function PayrollPage({ user, onExit }) {
   const navigate = useNavigate(); const role = user?.user?.role || 'employee'; const isAdmin = role === 'admin'; const initial = currentPeriod();
   const [runs, setRuns] = useState([]); const [payslips, setPayslips] = useState([]); const [pagination, setPagination] = useState({ page: 1, totalPages: 1 }); const [filters, setFilters] = useState({ month: initial.month, year: initial.year, status: '' }); const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const [message, setMessage] = useState(''); const [modal, setModal] = useState(null); const [mobileOpen, setMobileOpen] = useState(false); const [actionLoading, setActionLoading] = useState(false);
-  async function load(page = 1) { setLoading(true); setError(''); try { if (isAdmin) { const response = await api.get('/payroll', { params: { ...filters, page, pageSize: 10 } }); setRuns(response.data.data?.items || []); setPagination(response.data.data?.pagination || { page, totalPages: 1 }); } else { const response = await api.get('/payroll/me'); setPayslips(response.data.data || []); } } catch (requestError) { setError(requestError.response?.data?.error?.message || 'Could not load payroll.'); } finally { setLoading(false); } }
+  async function load(page = 1) { setLoading(true); setError(''); try { if (isAdmin) { const response = await api.get('/payroll', { params: cleanParams({ ...filters, page, pageSize: 10 }) }); setRuns(response.data.data?.items || []); setPagination(response.data.data?.pagination || { page, totalPages: 1 }); } else { const response = await api.get('/payroll/me'); setPayslips(response.data.data || []); } } catch (requestError) { setError(requestError.response?.data?.error?.message || 'Could not load payroll.'); } finally { setLoading(false); } }
   useEffect(() => { load(1); }, [filters.month, filters.year, filters.status]);
   function notify(text) { setMessage(text); window.setTimeout(() => setMessage(''), 2400); }
   async function generate(event) { event.preventDefault(); const form = new FormData(event.currentTarget); setActionLoading(true); try { await api.post('/payroll/generate', { month: Number(form.get('month')), year: Number(form.get('year')) }); notify('Payroll generated successfully'); setModal(null); await load(1); } catch (requestError) { setError(requestError.response?.data?.error?.message || 'Could not generate payroll.'); } finally { setActionLoading(false); } }

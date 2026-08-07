@@ -7,7 +7,7 @@ import { csvExport, generateHandler, itemGet, itemPeriodGet, myList, pdfExport, 
 
 const router = Router();
 router.use(authenticate);
-router.get('/me', authorize('admin', 'manager', 'employee'), myList);
+router.get('/me', authorize('admin', 'manager', 'employee'), validate(payrollRunQuerySchema, 'query'), myList);
 router.get('/', authorize('admin'), validate(payrollRunQuerySchema, 'query'), runsList);
 router.post('/generate', authorize('admin'), validate(payrollPeriodSchema), generateHandler);
 router.post('/runs', authorize('admin'), validate(payrollPeriodSchema), generateHandler);

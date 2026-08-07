@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/common/Sidebar.jsx';
 import Topbar from '../../components/common/Topbar.jsx';
 import Toast from '../../components/common/Toast.jsx';
-import DashboardPage from './DashboardPage.jsx';
+import DashboardPage from './ResilientDashboardPage.jsx';
 
 const paths = { Overview: '/dashboard', People: '/employees', Attendance: '/attendance', 'Time off': '/leaves', Payroll: '/payroll', Departments: '/departments', Settings: '/settings' };
 

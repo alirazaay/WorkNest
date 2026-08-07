@@ -3,7 +3,7 @@ import { AppError } from '../../middleware/error.js';
 import { acceptInvitation, inviteUser, login, logout, refresh, registerCompany, requestPasswordReset, resetPassword } from './auth.service.js';
 
 function publicUser(user) {
-  return { id: user.id, tenantId: user.tenantId, name: user.name, email: user.email, role: user.role, status: user.status };
+  return { id: user.id, tenantId: user.tenantId, name: user.name, email: user.email, avatarUrl: user.avatarUrl || null, role: user.role, status: user.status };
 }
 
 function setRefreshCookie(res, refreshToken) {
@@ -16,7 +16,7 @@ function clearRefreshCookie(res) {
 
 export async function register(req, res, next) {
   try {
-    const result = await registerCompany(req.body, req);
+    const result = await registerCompany(req.validated.body, req);
     setRefreshCookie(res, result.tokens.refreshToken);
     res.status(201).json({ success: true, data: { user: publicUser(result.user), tenant: { id: result.tenant.id, companyName: result.tenant.companyName, slug: result.tenant.slug }, accessToken: result.tokens.accessToken } });
   } catch (error) { next(error); }
@@ -24,7 +24,7 @@ export async function register(req, res, next) {
 
 export async function loginHandler(req, res, next) {
   try {
-    const result = await login(req.body, req);
+    const result = await login(req.validated.body, req);
     setRefreshCookie(res, result.tokens.refreshToken);
     res.json({ success: true, data: { user: publicUser(result.user), accessToken: result.tokens.accessToken } });
   } catch (error) { next(error); }
@@ -49,17 +49,17 @@ export async function me(req, res) {
 }
 
 export async function forgotPassword(req, res, next) {
-  try { await requestPasswordReset(req.body.email); res.json({ success: true, data: { message: 'If an account exists for that email, a reset link has been sent.' } }); } catch (error) { next(error); }
+  try { await requestPasswordReset(req.validated.body.email); res.json({ success: true, data: { message: 'If an account exists for that email, a reset link has been sent.' } }); } catch (error) { next(error); }
 }
 
 export async function resetPasswordHandler(req, res, next) {
-  try { await resetPassword(req.body); res.json({ success: true, data: { message: 'Password reset successfully. Please sign in again.' } }); } catch (error) { next(error); }
+  try { await resetPassword(req.validated.body); res.json({ success: true, data: { message: 'Password reset successfully. Please sign in again.' } }); } catch (error) { next(error); }
 }
 
 export async function inviteHandler(req, res, next) {
-  try { const invitation = await inviteUser(req.body, req.auth, req); res.status(201).json({ success: true, data: { id: invitation.id, email: invitation.email, expiresAt: invitation.expiresAt } }); } catch (error) { next(error); }
+  try { const invitation = await inviteUser(req.validated.body, req.auth, req); res.status(201).json({ success: true, data: { id: invitation.id, email: invitation.email, expiresAt: invitation.expiresAt } }); } catch (error) { next(error); }
 }
 
 export async function acceptInvitationHandler(req, res, next) {
-  try { const user = await acceptInvitation(req.body); res.status(201).json({ success: true, data: { user: publicUser(user), message: 'Account activated. You can now sign in.' } }); } catch (error) { next(error); }
+  try { const user = await acceptInvitation(req.validated.body); res.status(201).json({ success: true, data: { user: publicUser(user), message: 'Account activated. You can now sign in.' } }); } catch (error) { next(error); }
 }
