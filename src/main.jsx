@@ -10,6 +10,7 @@ import {
 import './styles.css';
 import './styles/foundation.css';
 import './styles/public-auth.css';
+import './styles/shell.css';
 import WorkspacePage from './pages/app/WorkspacePage.jsx';
 import ErrorBoundary from './components/common/ErrorBoundary.jsx';
 import ProtectedRoute from './routes/ProtectedRoute.jsx';
