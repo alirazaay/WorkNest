@@ -15,7 +15,6 @@ import './styles/dashboard.css';
 import './styles/departments.css';
 import './styles/employees.css';
 import './styles/attendance.css';
-import WorkspacePage from './pages/app/WorkspacePage.jsx';
 import ErrorBoundary from './components/common/ErrorBoundary.jsx';
 import ProtectedRoute from './routes/ProtectedRoute.jsx';
 import RoleRoute from './routes/RoleRoute.jsx';

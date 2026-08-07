@@ -35,7 +35,7 @@ export default function WorkspacePage({ user, onExit }) {
   }
   useEffect(() => { loadRecords(); }, []);
   function notify(text) { setMessage(text); window.setTimeout(() => setMessage(''), 2400); }
-  function openEmployeeModal(event) { event?.preventDefault(); setModal('employee'); }
+  function openEmployeeModal() { setModal('employee'); }
   async function submit(event) {
     event.preventDefault(); const data = new FormData(event.currentTarget);
     try {
