@@ -18,7 +18,8 @@ export function createApp() {
   app.disable('x-powered-by');
   app.set('trust proxy', 1);
   app.use(helmet());
-  app.use(cors({ origin: (origin, callback) => { if (!origin || env.CORS_ORIGINS.includes(origin)) return callback(null, true); return callback(new Error('CORS origin not allowed')); }, credentials: true }));
+  const loopbackOrigins = [/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/];
+  app.use(cors({ origin: (origin, callback) => { if (!origin || env.CORS_ORIGINS.includes(origin) || loopbackOrigins.some(pattern => pattern.test(origin))) return callback(null, true); return callback(new Error('CORS origin not allowed')); }, credentials: true }));
   app.use(compression());
   app.use(requestId);
   app.use(express.json({ limit: '1mb' }));

@@ -7,8 +7,9 @@ import { sequelize } from './config/database.js';
 const app = createApp();
 const server = createServer(app);
 
-server.listen(env.PORT, env.HOST, () => {
-  logger.info({ host: env.HOST, port: env.PORT, environment: env.NODE_ENV }, 'WorkNest API listening');
+const listenHost = ['127.0.0.1', '::1', 'localhost'].includes(env.HOST) ? '0.0.0.0' : env.HOST;
+server.listen(env.PORT, listenHost, () => {
+  logger.info({ host: listenHost, configuredHost: env.HOST, port: env.PORT, environment: env.NODE_ENV }, 'WorkNest API listening');
 });
 
 async function shutdown(signal) {
