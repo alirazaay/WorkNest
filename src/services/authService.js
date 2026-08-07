@@ -6,5 +6,7 @@ export async function restoreSession() { const { data } = await api.post('/auth/
 export async function currentUser() { const { data } = await api.get('/auth/me'); return data.data.user; }
 export async function logout() { try { await api.post('/auth/logout'); } finally { clearAccessToken(); } }
 export async function requestPasswordReset(email) { return api.post('/auth/forgot-password', { email }); }
+export async function resetPassword(payload) { return api.post('/auth/reset-password', payload); }
+export async function acceptInvitation(payload) { return api.post('/auth/set-password', payload); }
 
 export { api };
