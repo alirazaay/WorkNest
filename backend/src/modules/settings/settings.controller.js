@@ -1,0 +1,6 @@
+import { Tenant, TenantSetting } from '../../database/models/index.js';
+
+const send = (res, data) => res.json({ success: true, data });
+export async function getSettings(req, res, next) { try { const tenant = await Tenant.findByPk(req.auth.tenantId); const settings = await TenantSetting.findOne({ where: { tenantId: req.auth.tenantId } }); send(res, { company: tenant, workHours: settings }); } catch (error) { next(error); } }
+export async function updateCompany(req, res, next) { try { const tenant = await Tenant.findByPk(req.auth.tenantId); Object.assign(tenant, req.body); await tenant.save(); send(res, { company: tenant, workHours: await TenantSetting.findOne({ where: { tenantId: req.auth.tenantId } }) }); } catch (error) { next(error); } }
+export async function updateWorkHours(req, res, next) { try { const [settings] = await TenantSetting.findOrCreate({ where: { tenantId: req.auth.tenantId }, defaults: { tenantId: req.auth.tenantId } }); Object.assign(settings, req.body); await settings.save(); send(res, { company: await Tenant.findByPk(req.auth.tenantId), workHours: settings }); } catch (error) { next(error); } }

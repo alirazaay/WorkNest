@@ -9,6 +9,7 @@ import payrollRoutes from '../modules/payroll/payroll.routes.js';
 import dashboardRoutes from '../modules/dashboard/dashboard.routes.js';
 import superAdminRoutes from '../modules/super-admin/super-admin.routes.js';
 import docsRoutes from './docs.routes.js';
+import settingsRoutes from '../modules/settings/settings.routes.js';
 
 const router = Router();
 router.use('/health', healthRoutes);
@@ -21,5 +22,6 @@ router.use('/payroll', payrollRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/super', superAdminRoutes);
 router.use('/docs', docsRoutes);
+router.use('/settings', settingsRoutes);
 
 export default router;
