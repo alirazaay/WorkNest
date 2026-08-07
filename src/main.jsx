@@ -10,6 +10,7 @@ import {
 import './styles.css';
 import './styles/foundation.css';
 import { Login, Workspace } from './workspace-ui.jsx';
+import WorkspacePage from './pages/app/WorkspacePage.jsx';
 import ErrorBoundary from './components/common/ErrorBoundary.jsx';
 import ProtectedRoute from './routes/ProtectedRoute.jsx';
 
@@ -59,6 +60,6 @@ function Departments({ departments, onAdd, onDelete, query }) { return <><div cl
 
 function LoginRoute({ onSuccess }) { const navigate = useNavigate(); return <Login onBack={() => navigate('/')} onSuccess={(session) => { onSuccess(session); navigate('/dashboard', { replace: true }); }} />; }
 function LandingRoute() { const navigate = useNavigate(); return <Landing onLaunch={() => navigate('/login')} />; }
-function AppRoutes() { const [user, setUser] = useState(null); return <Routes><Route path="/" element={<LandingRoute />} /><Route path="/login" element={<LoginRoute onSuccess={setUser} />} /><Route element={<ProtectedRoute user={user} />}><Route path="/dashboard" element={<Workspace user={user} onExit={() => setUser(null)} />} /></Route><Route path="*" element={<Navigate to={user ? '/dashboard' : '/'} replace />} /></Routes>; }
+function AppRoutes() { const [user, setUser] = useState(null); return <Routes><Route path="/" element={<LandingRoute />} /><Route path="/login" element={<LoginRoute onSuccess={setUser} />} /><Route element={<ProtectedRoute user={user} />}><Route path="/dashboard" element={<WorkspacePage user={user} onExit={() => setUser(null)} />} /></Route><Route path="*" element={<Navigate to={user ? '/dashboard' : '/'} replace />} /></Routes>; }
 function App(){ return <ErrorBoundary><BrowserRouter><AppRoutes /></BrowserRouter></ErrorBoundary>; }
 createRoot(document.getElementById('root')).render(<App/>);
