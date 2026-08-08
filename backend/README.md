@@ -100,10 +100,15 @@ Employee document uploads currently use local storage under `backend/uploads/doc
 - `PATCH /api/v1/payroll/bank-accounts/:id`
 - `GET /api/v1/payroll/runs/:id/review`
 - `GET /api/v1/payroll/runs/:id/export/bank`
+- `GET|POST /api/v1/payroll/tax/:employeeId`
+- `POST /api/v1/payroll/adjustments`
+- `POST /api/v1/payroll/adjustments/:id/approve`
+
+Bank exports support `standard`, `hbl`, `meezan`, and `ubl` layouts through `?format=`. Locked payroll is not edited directly; corrections are recorded as tenant-scoped payroll adjustments and require approval. Employee tax configuration is effective-dated and becomes a payroll snapshot during generation.
 
 Payroll is generated once per tenant/month/year. Salary structures are effective-dated and changed by closing the previous row before creating a new row. Payroll items snapshot employee, salary, and bank information; line items retain their source type and source ID. Approved bonuses and loan installments are marked processed/deducted transactionally to prevent duplicate inclusion. Bank exports are restricted to approved or locked runs. Locked payroll remains immutable through normal payroll actions; corrections should use a future adjustment workflow.
 
-The subsystem migration is `20260808000200-add-payroll-subsystem.js`. Apply it with `npm run db:migrate`; do not use `sequelize.sync({ alter: true })`. Financial values are stored in MySQL DECIMAL columns. The generation service uses integer-cents arithmetic for its calculations and the server remains authoritative for all calculated totals.
+The subsystem migrations are `20260808000200-add-payroll-subsystem.js` and `20260808000300-add-tax-and-payroll-adjustments.js`. Apply them with `npm run db:migrate`; do not use `sequelize.sync({ alter: true })`. Financial values are stored in MySQL DECIMAL columns. The generation service uses integer-cents arithmetic for its calculations and the server remains authoritative for all calculated totals.
 
 ## Phase 7 dashboard endpoints
 

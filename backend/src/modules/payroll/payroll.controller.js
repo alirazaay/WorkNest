@@ -11,7 +11,7 @@ export async function itemGet(req, res, next) { try { send(res, await getPayroll
 export async function itemPeriodGet(req, res, next) { try { send(res, await getPayrollItemByPeriod(req.auth, Number(req.params.employeeId), Number(req.params.month), Number(req.params.year))); } catch (error) { next(error); } }
 export async function myList(req, res, next) { try { send(res, await getMyPayroll(req.auth, req.validated.query)); } catch (error) { next(error); } }
 export async function csvExport(req, res, next) { try { const id = req.validated.query.runId; const csv = await payrollCsv(req.auth, id); res.type('text/csv').attachment(`worknest-payroll-${id}.csv`).send(csv); } catch (error) { next(error); } }
-export async function bankExport(req, res, next) { try { const csv = await bankCsv(req.auth, Number(req.params.id)); res.type('text/csv').attachment(`worknest-bank-${req.params.id}.csv`).send(csv); } catch (error) { next(error); } }
+export async function bankExport(req, res, next) { try { const format = req.validated.query.format; const csv = await bankCsv(req.auth, Number(req.params.id), format); res.type('text/csv').attachment(`worknest-bank-${format}-${req.params.id}.csv`).send(csv); } catch (error) { next(error); } }
 export async function pdfExport(req, res, next) { try { const pdf = await buildPayslipPdf(req.auth, Number(req.params.id)); res.type('application/pdf').attachment(`worknest-payslip-${req.params.id}.pdf`).send(pdf); } catch (error) { next(error); } }
 const service = (fn, status = 200) => async (req, res, next) => { try { const result = await fn(req); send(res, result, status); } catch (error) { next(error); } };
 export const salaryList = service((req) => adminService.listSalaryStructures(req.auth, req.params.employeeId ? Number(req.params.employeeId) : null));
@@ -37,3 +37,7 @@ export const bankList = service((req) => adminService.listBankAccounts(req.auth,
 export const bankCreate = service((req) => adminService.createBankAccount(req.auth, Number(req.params.employeeId), req.validated.body), 201);
 export const bankUpdate = service((req) => adminService.updateBankAccount(req.auth, Number(req.params.id), req.validated.body));
 export const reviewGet = service((req) => payrollReview(req.auth, Number(req.params.id)));
+export const taxList = service((req) => adminService.listTaxConfigurations(req.auth, Number(req.params.employeeId)));
+export const taxCreate = service((req) => adminService.createTaxConfiguration(req.auth, Number(req.params.employeeId), req.validated.body), 201);
+export const adjustmentCreate = service((req) => adminService.createAdjustment(req.auth, req.validated.body), 201);
+export const adjustmentApprove = service((req) => adminService.approveAdjustment(req.auth, Number(req.params.id)));

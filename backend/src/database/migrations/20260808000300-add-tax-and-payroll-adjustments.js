@@ -1,0 +1,13 @@
+export async function up(queryInterface, Sequelize) {
+  const { DataTypes } = Sequelize;
+  const [existing] = await queryInterface.sequelize.query("SHOW TABLES LIKE 'employee_tax_configurations'");
+  if (existing.length) return;
+  const tenant = { type: DataTypes.INTEGER, allowNull: false, references: { model: 'tenants', key: 'id' }, onDelete: 'CASCADE' };
+  const employee = { type: DataTypes.INTEGER, allowNull: false, references: { model: 'employees', key: 'id' }, onDelete: 'RESTRICT' };
+  const timestamps = { created_at: { type: DataTypes.DATE, allowNull: false, defaultValue: Sequelize.literal('CURRENT_TIMESTAMP') }, updated_at: { type: DataTypes.DATE, allowNull: false, defaultValue: Sequelize.literal('CURRENT_TIMESTAMP') } };
+  await queryInterface.createTable('employee_tax_configurations', { id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true }, tenant_id: tenant, employee_id: employee, calculation_type: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'fixed' }, amount: { type: DataTypes.DECIMAL(14, 2), allowNull: false, defaultValue: 0 }, percentage: DataTypes.DECIMAL(7, 4), effective_from: { type: DataTypes.DATEONLY, allowNull: false }, effective_to: DataTypes.DATEONLY, is_active: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true }, created_by: { type: DataTypes.INTEGER, references: { model: 'users', key: 'id' }, onDelete: 'SET NULL' }, ...timestamps });
+  await queryInterface.createTable('payroll_adjustments', { id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true }, tenant_id: tenant, payroll_run_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'payroll_runs', key: 'id' }, onDelete: 'RESTRICT' }, employee_id: employee, line_type: { type: DataTypes.STRING(20), allowNull: false }, amount: { type: DataTypes.DECIMAL(14, 2), allowNull: false }, reason: { type: DataTypes.TEXT, allowNull: false }, status: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'pending' }, created_by: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'users', key: 'id' }, onDelete: 'RESTRICT' }, approved_by: { type: DataTypes.INTEGER, references: { model: 'users', key: 'id' }, onDelete: 'SET NULL' }, approved_at: DataTypes.DATE, ...timestamps });
+  await queryInterface.addIndex('employee_tax_configurations', ['tenant_id', 'employee_id', 'effective_from'], { name: 'idx_tax_employee_effective' });
+  await queryInterface.addIndex('payroll_adjustments', ['tenant_id', 'payroll_run_id', 'status'], { name: 'idx_payroll_adjustments_run_status' });
+}
+export async function down(queryInterface) { await queryInterface.dropTable('payroll_adjustments'); await queryInterface.dropTable('employee_tax_configurations'); }
