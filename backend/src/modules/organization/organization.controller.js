@@ -8,7 +8,7 @@ export async function departmentsCreate(req, res, next) { try { send(res, await 
 export async function departmentsUpdate(req, res, next) { try { send(res, await updateDepartment(req.auth.tenantId, Number(req.params.id), req.validated.body)); } catch (error) { next(error); } }
 export async function departmentsDelete(req, res, next) { try { await deleteDepartment(req.auth.tenantId, Number(req.params.id)); res.status(204).send(); } catch (error) { next(error); } }
 
-export async function employeesList(req, res, next) { try { send(res, await listEmployees(req.auth, req.query)); } catch (error) { next(error); } }
+export async function employeesList(req, res, next) { try { send(res, await listEmployees(req.auth, req.validated.query)); } catch (error) { next(error); } }
 export async function employeesGet(req, res, next) { try { send(res, await getEmployee(req.auth, Number(req.params.id))); } catch (error) { next(error); } }
 export async function employeesCreate(req, res, next) { try { send(res, await createEmployee(req.auth.tenantId, req.validated.body), 201); } catch (error) { next(error); } }
 export async function employeesUpdate(req, res, next) { try { send(res, await updateEmployee(req.auth, Number(req.params.id), req.validated.body)); } catch (error) { next(error); } }

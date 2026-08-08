@@ -3,7 +3,7 @@ import { authenticate } from '../../middleware/authenticate.js';
 import { authorize } from '../../middleware/authorize.js';
 import { validate } from '../../middleware/validate.js';
 import { leaveCalendarSchema, leaveListSchema, leaveRequestSchema, leaveReviewSchema, leaveTypeSchema } from './leave.schemas.js';
-import { balancesEmployee, balancesMe, calendar, notificationRead, notificationsList, notificationsReadAll, requestApprove, requestCancel, requestCreate, requestGet, requestReject, requestsList, typesCreate, typesList } from './leave.controller.js';
+import { balancesEmployee, balancesMe, calendar, requestApprove, requestCancel, requestCreate, requestGet, requestReject, requestsList, typesCreate, typesList } from './leave.controller.js';
 
 const router = Router();
 router.use(authenticate);
@@ -19,9 +19,5 @@ router.post('/requests', authorize('employee', 'manager'), validate(leaveRequest
 router.patch('/requests/:id/approve', authorize('admin', 'manager'), requestApprove);
 router.patch('/requests/:id/reject', authorize('admin', 'manager'), validate(leaveReviewSchema), requestReject);
 router.patch('/requests/:id/cancel', authorize('employee', 'manager'), requestCancel);
-
-router.get('/notifications', authorize('admin', 'manager', 'employee'), notificationsList);
-router.patch('/notifications/:id/read', authorize('admin', 'manager', 'employee'), notificationRead);
-router.patch('/notifications/read-all', authorize('admin', 'manager', 'employee'), notificationsReadAll);
 
 export default router;

@@ -12,7 +12,7 @@ import ErrorState from '../../components/common/ErrorState.jsx';
 import Toast from '../../components/common/Toast.jsx';
 import { cleanParams } from '../../utils/cleanParams.js';
 
-const paths = { Overview: '/dashboard', People: '/employees', Attendance: '/attendance', 'Time off': '/leaves', Payroll: '/payroll', Departments: '/departments', Settings: '/settings' };
+const paths = { Overview: '/dashboard', People: '/employees', Attendance: '/attendance', 'Time off': '/leaves', Payroll: '/payroll', Departments: '/departments', Notifications: '/notifications', Settings: '/settings' };
 const today = () => new Date().toISOString().slice(0, 10);
 const month = () => new Date().toISOString().slice(0, 7);
 const displayTime = value => value ? new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';

@@ -5,7 +5,7 @@ import Topbar from '../../components/common/Topbar.jsx';
 import Toast from '../../components/common/Toast.jsx';
 import DashboardPage from './ResilientDashboardPage.jsx';
 
-const paths = { Overview: '/dashboard', People: '/employees', Attendance: '/attendance', 'Time off': '/leaves', Payroll: '/payroll', Departments: '/departments', Settings: '/settings' };
+const paths = { Overview: '/dashboard', People: '/employees', Attendance: '/attendance', 'Time off': '/leaves', Payroll: '/payroll', Departments: '/departments', Notifications: '/notifications', Settings: '/settings' };
 
 export default function DashboardWorkspacePage({ user, onExit }) {
   const navigate = useNavigate(); const [mobileOpen, setMobileOpen] = useState(false); const [message, setMessage] = useState(''); const role = user?.user?.role || 'admin';

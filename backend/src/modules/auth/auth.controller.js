@@ -7,11 +7,11 @@ function publicUser(user) {
 }
 
 function setRefreshCookie(res, refreshToken) {
-  res.cookie(env.REFRESH_COOKIE_NAME, refreshToken, { httpOnly: true, secure: env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000, path: `${env.API_PREFIX}/auth` });
+  res.cookie(env.REFRESH_COOKIE_NAME, refreshToken, { httpOnly: true, secure: env.NODE_ENV === 'production', sameSite: 'strict', maxAge: 7 * 24 * 60 * 60 * 1000, path: `${env.API_PREFIX}/auth` });
 }
 
 function clearRefreshCookie(res) {
-  res.clearCookie(env.REFRESH_COOKIE_NAME, { httpOnly: true, secure: env.NODE_ENV === 'production', sameSite: 'lax', path: `${env.API_PREFIX}/auth` });
+  res.clearCookie(env.REFRESH_COOKIE_NAME, { httpOnly: true, secure: env.NODE_ENV === 'production', sameSite: 'strict', path: `${env.API_PREFIX}/auth` });
 }
 
 export async function register(req, res, next) {

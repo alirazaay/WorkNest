@@ -14,6 +14,7 @@ export const employeeCreateSchema = z.object({
 });
 
 export const employeeUpdateSchema = employeeCreateSchema.omit({ email: true, password: true }).partial();
+export const employeeListSchema = z.object({ search: z.string().trim().max(150).optional(), departmentId: z.coerce.number().int().positive().optional(), status: z.enum(['active', 'on-leave', 'terminated']).optional(), page: z.coerce.number().int().positive().default(1), pageSize: z.coerce.number().int().positive().max(100).default(25) });
 export const employeeStatusSchema = z.object({ status: z.enum(['active', 'on-leave', 'terminated']), reason: z.string().max(1000).optional() });
 export const salarySchema = z.object({ effectiveFrom: date, effectiveTo: date.nullable().optional(), baseSalary: money.default(0), houseAllowance: money.default(0), transportAllowance: money.default(0), medicalAllowance: money.default(0), taxDeduction: money.default(0), otherDeductions: money.default(0) });
 export const documentTypeSchema = z.enum(['cnic', 'contract', 'resume', 'other']);

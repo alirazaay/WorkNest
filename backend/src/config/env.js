@@ -48,6 +48,12 @@ if (!parsed.success) {
   process.exit(1);
 }
 
+const placeholderSecrets = ['replace-with-a-long-random-access-secret', 'replace-with-a-long-random-refresh-secret', 'development-access-secret-change-me-32chars', 'development-refresh-secret-change-me-32chars'];
+if (placeholderSecrets.includes(parsed.data.JWT_ACCESS_SECRET) || placeholderSecrets.includes(parsed.data.JWT_REFRESH_SECRET)) {
+  if (parsed.data.NODE_ENV === 'production') throw new Error('JWT secrets must be replaced with cryptographically random values before production startup');
+  console.warn('JWT secrets are using development placeholders; replace them before sharing or deploying this environment.');
+}
+
 export const env = {
   ...parsed.data,
   DB_LOG_SQL: parsed.data.DB_LOG_SQL === 'true',

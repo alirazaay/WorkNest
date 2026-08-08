@@ -80,7 +80,8 @@ export async function createLeaveRequest(auth, input) {
     const managers = await User.findAll({ where: { tenantId: auth.tenantId, role: { [Op.in]: ['admin', 'manager'] }, status: 'active' }, attributes: ['id', 'email'], transaction });
     await Promise.all(managers.map((manager) => createNotification({ tenantId: auth.tenantId, userId: manager.id, type: 'leave_requested', title: 'New leave request', message: `${employee.user?.name || 'An employee'} requested ${totalDays} day(s) of leave`, entityType: 'leave_request', entityId: created.id, transaction })));
   });
-  await sendLeaveRequestEmail({ tenantId: auth.tenantId, employeeEmail: employee.user?.email });
+  const reviewers = await User.findAll({ where: { tenantId: auth.tenantId, role: { [Op.in]: ['admin', 'manager'] }, status: 'active' }, attributes: ['email'] });
+  await Promise.all(reviewers.filter((reviewer) => reviewer.email).map((reviewer) => sendLeaveRequestEmail({ tenantId: auth.tenantId, employeeEmail: reviewer.email })));
   return getLeaveRequest(auth, created.id);
 }
 

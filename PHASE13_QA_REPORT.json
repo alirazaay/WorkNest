@@ -1,0 +1,10 @@
+{
+    "generatedAt":  "2026-08-08T10:19:25.9821554Z",
+    "results":  {
+                    "backendSyntax":  "passed",
+                    "backendTests":  "blocked_or_failed: run output contains environment/runtime failure",
+                    "frontendBuild":  "blocked_or_failed: run output contains environment/runtime failure",
+                    "liveChecks":  "not_run: pass -Live after services are running"
+                },
+    "note":  "Full workflow tests require MySQL and running API services."
+}

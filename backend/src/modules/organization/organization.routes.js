@@ -6,7 +6,7 @@ import { env } from '../../config/env.js';
 import { authenticate } from '../../middleware/authenticate.js';
 import { authorize } from '../../middleware/authorize.js';
 import { validate } from '../../middleware/validate.js';
-import { departmentCreateSchema, departmentUpdateSchema, documentUploadSchema, employeeCreateSchema, employeeStatusSchema, employeeUpdateSchema, salarySchema } from './organization.schemas.js';
+import { departmentCreateSchema, departmentUpdateSchema, documentUploadSchema, employeeCreateSchema, employeeListSchema, employeeStatusSchema, employeeUpdateSchema, salarySchema } from './organization.schemas.js';
 import { departmentsCreate, departmentsDelete, departmentsList, departmentsUpdate, documentCreate, documentsList, employeesCreate, employeesDelete, employeesGet, employeesList, employeesStatus, employeesUpdate, salaryCreate } from './organization.controller.js';
 
 const uploadRoot = path.resolve(env.FILE_STORAGE_ROOT);
@@ -25,7 +25,7 @@ router.post('/departments', authorize('admin'), validate(departmentCreateSchema)
 router.patch('/departments/:id', authorize('admin'), validate(departmentUpdateSchema), departmentsUpdate);
 router.delete('/departments/:id', authorize('admin'), departmentsDelete);
 
-router.get('/employees', authorize('admin', 'manager'), employeesList);
+router.get('/employees', authorize('admin', 'manager'), validate(employeeListSchema, 'query'), employeesList);
 router.get('/employees/:id', authorize('admin', 'manager'), employeesGet);
 router.post('/employees', authorize('admin'), validate(employeeCreateSchema), employeesCreate);
 router.patch('/employees/:id', authorize('admin'), validate(employeeUpdateSchema), employeesUpdate);

@@ -13,7 +13,7 @@ import ErrorState from '../../components/common/ErrorState.jsx';
 import Toast from '../../components/common/Toast.jsx';
 import { cleanParams } from '../../utils/cleanParams.js';
 
-const paths = { Overview: '/dashboard', People: '/employees', Attendance: '/attendance', 'Time off': '/leaves', Payroll: '/payroll', Departments: '/departments', Settings: '/settings' };
+const paths = { Overview: '/dashboard', People: '/employees', Attendance: '/attendance', 'Time off': '/leaves', Payroll: '/payroll', Departments: '/departments', Notifications: '/notifications', Settings: '/settings' };
 const money = value => `PKR ${Number(value || 0).toLocaleString('en-PK', { minimumFractionDigits: 2 })}`;
 const currentPeriod = () => { const date = new Date(); return { month: date.getMonth() + 1, year: date.getFullYear() }; };
 

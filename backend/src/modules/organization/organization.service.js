@@ -39,7 +39,7 @@ async function assertPlanCapacity(tenantId, transaction) {
 }
 
 export async function listDepartments(tenantId) {
-  return Department.findAll({ where: { tenantId }, include: [{ model: Employee, as: 'head', attributes: ['id', 'employeeCode'], include: [{ model: User, as: 'user', attributes: ['name'] }] }], order: [['name', 'ASC']] });
+  return Department.findAll({ where: { tenantId }, include: [{ model: Employee, as: 'head', attributes: ['id', 'employeeCode'], include: [{ model: User, as: 'user', attributes: ['name'] }] }, { model: Employee, as: 'employees', attributes: ['id'], where: { employmentStatus: { [Op.ne]: 'terminated' } }, required: false }], order: [['name', 'ASC']] });
 }
 
 export async function createDepartment(tenantId, input) {
@@ -78,7 +78,6 @@ export async function listEmployees(auth, query) {
   const where = { tenantId: auth.tenantId, ...scope };
   if (query.departmentId) where.departmentId = Number(query.departmentId);
   if (query.status) where.employmentStatus = query.status;
-  if (query.search) where[Op.or] = [{ employeeCode: { [Op.like]: `%${query.search}%` } }];
   if (query.search) where[Op.or] = [{ employeeCode: { [Op.like]: `%${query.search}%` } }, { '$user.name$': { [Op.like]: `%${query.search}%` } }];
   const result = await Employee.findAndCountAll({ where, include: [{ ...employeeInclude[0], required: false }, employeeInclude[1]], order: [['id', 'DESC']], limit: pageSize, offset: (page - 1) * pageSize, distinct: true });
   return { items: result.rows.map(serializeEmployee), pagination: { page, pageSize, total: result.count, totalPages: Math.ceil(result.count / pageSize) } };

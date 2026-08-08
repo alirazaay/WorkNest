@@ -19,25 +19,25 @@
     "test": "node --test"
   },
   "dependencies": {
-    "bcryptjs": "latest",
-    "cookie-parser": "latest",
-    "compression": "latest",
-    "cors": "latest",
-    "dotenv": "latest",
-    "express": "latest",
-    "helmet": "latest",
-    "mysql2": "latest",
-    "nodemailer": "latest",
-    "pino": "latest",
-    "pino-http": "latest",
-    "pdfkit": "latest",
-    "jsonwebtoken": "latest",
-    "multer": "latest",
-    "sequelize": "latest",
-    "express-rate-limit": "latest",
-    "zod": "latest"
+    "bcryptjs": "3.0.2",
+    "cookie-parser": "1.4.7",
+    "compression": "1.8.1",
+    "cors": "2.8.5",
+    "dotenv": "17.2.2",
+    "express": "5.2.1",
+    "helmet": "8.1.0",
+    "mysql2": "3.23.2",
+    "nodemailer": "7.0.6",
+    "pino": "10.1.0",
+    "pino-http": "11.0.0",
+    "pdfkit": "0.17.2",
+    "jsonwebtoken": "9.0.2",
+    "multer": "2.0.2",
+    "sequelize": "6.37.8",
+    "express-rate-limit": "8.2.1",
+    "zod": "4.4.3"
   },
   "devDependencies": {
-    "sequelize-cli": "latest"
+    "sequelize-cli": "6.6.3"
   }
 }

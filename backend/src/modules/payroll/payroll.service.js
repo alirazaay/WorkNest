@@ -64,7 +64,7 @@ export async function generatePayroll(auth, { month, year }) {
 
 export async function listPayrollRuns(auth, query) {
   const where = { tenantId: auth.tenantId }; if (query.month) where.month = query.month; if (query.year) where.year = query.year; if (query.status) where.status = query.status;
-  const page = Math.max(1, Number(query.page || 1)); const pageSize = Math.min(100, Math.max(1, Number(query.pageSize || 25))); const result = await PayrollRun.findAndCountAll({ where, include: [{ model: User, as: 'generator', attributes: ['id', 'name'] }], order: [['year', 'DESC'], ['month', 'DESC']], limit: pageSize, offset: (page - 1) * pageSize });
+  const page = Math.max(1, Number(query.page || 1)); const pageSize = Math.min(100, Math.max(1, Number(query.pageSize || 25))); const result = await PayrollRun.findAndCountAll({ where, include: [{ model: PayrollItem, as: 'items', include: [activeEmployeeInclude()] }, { model: User, as: 'generator', attributes: ['id', 'name'] }], order: [['year', 'DESC'], ['month', 'DESC']], limit: pageSize, offset: (page - 1) * pageSize, distinct: true });
   return { items: result.rows, pagination: { page, pageSize, total: result.count, totalPages: Math.ceil(result.count / pageSize) } };
 }
 

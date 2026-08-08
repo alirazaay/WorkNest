@@ -9,16 +9,14 @@
     "backend:install": "npm --prefix backend install",
     "backend:test": "npm --prefix backend test"
   },
-  "devDependencies": {
-    "@vitejs/plugin-react": "latest",
-    "lucide-react": "latest",
-    "react": "latest",
-    "react-dom": "latest",
-    "vite": "latest"
-  },
   "dependencies": {
-    "axios": "latest",
-    "react-router-dom": "^7.18.2",
-    "recharts": "^3.10.1"
+    "@vitejs/plugin-react": "6.0.5",
+    "axios": "1.19.0",
+    "lucide-react": "1.28.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-router-dom": "7.18.2",
+    "recharts": "3.10.1",
+    "vite": "8.2.0"
   }
 }

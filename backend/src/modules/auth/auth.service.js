@@ -37,7 +37,7 @@ export async function registerCompany(input, req) {
   return sequelize.transaction(async (transaction) => {
     const existing = await User.findOne({ where: { email: input.adminEmail }, transaction });
     if (existing) throw new AppError('Unable to create workspace with those details', 409, 'EMAIL_IN_USE');
-    const tenant = await Tenant.create({ companyName: input.companyName, slug: await uniqueSlug(input.companyName, transaction), industry: input.industry }, { transaction });
+    const tenant = await Tenant.create({ companyName: input.companyName, slug: await uniqueSlug(input.companyName, transaction), industry: input.industry, companySize: input.companySize }, { transaction });
     await TenantSetting.create({ tenantId: tenant.id }, { transaction });
     await LeaveType.bulkCreate([
       { tenantId: tenant.id, name: 'Annual Leave', code: 'annual', isPaid: true, annualAllowance: 20, requiresApproval: true, isActive: true },

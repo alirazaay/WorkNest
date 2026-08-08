@@ -13,6 +13,6 @@ export async function requestApprove(req, res, next) { try { send(res, await app
 export async function requestReject(req, res, next) { try { send(res, await rejectLeave(req.auth, Number(req.params.id), req.validated.body.comment)); } catch (error) { next(error); } }
 export async function requestCancel(req, res, next) { try { send(res, await cancelLeave(req.auth, Number(req.params.id))); } catch (error) { next(error); } }
 export async function calendar(req, res, next) { try { send(res, await leaveCalendar(req.auth, req.validated.query)); } catch (error) { next(error); } }
-export async function notificationsList(req, res, next) { try { send(res, await listNotifications(req.auth, req.query)); } catch (error) { next(error); } }
+export async function notificationsList(req, res, next) { try { send(res, await listNotifications(req.auth, req.validated?.query || {})); } catch (error) { next(error); } }
 export async function notificationRead(req, res, next) { try { send(res, await markNotificationRead(req.auth, Number(req.params.id))); } catch (error) { next(error); } }
 export async function notificationsReadAll(req, res, next) { try { await markAllNotificationsRead(req.auth); res.status(204).send(); } catch (error) { next(error); } }
