@@ -1,37 +1,36 @@
-# WorkNest
-## WorkNest
+# WorkNest — SaaS HR Management Platform
 
-WorkNest is a React frontend with a separate Express backend.
+*"One platform. Every team. Total HR control."*
 
-### Frontend
+WorkNest is a cloud-based, multi-tenant Software-as-a-Service (SaaS) Human Resource Management System (HRMS) built with React (Vite) on the frontend and Node.js/Express on the backend. It allows multiple companies to independently manage their entire workforce — from hiring and onboarding to attendance, leave approvals, payroll generation, and analytics — all within a single shared platform while keeping each company's data fully isolated.
 
-```powershell
-npm install
-npm run dev
-```
+## Project Status
+**All phases and modules defined in the `WorkNest_Project_Proposal.md` have been successfully implemented.**
+The system fully supports the multi-tenancy model and role-based access control (Super Admin, Company Admin, Manager, and Employee).
 
-### Backend — Phase 1
+### Implemented Modules:
+1. **Authentication & Onboarding:** Complete with JWT and role-based protection.
+2. **Dashboard:** Role-specific KPIs, charts, and activity feeds.
+3. **Department Management:** Full CRUD operations for company departments.
+4. **Employee Management:** Directory, profiles, status tracking.
+5. **Attendance Management:** Clock in/out widget, monthly heatmap, attendance logs.
+6. **Leave Management:** Leave requests, balance tracking, approval pipelines.
+7. **Payroll Management:** Salary structure, monthly payroll generation, payslips.
+8. **Notifications:** In-app notification bell and alerts.
+9. **Company Settings:** Company profile, work hours, subscription management.
+10. **Super Admin Panel:** Oversee all tenants and platform statistics.
 
-```powershell
-cd backend
-Copy-Item .env.example .env
-# Set DB credentials in backend/.env
-npm install
-npm run dev
-```
+## Getting Started
 
-Available backend endpoints:
+WorkNest comprises a React frontend and a separate Express backend.
 
-- `GET http://localhost:5000/`
-- `GET http://localhost:5000/api/v1/health`
+### Prerequisites
+- Node.js (v18+)
+- MySQL (or Docker to run the database)
 
-The health endpoint checks MySQL connectivity and returns `503` when the database is unavailable. Database schema migrations will be added in the next phase.
+### Complete Local Stack (Docker)
 
-### Phase 10 local integration
-
-Frontend API configuration is available in [.env.example](D:/WorkNest/.env.example), with the default API base URL set to `http://localhost:5000/api/v1`.
-
-For a complete local stack with MySQL:
+For a complete local stack with MySQL via Docker Compose:
 
 ```powershell
 docker compose up --build -d
@@ -42,11 +41,40 @@ cd ..
 npm run dev
 ```
 
-Demo admin credentials:
+### Manual Setup
+
+#### Backend Setup
+
+```powershell
+cd backend
+Copy-Item .env.example .env
+# Set DB credentials in backend/.env
+npm install
+npm run dev
+```
+
+Available backend endpoints:
+- `GET http://localhost:5000/`
+- `GET http://localhost:5000/api/v1/health`
+
+#### Frontend Setup
+
+Frontend API configuration is available in `.env.example`, with the default API base URL set to `http://localhost:5000/api/v1`.
+
+```powershell
+npm install
+npm run dev
+```
+
+### Demo Credentials
+
+You can use the following credentials to access the seeded demo company:
 
 ```text
-admin@acme-demo.local
-ChangeMe123!
+Email: admin@acme-demo.local
+Password: ChangeMe123!
 ```
+
+## Testing
 
 Run the API smoke checks with `backend/scripts/smoke-test.ps1` after the backend is available.
