@@ -13,6 +13,7 @@ import './styles/modal-overrides.css';
 import './styles/public-auth.css';
 import './styles/shell.css';
 import './styles/dashboard.css';
+import './styles/dashboard-overrides.css';
 import './styles/departments.css';
 import './styles/employees.css';
 import './styles/attendance.css';
