@@ -12,6 +12,7 @@ import './styles/foundation.css';
 import './styles/modal-overrides.css';
 import './styles/public-auth.css';
 import './styles/login-reference.css';
+import './styles/login-viewport-fix.css';
 import './styles/shell.css';
 import './styles/dashboard.css';
 import './styles/dashboard-overrides.css';
