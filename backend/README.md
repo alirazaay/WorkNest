@@ -73,7 +73,7 @@ Employee document uploads currently use local storage under `backend/uploads/doc
 - `GET /api/v1/leaves/notifications`
 - `PATCH /api/v1/leaves/notifications/:id/read`
 
-## Phase 6 payroll endpoints
+## Payroll subsystem
 
 - `POST /api/v1/payroll/generate`
 - `GET /api/v1/payroll/runs`
@@ -84,8 +84,26 @@ Employee document uploads currently use local storage under `backend/uploads/doc
 - `GET /api/v1/payroll/items/:id/payslip`
 - `GET /api/v1/payroll/items/:id/pdf`
 - `GET /api/v1/payroll/export/csv?runId=:id`
+- `GET /api/v1/payroll/salary-structures[/:employeeId]`
+- `POST /api/v1/payroll/salary-structures/:employeeId/change`
+- `GET|POST /api/v1/payroll/components`
+- `PATCH /api/v1/payroll/components/:id`
+- `POST /api/v1/payroll/components/:componentId/employees/:employeeId`
+- `GET|POST /api/v1/payroll/bonuses`
+- `POST /api/v1/payroll/bonuses/:id/approve|reject`
+- `GET|POST /api/v1/payroll/deductions`
+- `PATCH /api/v1/payroll/deductions/:id`
+- `GET|POST /api/v1/payroll/loans`
+- `GET /api/v1/payroll/loans/:id/installments`
+- `POST /api/v1/payroll/loans/:id/approve|reject`
+- `GET|POST /api/v1/payroll/bank-accounts/:employeeId`
+- `PATCH /api/v1/payroll/bank-accounts/:id`
+- `GET /api/v1/payroll/runs/:id/review`
+- `GET /api/v1/payroll/runs/:id/export/bank`
 
-Payroll is generated once per tenant/month/year. After approval and locking, the run and its item snapshots are immutable through the Phase 6 API. PDF payslips are generated with PDFKit.
+Payroll is generated once per tenant/month/year. Salary structures are effective-dated and changed by closing the previous row before creating a new row. Payroll items snapshot employee, salary, and bank information; line items retain their source type and source ID. Approved bonuses and loan installments are marked processed/deducted transactionally to prevent duplicate inclusion. Bank exports are restricted to approved or locked runs. Locked payroll remains immutable through normal payroll actions; corrections should use a future adjustment workflow.
+
+The subsystem migration is `20260808000200-add-payroll-subsystem.js`. Apply it with `npm run db:migrate`; do not use `sequelize.sync({ alter: true })`. Financial values are stored in MySQL DECIMAL columns. The generation service uses integer-cents arithmetic for its calculations and the server remains authoritative for all calculated totals.
 
 ## Phase 7 dashboard endpoints
 

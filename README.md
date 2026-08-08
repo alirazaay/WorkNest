@@ -15,7 +15,7 @@ The system fully supports the multi-tenancy model and role-based access control 
 4. **Employee Management:** Directory, profiles, status tracking.
 5. **Attendance Management:** Clock in/out widget, monthly heatmap, attendance logs.
 6. **Leave Management:** Leave requests, balance tracking, approval pipelines.
-7. **Payroll Management:** Salary structure, monthly payroll generation, payslips.
+7. **Payroll Management:** Effective-dated salary history, configurable salary components, bonuses, deductions, loans/installments, bank accounts, monthly payroll generation, review, approval, locking, payslips, and bank CSV export.
 8. **Notifications:** In-app notification bell and alerts.
 9. **Company Settings:** Company profile, work hours, subscription management.
 10. **Super Admin Panel:** Oversee all tenants and platform statistics.
@@ -87,6 +87,7 @@ Run the API smoke checks with `backend/scripts/smoke-test.ps1` after the backend
 - The Overview dashboard has responsive KPI cards, charts, quick actions, widget-level retry states, empty states, and dynamic greetings.
 - Notifications are served from `GET /api/v1/notifications`; notification ordering uses the database `created_at` column.
 - The backend uses validated request data through `req.validated`, tenant-scoped queries, JWT access tokens, rotated HTTP-only refresh cookies, and environment-specific authentication rate limits.
+- Payroll-owned records are tenant-scoped and use additive Sequelize migrations. Payroll generation snapshots employee/salary/payment data, records source-linked earnings and deductions, prevents duplicate bonus/loan processing, and keeps locked runs immutable through normal API actions.
 
 ### Verification Commands
 
@@ -100,6 +101,9 @@ node scripts/verify-database.js
 
 # Backend syntax check
 Get-ChildItem src -Recurse -Filter *.js | ForEach-Object { node --check $_.FullName }
+
+# Payroll migration
+npm run db:migrate
 ```
 
 The local development servers use port `5173` for the frontend and port `5000` for the API. If another project is already using either port, stop that process before starting WorkNest to avoid serving the wrong application.

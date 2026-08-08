@@ -3,5 +3,5 @@ import { sequelize } from '../../config/database.js';
 
 export class PayrollItemLine extends Model {}
 PayrollItemLine.init({
-  id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true }, tenantId: { type: DataTypes.INTEGER, allowNull: false, field: 'tenant_id' }, payrollItemId: { type: DataTypes.INTEGER, allowNull: false, field: 'payroll_item_id' }, lineType: { type: DataTypes.STRING(20), allowNull: false, field: 'line_type' }, label: { type: DataTypes.STRING(150), allowNull: false }, amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false }
+  id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true }, tenantId: { type: DataTypes.INTEGER, allowNull: false, field: 'tenant_id' }, payrollItemId: { type: DataTypes.INTEGER, allowNull: false, field: 'payroll_item_id' }, lineType: { type: DataTypes.STRING(20), allowNull: false, field: 'line_type' }, label: { type: DataTypes.STRING(150), allowNull: false }, amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false }, componentCode: { type: DataTypes.STRING(60), field: 'component_code' }, sourceType: { type: DataTypes.STRING(50), field: 'source_type' }, sourceId: { type: DataTypes.INTEGER, field: 'source_id' }, metadata: DataTypes.JSON
 }, { sequelize, modelName: 'PayrollItemLine', tableName: 'payroll_item_lines' });

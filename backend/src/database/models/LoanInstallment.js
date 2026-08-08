@@ -1,0 +1,4 @@
+import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../../config/database.js';
+export class LoanInstallment extends Model {}
+LoanInstallment.init({ id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true }, tenantId: { type: DataTypes.INTEGER, allowNull: false, field: 'tenant_id' }, loanId: { type: DataTypes.INTEGER, allowNull: false, field: 'loan_id' }, payrollItemId: { type: DataTypes.INTEGER, field: 'payroll_item_id' }, installmentMonth: { type: DataTypes.TINYINT, allowNull: false, field: 'installment_month' }, installmentYear: { type: DataTypes.SMALLINT, allowNull: false, field: 'installment_year' }, amount: { type: DataTypes.DECIMAL(14, 2), allowNull: false }, status: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'pending' }, deductedAt: { type: DataTypes.DATE, field: 'deducted_at' } }, { sequelize, modelName: 'LoanInstallment', tableName: 'loan_installments' });

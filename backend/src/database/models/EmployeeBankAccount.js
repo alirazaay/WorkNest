@@ -1,0 +1,4 @@
+import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../../config/database.js';
+export class EmployeeBankAccount extends Model {}
+EmployeeBankAccount.init({ id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true }, tenantId: { type: DataTypes.INTEGER, allowNull: false, field: 'tenant_id' }, employeeId: { type: DataTypes.INTEGER, allowNull: false, field: 'employee_id' }, bankName: { type: DataTypes.STRING(150), allowNull: false, field: 'bank_name' }, accountTitle: { type: DataTypes.STRING(150), allowNull: false, field: 'account_title' }, accountNumber: { type: DataTypes.STRING(100), field: 'account_number' }, iban: DataTypes.STRING(100), branchCode: { type: DataTypes.STRING(50), field: 'branch_code' }, isPrimary: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false, field: 'is_primary' } }, { sequelize, modelName: 'EmployeeBankAccount', tableName: 'employee_bank_accounts' });

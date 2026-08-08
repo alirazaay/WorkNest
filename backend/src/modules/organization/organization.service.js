@@ -122,8 +122,11 @@ export async function deleteEmployee(auth, id) { return updateEmployeeStatus(aut
 
 export async function addSalaryStructure(auth, employeeId, input) {
   const employee = await Employee.findOne({ where: { id: employeeId, tenantId: auth.tenantId } }); if (!employee) throw new AppError('Employee not found', 404, 'EMPLOYEE_NOT_FOUND');
-  await EmployeeSalaryStructure.update({ effectiveTo: new Date(new Date(input.effectiveFrom).getTime() - 86_400_000) }, { where: { tenantId: auth.tenantId, employeeId, effectiveTo: null } });
-  return EmployeeSalaryStructure.create({ tenantId: auth.tenantId, employeeId, ...input });
+  return sequelize.transaction(async (transaction) => {
+    const current = await EmployeeSalaryStructure.findOne({ where: { tenantId: auth.tenantId, employeeId, effectiveFrom: { [Op.lt]: input.effectiveFrom }, [Op.or]: [{ effectiveTo: null }, { effectiveTo: { [Op.gte]: input.effectiveFrom } }] }, order: [['effectiveFrom', 'DESC']], transaction, lock: transaction.LOCK.UPDATE });
+    if (current) { const end = new Date(`${input.effectiveFrom}T00:00:00Z`); end.setUTCDate(end.getUTCDate() - 1); current.effectiveTo = end.toISOString().slice(0, 10); await current.save({ transaction }); }
+    return EmployeeSalaryStructure.create({ tenantId: auth.tenantId, employeeId, ...input }, { transaction });
+  });
 }
 
 export async function addDocument(auth, employeeId, file, documentType) {

@@ -37,6 +37,7 @@ import LeavesPage from './pages/app/LeavesPage.jsx';
 import './styles/leaves.css';
 import PayrollPage from './pages/app/PayrollPage.jsx';
 import './styles/payroll.css';
+import './styles/payroll-setup.css';
 import NotificationsPage from './pages/app/NotificationsPage.jsx';
 import './styles/notifications.css';
 import SettingsPage from './pages/app/SettingsPage.jsx';
