@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import './styles.css';
 import './styles/foundation.css';
+import './styles/modal-overrides.css';
 import './styles/public-auth.css';
 import './styles/shell.css';
 import './styles/dashboard.css';

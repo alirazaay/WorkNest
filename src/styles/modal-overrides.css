@@ -1,0 +1,23 @@
+/* Keep long dialogs usable on short screens while leaving compact dialogs unchanged. */
+.modal-backdrop {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.modal {
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+@media (max-width: 620px) {
+  .modal-backdrop {
+    align-items: flex-start;
+    padding: 16px;
+  }
+
+  .modal {
+    max-height: calc(100vh - 32px);
+  }
+}
