@@ -78,3 +78,28 @@ Password: ChangeMe123!
 ## Testing
 
 Run the API smoke checks with `backend/scripts/smoke-test.ps1` after the backend is available.
+
+### Current UI and Reliability Notes
+
+- The login page uses a responsive split-screen design with email/password validation, password visibility control, rate-limit feedback, and mobile viewport handling.
+- The WorkNest favicon is available at `public/worknest-favicon.svg` and is linked from `index.html`.
+- Long forms inside shared modals use an internal scrollbar so employee, department, leave, payroll, settings, and profile forms remain usable on short screens.
+- The Overview dashboard has responsive KPI cards, charts, quick actions, widget-level retry states, empty states, and dynamic greetings.
+- Notifications are served from `GET /api/v1/notifications`; notification ordering uses the database `created_at` column.
+- The backend uses validated request data through `req.validated`, tenant-scoped queries, JWT access tokens, rotated HTTP-only refresh cookies, and environment-specific authentication rate limits.
+
+### Verification Commands
+
+```powershell
+# Frontend production build
+npm run build
+
+# Backend database verification
+cd backend
+node scripts/verify-database.js
+
+# Backend syntax check
+Get-ChildItem src -Recurse -Filter *.js | ForEach-Object { node --check $_.FullName }
+```
+
+The local development servers use port `5173` for the frontend and port `5000` for the API. If another project is already using either port, stop that process before starting WorkNest to avoid serving the wrong application.
