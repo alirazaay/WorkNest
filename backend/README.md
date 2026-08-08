@@ -26,6 +26,8 @@ Run foundation tests with `npm test`.
 
 The health endpoint intentionally checks MySQL connectivity. It returns `503` when the API is running but the database is unavailable.
 
+If a newly added route returns `Route not found`, restart the backend process listening on port `5000`; Express loads route modules at startup.
+
 ## Phase 2 auth endpoints
 
 - `POST /api/v1/auth/register-company`

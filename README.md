@@ -108,3 +108,5 @@ npm run db:migrate
 ```
 
 The local development servers use port `5173` for the frontend and port `5000` for the API. If another project is already using either port, stop that process before starting WorkNest to avoid serving the wrong application.
+
+After adding backend routes, restart the API process so its in-memory Express route registry reloads. A stale process on port `5000` can return `Route not found` even when the route exists in source code.
