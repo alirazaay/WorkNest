@@ -24,5 +24,10 @@ export function getErrorMessage(error, fallback = 'Something went wrong. Please 
     const retryAfter = Number(error.response.headers?.['retry-after']);
     return retryAfter ? `Too many requests. Please try again in ${retryAfter} seconds.` : 'Too many requests. Please try again later.';
   }
+  const fields = error?.response?.data?.error?.fields;
+  if (fields && typeof fields === 'object') {
+    const message = Object.values(fields).flat().filter(Boolean).join(' ');
+    if (message) return message;
+  }
   return error?.response?.data?.error?.message || error?.response?.data?.message || (error?.request ? 'Unable to reach the server. Check that the backend is running.' : fallback);
 }
