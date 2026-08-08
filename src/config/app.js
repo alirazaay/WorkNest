@@ -20,5 +20,9 @@ export const appConfig = {
 };
 
 export function getErrorMessage(error, fallback = 'Something went wrong. Please try again.') {
+  if (error?.response?.status === 429) {
+    const retryAfter = Number(error.response.headers?.['retry-after']);
+    return retryAfter ? `Too many requests. Please try again in ${retryAfter} seconds.` : 'Too many requests. Please try again later.';
+  }
   return error?.response?.data?.error?.message || error?.response?.data?.message || (error?.request ? 'Unable to reach the server. Check that the backend is running.' : fallback);
 }
