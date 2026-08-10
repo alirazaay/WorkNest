@@ -221,3 +221,12 @@ npm run db:restore -- -BackupFile ./backups/worknest-YYYYMMDD-HHMMSS.sql -Confir
 - `GET /api/v1/performance/employees/:employeeId/goals`
 
 Goals are tenant-scoped and stored in `performance_goals`. Managers are restricted to employees in their department, employees can only read their own goals, and administrators can manage tenant goals. Goal progress is validated from 0 to 100, completed goals are normalized to 100% progress, and goals in completed or archived cycles are immutable. Goal creation and updates are recorded in the audit log.
+
+## FairRank Phase 5: performance evidence
+
+- `GET /api/v1/performance/evidence`
+- `POST /api/v1/performance/evidence` (multipart field `file` is optional)
+- `PATCH /api/v1/performance/evidence/:id/verify`
+- `GET /api/v1/performance/employees/:employeeId/evidence`
+
+Evidence is stored in `performance_evidence`, is linked to the authenticated tenant, cycle, employee, optional goal, and optional criterion, and supports pending/verified/rejected review. Uploads accept the existing configured PDF/JPEG/PNG file types and size limit. Raw filesystem storage keys are never returned to clients; responses expose attachment availability and safe file metadata only. Employees can submit and view only their own evidence, managers are limited to their department, and administrators can manage tenant evidence.

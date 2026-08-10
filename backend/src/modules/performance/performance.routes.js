@@ -1,11 +1,18 @@
+import { mkdirSync } from 'node:fs';
+import path from 'node:path';
+import multer from 'multer';
 import { Router } from 'express';
+import { env } from '../../config/env.js';
 import { authenticate } from '../../middleware/authenticate.js';
 import { authorize } from '../../middleware/authorize.js';
 import { validate } from '../../middleware/validate.js';
-import { criteriaList, criterionCreate, criterionUpdate, cycleCreate, cycleGet, cyclesList, cycleUpdate, employeeGoalsList, goalCreate, goalGet, goalsList, goalUpdate, templateCreate, templateCriterionAdd, templateCriterionRemove, templateCriterionUpdate, templateGet, templatesList, templateUpdate } from './performance.controller.js';
-import { performanceCriterionCreateSchema, performanceCriterionUpdateSchema, performanceCycleCreateSchema, performanceCycleQuerySchema, performanceCycleUpdateSchema, performanceGoalCreateSchema, performanceGoalQuerySchema, performanceGoalUpdateSchema, performanceTemplateCreateSchema, performanceTemplateUpdateSchema, templateCriterionSchema, templateCriterionUpdateSchema } from './performance.schemas.js';
+import { criteriaList, criterionCreate, criterionUpdate, cycleCreate, cycleGet, cyclesList, cycleUpdate, employeeEvidenceList, employeeGoalsList, evidenceCreate, evidenceList, evidenceVerify, goalCreate, goalGet, goalsList, goalUpdate, templateCreate, templateCriterionAdd, templateCriterionRemove, templateCriterionUpdate, templateGet, templatesList, templateUpdate } from './performance.controller.js';
+import { performanceCriterionCreateSchema, performanceCriterionUpdateSchema, performanceCycleCreateSchema, performanceCycleQuerySchema, performanceCycleUpdateSchema, performanceEvidenceCreateSchema, performanceEvidenceQuerySchema, performanceEvidenceVerifySchema, performanceGoalCreateSchema, performanceGoalQuerySchema, performanceGoalUpdateSchema, performanceTemplateCreateSchema, performanceTemplateUpdateSchema, templateCriterionSchema, templateCriterionUpdateSchema } from './performance.schemas.js';
 
 const router = Router();
+const evidenceUploadRoot = path.resolve(env.FILE_STORAGE_ROOT, 'performance-evidence');
+mkdirSync(evidenceUploadRoot, { recursive: true });
+const evidenceUpload = multer({ storage: multer.diskStorage({ destination: evidenceUploadRoot, filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_')}`) }), limits: { fileSize: env.FILE_MAX_BYTES }, fileFilter: (req, file, cb) => cb(null, ['application/pdf', 'image/jpeg', 'image/png'].includes(file.mimetype)) });
 router.use(authenticate);
 router.get('/cycles', authorize('admin', 'manager', 'employee'), validate(performanceCycleQuerySchema, 'query'), cyclesList);
 router.post('/cycles', authorize('admin'), validate(performanceCycleCreateSchema), cycleCreate);
@@ -26,4 +33,8 @@ router.get('/employees/:employeeId/goals', authorize('admin', 'manager', 'employ
 router.get('/goals/:id', authorize('admin', 'manager', 'employee'), goalGet);
 router.post('/goals', authorize('admin', 'manager'), validate(performanceGoalCreateSchema), goalCreate);
 router.patch('/goals/:id', authorize('admin', 'manager'), validate(performanceGoalUpdateSchema), goalUpdate);
+router.get('/evidence', authorize('admin', 'manager', 'employee'), validate(performanceEvidenceQuerySchema, 'query'), evidenceList);
+router.get('/employees/:employeeId/evidence', authorize('admin', 'manager', 'employee'), validate(performanceEvidenceQuerySchema, 'query'), employeeEvidenceList);
+router.post('/evidence', authorize('admin', 'manager', 'employee'), evidenceUpload.single('file'), validate(performanceEvidenceCreateSchema, 'body'), evidenceCreate);
+router.patch('/evidence/:id/verify', authorize('admin', 'manager'), validate(performanceEvidenceVerifySchema), evidenceVerify);
 export default router;
