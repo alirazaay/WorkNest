@@ -167,6 +167,10 @@ Cycle finalization, review submission, evidence verification, and promotion-read
 
 The FairRank test suite now explicitly covers score weights, rating-band assignment, equivalence grouping, promotion/performance separation, review and override validation, employee release policy, finalized-cycle immutability guards, tenant scoping, and manager department boundaries. The focused suite can be run with `node --test backend/test/performance-*.test.js`.
 
+## FairRank Phase 28 deterministic MVP boundary
+
+FairRank uses deterministic backend algorithms for authoritative scores, weighting, equivalence, promotion readiness, signatures, and fairness flags. AI is not connected to decision-making, and a regression guard prevents AI or random dependencies from entering those modules. Any future AI feature must produce clearly editable suggestions only and cannot alter scores, ratings, recommendations, or finalized appraisal history.
+
 After adding backend routes, restart the API process so its in-memory Express route registry reloads. A stale process on port `5000` can return `Route not found` even when the route exists in source code.
 
 If `npm run dev` reports `EADDRINUSE`, find and stop the listener before starting the watcher:
