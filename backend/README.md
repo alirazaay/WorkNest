@@ -263,3 +263,13 @@ Rating bands are tenant-configurable and stored in `performance_rating_bands`. A
 - `POST /api/v1/performance/cycles/:cycleId/recalculate-equivalence`
 
 The default equivalence threshold is 1 performance point and can be configured per tenant. Recalculation groups employees only within the same rating band when the score spread from the group's highest score is within the threshold. Groups contain member score snapshots and the threshold used, and managers only see groups entirely within their department. No employee score or rating is changed by equivalence grouping.
+
+## FairRank Phase 10: performance signatures
+
+- `GET /api/v1/performance/signature-rules`
+- `POST /api/v1/performance/signature-rules`
+- `PATCH /api/v1/performance/signature-rules/:id`
+- `GET /api/v1/performance/employees/:employeeId/signature?cycleId=:cycleId`
+- `POST /api/v1/performance/cycles/:cycleId/generate-signatures`
+
+Signature rules map configurable labels to criterion categories, such as Execution Leader or Innovation Contributor. Generation reads immutable score-snapshot calculation lines, selects the highest-scoring matching rule, stores the strongest factors, and preserves the source snapshot. Existing signatures are not overwritten; managers are restricted to their department and employees to their own signature.

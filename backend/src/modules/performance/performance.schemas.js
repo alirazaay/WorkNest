@@ -43,3 +43,6 @@ export const performanceRatingBandCreateSchema = performanceRatingBandFields.sup
 export const performanceRatingBandUpdateSchema = performanceRatingBandFields.partial().extend({ isActive: z.boolean().optional() });
 export const performanceEquivalenceSettingsSchema = z.object({ threshold: z.coerce.number().min(0).max(10), strictRanking: z.boolean().optional() });
 export const performanceEquivalenceQuerySchema = z.object({ cycleId: z.coerce.number().int().positive().optional() });
+export const performanceSignatureRuleCreateSchema = z.object({ name: z.string().min(2).max(100), description: z.string().max(1000).optional().nullable(), categories: z.array(z.string().min(2).max(80)).min(1).max(20), sortOrder: z.coerce.number().int().min(0).default(0) });
+export const performanceSignatureRuleUpdateSchema = performanceSignatureRuleCreateSchema.partial().extend({ isActive: z.boolean().optional() });
+export const performanceSignatureQuerySchema = z.object({ cycleId: z.coerce.number().int().positive() });

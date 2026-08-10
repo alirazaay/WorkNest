@@ -1,0 +1,14 @@
+export async function up(queryInterface, Sequelize) {
+  const { DataTypes } = Sequelize;
+  await queryInterface.createTable('performance_signature_rules', {
+    id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true }, tenant_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'tenants', key: 'id' }, onDelete: 'CASCADE' }, name: { type: DataTypes.STRING(100), allowNull: false }, description: DataTypes.TEXT, categories: { type: DataTypes.JSON, allowNull: false }, sort_order: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 }, is_active: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
+    created_at: { type: DataTypes.DATE, allowNull: false, defaultValue: Sequelize.literal('CURRENT_TIMESTAMP') }, updated_at: { type: DataTypes.DATE, allowNull: false, defaultValue: Sequelize.literal('CURRENT_TIMESTAMP') }
+  });
+  await queryInterface.addIndex('performance_signature_rules', ['tenant_id', 'is_active', 'sort_order'], { name: 'idx_performance_signature_rules_order' });
+  await queryInterface.addIndex('performance_signature_rules', ['tenant_id', 'name'], { unique: true, name: 'uq_performance_signature_rule_name' });
+  await queryInterface.createTable('performance_signatures', {
+    id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true }, tenant_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'tenants', key: 'id' }, onDelete: 'CASCADE' }, cycle_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'performance_cycles', key: 'id' }, onDelete: 'RESTRICT' }, employee_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'employees', key: 'id' }, onDelete: 'RESTRICT' }, signature_rule_id: { type: DataTypes.INTEGER, references: { model: 'performance_signature_rules', key: 'id' }, onDelete: 'SET NULL' }, signature_name: { type: DataTypes.STRING(100), allowNull: false }, strongest_factors: { type: DataTypes.JSON, allowNull: false }, signature_score: { type: DataTypes.DECIMAL(7, 3), allowNull: false }, calculation_details: { type: DataTypes.JSON, allowNull: false }, generated_by: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'users', key: 'id' }, onDelete: 'RESTRICT' }, generated_at: { type: DataTypes.DATE, allowNull: false, defaultValue: Sequelize.literal('CURRENT_TIMESTAMP') }, created_at: { type: DataTypes.DATE, allowNull: false, defaultValue: Sequelize.literal('CURRENT_TIMESTAMP') }
+  });
+  await queryInterface.addIndex('performance_signatures', ['tenant_id', 'cycle_id', 'employee_id'], { unique: true, name: 'uq_performance_signature_employee_cycle' });
+}
+export async function down(queryInterface) { await queryInterface.dropTable('performance_signatures'); await queryInterface.dropTable('performance_signature_rules'); }

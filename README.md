@@ -98,6 +98,7 @@ Run the API smoke checks with `backend/scripts/smoke-test.ps1` after the backend
 - FairRank Phase 7 adds deterministic server-side weighted score calculation and immutable employee/cycle score snapshots. Submitted manager/final reviews are selected by priority, verified evidence counts are preserved in calculation details, and existing snapshots are never overwritten. Rating-band assignment remains reserved for Phase 8.
 - FairRank Phase 8 adds tenant-configurable rating bands with overlap protection. Score generation snapshots the matching band name and ID into the calculation details, so later band configuration changes do not rewrite historical performance results.
 - FairRank Phase 9 adds configurable equivalence thresholds and persisted equivalence groups. Scores are grouped only within the same rating band when their spread is within the configured threshold; the system recognizes equivalent performance instead of generating forced rankings.
+- FairRank Phase 10 adds deterministic, tenant-configurable Performance Signatures. Signature labels are selected from criterion categories and stored with strongest factors and source snapshot details; no AI or random labeling is used.
 - Payroll also supports effective-dated tax configuration, approved adjustments for locked runs, and standard/HBL/Meezan/UBL bank-export layouts. The UI exposes payroll configuration and the backend endpoints remain authoritative for all financial values.
 
 ### Verification Commands

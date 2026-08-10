@@ -29,6 +29,8 @@ import { PerformanceRatingBand } from './PerformanceRatingBand.js';
 import { PerformanceEquivalenceSetting } from './PerformanceEquivalenceSetting.js';
 import { PerformanceEquivalenceGroup } from './PerformanceEquivalenceGroup.js';
 import { PerformanceEquivalenceMember } from './PerformanceEquivalenceMember.js';
+import { PerformanceSignatureRule } from './PerformanceSignatureRule.js';
+import { PerformanceSignature } from './PerformanceSignature.js';
 import { EmployeeDocument } from './EmployeeDocument.js';
 import { AttendanceRecord } from './AttendanceRecord.js';
 import { LeaveType } from './LeaveType.js';
@@ -63,6 +65,8 @@ Tenant.hasMany(PerformanceScoreSnapshot, { foreignKey: 'tenantId', as: 'performa
 Tenant.hasMany(PerformanceRatingBand, { foreignKey: 'tenantId', as: 'performanceRatingBands' });
 Tenant.hasOne(PerformanceEquivalenceSetting, { foreignKey: 'tenantId', as: 'performanceEquivalenceSetting' });
 Tenant.hasMany(PerformanceEquivalenceGroup, { foreignKey: 'tenantId', as: 'performanceEquivalenceGroups' });
+Tenant.hasMany(PerformanceSignatureRule, { foreignKey: 'tenantId', as: 'performanceSignatureRules' });
+Tenant.hasMany(PerformanceSignature, { foreignKey: 'tenantId', as: 'performanceSignatures' });
 User.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
 User.hasMany(UserSession, { foreignKey: 'userId', as: 'sessions' });
 User.hasMany(PasswordResetToken, { foreignKey: 'userId', as: 'passwordResetTokens' });
@@ -134,6 +138,11 @@ PerformanceEquivalenceGroup.belongsTo(PerformanceCycle, { foreignKey: 'cycleId',
 PerformanceEquivalenceGroup.hasMany(PerformanceEquivalenceMember, { foreignKey: 'groupId', as: 'members' });
 PerformanceEquivalenceMember.belongsTo(PerformanceEquivalenceGroup, { foreignKey: 'groupId', as: 'group' });
 PerformanceEquivalenceMember.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
+PerformanceSignatureRule.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
+PerformanceSignature.belongsTo(PerformanceCycle, { foreignKey: 'cycleId', as: 'cycle' });
+PerformanceSignature.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
+PerformanceSignature.belongsTo(PerformanceSignatureRule, { foreignKey: 'signatureRuleId', as: 'rule' });
+PerformanceSignature.belongsTo(User, { foreignKey: 'generatedBy', as: 'generator' });
 EmployeeDocument.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
 EmployeeDocument.belongsTo(User, { foreignKey: 'uploadedBy', as: 'uploader' });
 Employee.hasMany(AttendanceRecord, { foreignKey: 'employeeId', as: 'attendanceRecords' });
@@ -165,4 +174,4 @@ PayrollItemLine.belongsTo(PayrollItem, { foreignKey: 'payrollItemId', as: 'item'
 AuditLog.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
 AuditLog.belongsTo(User, { foreignKey: 'actorUserId', as: 'actor' });
 
-export { Tenant, TenantSetting, User, UserSession, Invitation, PasswordResetToken, Department, Employee, EmployeeSalaryStructure, SalaryComponent, EmployeeSalaryComponent, Bonus, EmployeeDeduction, EmployeeLoan, LoanInstallment, EmployeeBankAccount, EmployeeTaxConfiguration, PayrollAdjustment, PerformanceCycle, PerformanceCriterion, PerformanceTemplate, PerformanceTemplateCriterion, PerformanceGoal, PerformanceEvidence, PerformanceReview, PerformanceReviewScore, PerformanceScoreSnapshot, PerformanceRatingBand, PerformanceEquivalenceSetting, PerformanceEquivalenceGroup, PerformanceEquivalenceMember, EmployeeDocument, AttendanceRecord, LeaveType, LeaveBalance, LeaveRequest, Notification, PayrollRun, PayrollItem, PayrollItemLine, AuditLog };
+export { Tenant, TenantSetting, User, UserSession, Invitation, PasswordResetToken, Department, Employee, EmployeeSalaryStructure, SalaryComponent, EmployeeSalaryComponent, Bonus, EmployeeDeduction, EmployeeLoan, LoanInstallment, EmployeeBankAccount, EmployeeTaxConfiguration, PayrollAdjustment, PerformanceCycle, PerformanceCriterion, PerformanceTemplate, PerformanceTemplateCriterion, PerformanceGoal, PerformanceEvidence, PerformanceReview, PerformanceReviewScore, PerformanceScoreSnapshot, PerformanceRatingBand, PerformanceEquivalenceSetting, PerformanceEquivalenceGroup, PerformanceEquivalenceMember, PerformanceSignatureRule, PerformanceSignature, EmployeeDocument, AttendanceRecord, LeaveType, LeaveBalance, LeaveRequest, Notification, PayrollRun, PayrollItem, PayrollItemLine, AuditLog };

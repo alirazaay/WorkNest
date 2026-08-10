@@ -6,6 +6,7 @@ import { createReview, getReview, listReviews, submitReview } from './reviews.se
 import { calculateCycleScores, getEmployeeScore } from './score.service.js';
 import { createRatingBand, listRatingBands, updateRatingBand } from './rating-bands.service.js';
 import { getEquivalenceSettings, listEquivalenceGroups, recalculateEquivalence, updateEquivalenceSettings } from './equivalence.service.js';
+import { createSignatureRule, generateCycleSignatures, getEmployeeSignature, listSignatureRules, selectPerformanceSignature, updateSignatureRule } from './signature.service.js';
 
 const send = (res, data, status = 200) => res.status(status).json({ success: true, data });
 export async function cyclesList(req, res, next) { try { send(res, await listPerformanceCycles(req.auth, req.validated.query)); } catch (error) { next(error); } }
@@ -44,4 +45,9 @@ export async function equivalenceSettingsGet(req, res, next) { try { send(res, a
 export async function equivalenceSettingsUpdate(req, res, next) { try { send(res, await updateEquivalenceSettings(req.auth, req.validated.body)); } catch (error) { next(error); } }
 export async function equivalenceGroupsList(req, res, next) { try { send(res, await listEquivalenceGroups(req.auth, Number(req.params.cycleId))); } catch (error) { next(error); } }
 export async function equivalenceRecalculate(req, res, next) { try { send(res, await recalculateEquivalence(req.auth, Number(req.params.cycleId))); } catch (error) { next(error); } }
+export async function signatureRulesList(req, res, next) { try { send(res, await listSignatureRules(req.auth)); } catch (error) { next(error); } }
+export async function signatureRuleCreate(req, res, next) { try { send(res, await createSignatureRule(req.auth, req.validated.body), 201); } catch (error) { next(error); } }
+export async function signatureRuleUpdate(req, res, next) { try { send(res, await updateSignatureRule(req.auth, Number(req.params.id), req.validated.body)); } catch (error) { next(error); } }
+export async function employeeSignatureGet(req, res, next) { try { send(res, await getEmployeeSignature(req.auth, req.validated.query.cycleId, Number(req.params.employeeId))); } catch (error) { next(error); } }
+export async function cycleSignaturesGenerate(req, res, next) { try { send(res, await generateCycleSignatures(req.auth, Number(req.params.cycleId))); } catch (error) { next(error); } }
 import { unlink } from 'node:fs/promises';
