@@ -59,3 +59,5 @@ export const performanceRewardRejectSchema = z.object({ reason: z.string().min(5
 export const performanceCalibrationQuerySchema = z.object({ cycleId: z.coerce.number().int().positive().optional() });
 export const performanceCalibrationActionSchema = z.object({ action: z.enum(['confirm', 'request_clarification']), justification: z.string().max(3000).optional().nullable() }).superRefine((value, ctx) => { if (value.action === 'request_clarification' && !value.justification?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['justification'], message: 'Clarification requests require a reason' }); });
 export const performanceCalibrationOverrideSchema = z.object({ newScore: z.coerce.number().min(0).max(100).optional(), newRatingBand: z.string().min(2).max(100), justification: z.string().min(10).max(3000) });
+export const performanceCalibrationSettingsSchema = z.object({ blindReviewEnabled: z.boolean() });
+export const performanceCalibrationRevealQuerySchema = z.object({ revealIdentity: z.coerce.boolean().optional().default(false) });

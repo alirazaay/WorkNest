@@ -300,3 +300,11 @@ Rewards are stored separately in `performance_rewards` and support salary increm
 - `POST /api/v1/performance/reviews/:reviewId/override`
 
 Calibration responses include review scores, evidence coverage, score snapshots, and equivalence-group context. Administrators can confirm a review, request clarification, or override the final score/rating. Overrides require a justification and persist previous/new values in `performance_calibration_decisions` and `audit_logs`; immutable score snapshots are not modified.
+
+## FairRank Phase 14: blind calibration
+
+- `GET /api/v1/performance/calibration-settings`
+- `PATCH /api/v1/performance/calibration-settings`
+- `GET /api/v1/performance/cycles/:cycleId/calibration?revealIdentity=false`
+
+When `blindReviewEnabled` is true, calibration payloads hide names, employee codes, IDs, and other unnecessary identity details while retaining designation, department, criterion scores, evidence coverage, and equivalence context. Only an administrator requesting `revealIdentity=true` receives identity fields. Blind mode is a presentation/access response policy and does not alter stored appraisal records.

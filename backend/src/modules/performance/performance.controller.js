@@ -9,7 +9,7 @@ import { getEquivalenceSettings, listEquivalenceGroups, recalculateEquivalence, 
 import { createSignatureRule, generateCycleSignatures, getEmployeeSignature, listSignatureRules, selectPerformanceSignature, updateSignatureRule } from './signature.service.js';
 import { createPromotionAssessment, createPromotionProfile, getEmployeePromotionReadiness, listPromotionProfiles, updatePromotionProfile } from './promotion.service.js';
 import { approveReward, createReward, listRewards, rejectReward } from './rewards.service.js';
-import { calibrateReview, listCalibration, overrideReview } from './calibration.service.js';
+import { calibrateReview, getCalibrationSettings, listCalibration, overrideReview, updateCalibrationSettings } from './calibration.service.js';
 
 const send = (res, data, status = 200) => res.status(status).json({ success: true, data });
 export async function cyclesList(req, res, next) { try { send(res, await listPerformanceCycles(req.auth, req.validated.query)); } catch (error) { next(error); } }
@@ -62,7 +62,9 @@ export async function rewardsList(req, res, next) { try { send(res, await listRe
 export async function rewardCreate(req, res, next) { try { send(res, await createReward(req.auth, req.validated.body), 201); } catch (error) { next(error); } }
 export async function rewardApprove(req, res, next) { try { send(res, await approveReward(req.auth, Number(req.params.id), req.validated.body)); } catch (error) { next(error); } }
 export async function rewardReject(req, res, next) { try { send(res, await rejectReward(req.auth, Number(req.params.id), req.validated.body)); } catch (error) { next(error); } }
-export async function calibrationList(req, res, next) { try { send(res, await listCalibration(req.auth, Number(req.params.cycleId))); } catch (error) { next(error); } }
+export async function calibrationList(req, res, next) { try { send(res, await listCalibration(req.auth, Number(req.params.cycleId), req.validated.query.revealIdentity)); } catch (error) { next(error); } }
 export async function reviewCalibrate(req, res, next) { try { send(res, await calibrateReview(req.auth, Number(req.params.reviewId), req.validated.body)); } catch (error) { next(error); } }
 export async function reviewOverride(req, res, next) { try { send(res, await overrideReview(req.auth, Number(req.params.reviewId), req.validated.body)); } catch (error) { next(error); } }
+export async function calibrationSettingsGet(req, res, next) { try { send(res, await getCalibrationSettings(req.auth)); } catch (error) { next(error); } }
+export async function calibrationSettingsUpdate(req, res, next) { try { send(res, await updateCalibrationSettings(req.auth, req.validated.body)); } catch (error) { next(error); } }
 import { unlink } from 'node:fs/promises';
