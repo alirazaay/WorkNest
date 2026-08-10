@@ -56,3 +56,6 @@ export const performanceRewardCreateSchema = z.object({ cycleId: z.coerce.number
 export const performanceRewardQuerySchema = z.object({ cycleId: z.coerce.number().int().positive().optional(), employeeId: z.coerce.number().int().positive().optional(), rewardType: z.enum(rewardTypes).optional(), status: z.enum(['recommended', 'approved', 'rejected']).optional() });
 export const performanceRewardApproveSchema = z.object({ approvedValue: z.coerce.number().min(0).optional(), approvalReason: z.string().max(2000).optional().nullable() });
 export const performanceRewardRejectSchema = z.object({ reason: z.string().min(5).max(2000) });
+export const performanceCalibrationQuerySchema = z.object({ cycleId: z.coerce.number().int().positive().optional() });
+export const performanceCalibrationActionSchema = z.object({ action: z.enum(['confirm', 'request_clarification']), justification: z.string().max(3000).optional().nullable() }).superRefine((value, ctx) => { if (value.action === 'request_clarification' && !value.justification?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['justification'], message: 'Clarification requests require a reason' }); });
+export const performanceCalibrationOverrideSchema = z.object({ newScore: z.coerce.number().min(0).max(100).optional(), newRatingBand: z.string().min(2).max(100), justification: z.string().min(10).max(3000) });

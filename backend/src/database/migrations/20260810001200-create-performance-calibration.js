@@ -1,0 +1,9 @@
+export async function up(queryInterface, Sequelize) {
+  const { DataTypes } = Sequelize;
+  await queryInterface.createTable('performance_calibration_decisions', {
+    id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true }, tenant_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'tenants', key: 'id' }, onDelete: 'CASCADE' }, cycle_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'performance_cycles', key: 'id' }, onDelete: 'RESTRICT' }, review_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'performance_reviews', key: 'id' }, onDelete: 'CASCADE' }, employee_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'employees', key: 'id' }, onDelete: 'RESTRICT' }, status: { type: DataTypes.STRING(30), allowNull: false }, previous_score: DataTypes.DECIMAL(7, 3), new_score: DataTypes.DECIMAL(7, 3), previous_rating_band: DataTypes.STRING(100), new_rating_band: DataTypes.STRING(100), justification: DataTypes.TEXT, decided_by: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'users', key: 'id' }, onDelete: 'RESTRICT' }, decided_at: { type: DataTypes.DATE, allowNull: false, defaultValue: Sequelize.literal('CURRENT_TIMESTAMP') }, created_at: { type: DataTypes.DATE, allowNull: false, defaultValue: Sequelize.literal('CURRENT_TIMESTAMP') }, updated_at: { type: DataTypes.DATE, allowNull: false, defaultValue: Sequelize.literal('CURRENT_TIMESTAMP') }
+  });
+  await queryInterface.addIndex('performance_calibration_decisions', ['tenant_id', 'review_id'], { unique: true, name: 'uq_performance_calibration_review' });
+  await queryInterface.addIndex('performance_calibration_decisions', ['tenant_id', 'cycle_id', 'status'], { name: 'idx_performance_calibration_cycle_status' });
+}
+export async function down(queryInterface) { await queryInterface.dropTable('performance_calibration_decisions'); }

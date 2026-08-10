@@ -292,3 +292,11 @@ Promotion profiles define target roles and criteria such as leadership, decision
 - `POST /api/v1/performance/rewards/:id/reject`
 
 Rewards are stored separately in `performance_rewards` and support salary increments, performance bonuses, promotions, recognition, and development opportunities. Managers can recommend rewards for their department; only administrators can approve or reject them. Reward recommendations and approvals do not alter annual performance scores, rating bands, or equivalence groups.
+
+## FairRank Phase 13: calibration workspace
+
+- `GET /api/v1/performance/cycles/:cycleId/calibration`
+- `POST /api/v1/performance/reviews/:reviewId/calibrate`
+- `POST /api/v1/performance/reviews/:reviewId/override`
+
+Calibration responses include review scores, evidence coverage, score snapshots, and equivalence-group context. Administrators can confirm a review, request clarification, or override the final score/rating. Overrides require a justification and persist previous/new values in `performance_calibration_decisions` and `audit_logs`; immutable score snapshots are not modified.

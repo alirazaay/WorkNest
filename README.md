@@ -101,6 +101,7 @@ Run the API smoke checks with `backend/scripts/smoke-test.ps1` after the backend
 - FairRank Phase 10 adds deterministic, tenant-configurable Performance Signatures. Signature labels are selected from criterion categories and stored with strongest factors and source snapshot details; no AI or random labeling is used.
 - FairRank Phase 11 adds a separate Advancement Readiness layer with configurable promotion profiles, weighted readiness criteria, server-calculated recommendations, and immutable assessment snapshots. Promotion readiness never changes the employee's annual performance score or rating.
 - FairRank Phase 12 adds a separate reward recommendation and approval layer for increments, bonuses, promotions, recognition, and development opportunities. Reward decisions are independently stored and never downgrade or rewrite performance ratings.
+- FairRank Phase 13 adds an auditable calibration workspace with evidence coverage, equivalence context, confirmation/clarification actions, and justified manual overrides. Overrides persist previous and new values and never silently rewrite score snapshots.
 - Payroll also supports effective-dated tax configuration, approved adjustments for locked runs, and standard/HBL/Meezan/UBL bank-export layouts. The UI exposes payroll configuration and the backend endpoints remain authoritative for all financial values.
 
 ### Verification Commands
