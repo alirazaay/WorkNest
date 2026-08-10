@@ -88,6 +88,7 @@ Run the API smoke checks with `backend/scripts/smoke-test.ps1` after the backend
 - Notifications are served from `GET /api/v1/notifications`; notification ordering uses the database `created_at` column.
 - The backend uses validated request data through `req.validated`, tenant-scoped queries, JWT access tokens, rotated HTTP-only refresh cookies, and environment-specific authentication rate limits.
 - Payroll-owned records are tenant-scoped and use additive Sequelize migrations. Payroll generation snapshots employee/salary/payment data, records source-linked earnings and deductions, prevents duplicate bonus/loan processing, and keeps locked runs immutable through normal API actions.
+- Payroll list queries use the database's underscored timestamp fields (`created_at`) so bonus and loan configuration panels do not cause the main Payroll page to fail.
 - Payroll also supports effective-dated tax configuration, approved adjustments for locked runs, and standard/HBL/Meezan/UBL bank-export layouts. The UI exposes payroll configuration and the backend endpoints remain authoritative for all financial values.
 
 ### Verification Commands
@@ -110,3 +111,12 @@ npm run db:migrate
 The local development servers use port `5173` for the frontend and port `5000` for the API. If another project is already using either port, stop that process before starting WorkNest to avoid serving the wrong application.
 
 After adding backend routes, restart the API process so its in-memory Express route registry reloads. A stale process on port `5000` can return `Route not found` even when the route exists in source code.
+
+If `npm run dev` reports `EADDRINUSE`, find and stop the listener before starting the watcher:
+
+```powershell
+netstat -ano | Select-String ':5000.*LISTENING'
+Stop-Process -Id <PID> -Force
+cd backend
+npm run dev
+```

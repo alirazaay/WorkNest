@@ -28,6 +28,10 @@ The health endpoint intentionally checks MySQL connectivity. It returns `503` wh
 
 If a newly added route returns `Route not found`, restart the backend process listening on port `5000`; Express loads route modules at startup.
 
+If `npm run dev` reports `EADDRINUSE`, another API process already owns port `5000`. Stop that exact PID with PowerShell, then rerun `npm run dev`.
+
+Payroll bonus and loan list queries explicitly order by the MySQL `created_at` column. This avoids Sequelize-generated `createdAt` SQL errors with the underscored schema.
+
 ## Phase 2 auth endpoints
 
 - `POST /api/v1/auth/register-company`
