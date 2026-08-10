@@ -50,8 +50,10 @@ export async function updatePerformanceCycle(auth, id, input) {
     if (active) throw new AppError('Another active cycle already exists for this year and cycle type', 409, 'ACTIVE_PERFORMANCE_CYCLE_EXISTS');
   }
   const before = cycle.toJSON();
-  await cycle.update(input);
-  await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: input.status ? `performance_cycle_${input.status}` : 'performance_cycle_updated', entityType: 'performance_cycle', entityId: id, beforeData: before, afterData: cycle.toJSON() });
+  await sequelize.transaction(async transaction => {
+    await cycle.update(input, { transaction });
+    await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: input.status ? `performance_cycle_${input.status}` : 'performance_cycle_updated', entityType: 'performance_cycle', entityId: id, beforeData: before, afterData: cycle.toJSON(), transaction });
+  });
   if (input.status === 'review') await notifyManagersForReview(auth);
   if (input.status === 'calibration') await notifyAdminsForCalibration(auth);
   if (input.status === 'completed') await notifyReleasedAppraisals(auth, id);

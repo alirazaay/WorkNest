@@ -359,3 +359,7 @@ Added `POST /api/v1/performance/compare` with Zod validation for `cycleId` and 2
 ## FairRank Phase 25: database safety
 
 FairRank does not use `sequelize.sync({ alter: true })` or destructive sync options. Run `node scripts/verify-database-safety.js` to scan 154 backend source files for unsafe schema mutation patterns. Evidence verification and score recalculation are rejected for `completed` and `archived` cycles. Derived equivalence/fairness recalculation may replace only derived records; finalized scores, reviews, explanations, and history are not physically deleted.
+
+## FairRank Phase 26: transaction safety
+
+Critical finalization mutations now use Sequelize transactions for the business write and its audit record: cycle transitions, review submission, evidence verification, and promotion-readiness assessment creation. If an audit write fails, the associated domain mutation rolls back. Existing transactions for score generation, calibration, explanations, signatures, equivalence, fairness, and reward approval remain in place. Regression coverage is in `test/performance-transactions.test.js`.

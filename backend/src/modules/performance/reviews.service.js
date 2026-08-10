@@ -91,7 +91,9 @@ export async function submitReview(auth, id) {
   if (review.reviewerId !== auth.userId && auth.role !== 'admin') throw new AppError('Only the assigned reviewer can submit this review', 403, 'REVIEW_SUBMIT_DENIED');
   if (!['draft', 'in_progress'].includes(review.status)) throw new AppError('This review has already been submitted or released', 409, 'REVIEW_ALREADY_SUBMITTED');
   const before = review.toJSON();
-  await review.update({ status: 'submitted', submittedAt: new Date() });
-  await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'performance_review_submitted', entityType: 'performance_review', entityId: id, beforeData: before, afterData: review.toJSON() });
+  await sequelize.transaction(async transaction => {
+    await review.update({ status: 'submitted', submittedAt: new Date() }, { transaction });
+    await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'performance_review_submitted', entityType: 'performance_review', entityId: id, beforeData: before, afterData: review.toJSON(), transaction });
+  });
   return reviewFor(auth, id);
 }

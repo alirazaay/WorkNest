@@ -159,6 +159,10 @@ The canonical employee transparency contract remains `GET /api/v1/performance/me
 
 FairRank schema changes use Sequelize migrations only. `node backend/scripts/verify-database-safety.js` scans backend source for unsafe `sequelize.sync`, `alter: true`, and `force: true` usage. Completed and archived cycles reject evidence verification and score recalculation, while finalized snapshots and appraisal history remain immutable.
 
+## FairRank Phase 26 transaction safety
+
+Cycle finalization, review submission, evidence verification, and promotion-readiness assessments now commit their domain update and audit entry in the same Sequelize transaction. This prevents a successful business mutation from being left without its required audit trail when a later write fails. Existing transactional score, calibration, explanation, signature, equivalence, fairness, and reward-approval workflows remain protected.
+
 After adding backend routes, restart the API process so its in-memory Express route registry reloads. A stale process on port `5000` can return `Route not found` even when the route exists in source code.
 
 If `npm run dev` reports `EADDRINUSE`, find and stop the listener before starting the watcher:

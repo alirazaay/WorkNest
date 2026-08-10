@@ -58,12 +58,14 @@ export async function createPromotionAssessment(auth, input) {
   assertWeights(profile.criteria);
   const expected = new Set(profile.criteria.map(row => row.id)); const provided = new Set(input.scores.map(row => Number(row.criterionId)));
   if (expected.size !== provided.size || [...expected].some(id => !provided.has(id))) throw new AppError('A score is required for every promotion readiness criterion', 422, 'INCOMPLETE_PROMOTION_ASSESSMENT');
-  const existing = await EmployeePromotionAssessment.findOne({ where: { tenantId: auth.tenantId, cycleId: input.cycleId, employeeId: input.employeeId, promotionProfileId: input.promotionProfileId } });
-  if (existing) throw new AppError('A promotion assessment already exists for this employee and profile', 409, 'PROMOTION_ASSESSMENT_EXISTS');
   const result = calculateReadinessScore(profile.criteria, input.scores);
-  const assessment = await EmployeePromotionAssessment.create({ tenantId: auth.tenantId, cycleId: input.cycleId, employeeId: input.employeeId, promotionProfileId: input.promotionProfileId, readinessScore: result.readinessScore, recommendation: result.recommendation, assessedBy: auth.userId, comments: input.comments ?? null, assessmentSnapshot: { version: 1, profile: { id: profile.id, name: profile.name, targetRole: profile.targetRole }, lines: result.lines, generatedAt: new Date().toISOString() } });
-  await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'promotion_readiness_assessed', entityType: 'employee_promotion_assessment', entityId: assessment.id, afterData: { cycleId: input.cycleId, employeeId: input.employeeId, promotionProfileId: input.promotionProfileId, readinessScore: result.readinessScore, recommendation: result.recommendation } });
-  return EmployeePromotionAssessment.findOne({ where: { id: assessment.id, tenantId: auth.tenantId }, include: assessmentInclude });
+  return sequelize.transaction(async transaction => {
+    const existing = await EmployeePromotionAssessment.findOne({ where: { tenantId: auth.tenantId, cycleId: input.cycleId, employeeId: input.employeeId, promotionProfileId: input.promotionProfileId }, transaction });
+    if (existing) throw new AppError('A promotion assessment already exists for this employee and profile', 409, 'PROMOTION_ASSESSMENT_EXISTS');
+    const assessment = await EmployeePromotionAssessment.create({ tenantId: auth.tenantId, cycleId: input.cycleId, employeeId: input.employeeId, promotionProfileId: input.promotionProfileId, readinessScore: result.readinessScore, recommendation: result.recommendation, assessedBy: auth.userId, comments: input.comments ?? null, assessmentSnapshot: { version: 1, profile: { id: profile.id, name: profile.name, targetRole: profile.targetRole }, lines: result.lines, generatedAt: new Date().toISOString() } }, { transaction });
+    await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'promotion_readiness_assessed', entityType: 'employee_promotion_assessment', entityId: assessment.id, afterData: { cycleId: input.cycleId, employeeId: input.employeeId, promotionProfileId: input.promotionProfileId, readinessScore: result.readinessScore, recommendation: result.recommendation }, transaction });
+    return EmployeePromotionAssessment.findOne({ where: { id: assessment.id, tenantId: auth.tenantId }, include: assessmentInclude, transaction });
+  });
 }
 
 export async function getEmployeePromotionReadiness(auth, employeeId, query = {}) {

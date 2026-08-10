@@ -1,5 +1,6 @@
 import { Op } from 'sequelize';
 import { Employee, PerformanceCriterion, PerformanceCycle, PerformanceEvidence, PerformanceGoal, User } from '../../database/models/index.js';
+import { sequelize } from '../../config/database.js';
 import { AppError } from '../../middleware/error.js';
 import { recordAudit } from '../../services/audit.service.js';
 
@@ -80,7 +81,9 @@ export async function verifyEvidence(auth, id, input) {
   if (auth.role === 'employee') throw new AppError('Employees cannot verify evidence', 403, 'EVIDENCE_VERIFICATION_DENIED');
   if (['completed', 'archived'].includes(evidence.cycle?.status)) throw new AppError('Evidence in a completed or archived cycle is immutable', 409, 'PERFORMANCE_CYCLE_FROZEN');
   const before = evidence.toJSON();
-  await evidence.update({ verificationStatus: input.verificationStatus, verifiedBy: auth.userId });
-  await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: `performance_evidence_${input.verificationStatus}`, entityType: 'performance_evidence', entityId: id, beforeData: { ...before, storageKey: undefined }, afterData: { ...evidence.toJSON(), storageKey: undefined } });
+  await sequelize.transaction(async transaction => {
+    await evidence.update({ verificationStatus: input.verificationStatus, verifiedBy: auth.userId }, { transaction });
+    await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: `performance_evidence_${input.verificationStatus}`, entityType: 'performance_evidence', entityId: id, beforeData: { ...before, storageKey: undefined }, afterData: { ...evidence.toJSON(), storageKey: undefined }, transaction });
+  });
   return safeEvidence(await evidenceFor(auth, id));
 }
