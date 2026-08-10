@@ -68,5 +68,7 @@ export async function createPromotionAssessment(auth, input) {
 
 export async function getEmployeePromotionReadiness(auth, employeeId, query = {}) {
   await employeeFor(auth, employeeId);
-  return EmployeePromotionAssessment.findAll({ where: { tenantId: auth.tenantId, employeeId, ...(query.cycleId ? { cycleId: query.cycleId } : {}), ...(query.promotionProfileId ? { promotionProfileId: query.promotionProfileId } : {}) }, include: assessmentInclude, order: [['created_at', 'DESC']] });
+  const cycleWhere = { tenantId: auth.tenantId, ...(query.cycleId ? { id: query.cycleId } : {}) };
+  const cycles = await PerformanceCycle.findAll({ where: auth.role === 'employee' ? { ...cycleWhere, status: { [Op.in]: ['completed', 'archived'] } } : cycleWhere, attributes: ['id', 'status'] });
+  return EmployeePromotionAssessment.findAll({ where: { tenantId: auth.tenantId, employeeId, cycleId: { [Op.in]: cycles.map(cycle => cycle.id) }, ...(query.promotionProfileId ? { promotionProfileId: query.promotionProfileId } : {}) }, include: assessmentInclude, order: [['created_at', 'DESC']] });
 }

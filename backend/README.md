@@ -347,3 +347,7 @@ FairRank mutations use the existing `recordAudit` service for cycles, criteria/t
 ## FairRank Phase 22: tenant isolation verification
 
 Migration `20260810001700-add-performance-child-tenant-scope.js` adds and backfills `tenant_id` on `performance_equivalence_members` and `promotion_readiness_criteria`, then enforces non-null foreign keys and tenant-aware indexes. Run `node scripts/verify-performance-isolation.js` to verify all 23 FairRank tables have direct tenant scope. Service queries continue deriving tenant context from authenticated `req.auth`; client-provided tenant IDs are not accepted.
+
+## FairRank Phase 23: role permissions
+
+FairRank routes explicitly authorize `admin`, `manager`, or `employee` capabilities; `super_admin` is intentionally excluded. Employee-owned score, signature, explanation, promotion-readiness, and non-self review reads are restricted to finalized cycle statuses (`completed` or `archived`). Manager access remains department-scoped in service authorization, and administrative configuration/calibration/audit actions remain admin-only. Added release policy: `src/modules/performance/access.js`.

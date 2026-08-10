@@ -3,6 +3,7 @@ import { Employee, EmployeePromotionAssessment, PerformanceAppraisalExplanation,
 import { sequelize } from '../../config/database.js';
 import { AppError } from '../../middleware/error.js';
 import { recordAudit } from '../../services/audit.service.js';
+import { assertEmployeeRelease } from './access.js';
 
 const priority = { calibration: 5, final: 4, manager: 3, self: 2, peer: 1 };
 const employeeInclude = [{ model: Employee, as: 'employee', attributes: ['id', 'employeeCode', 'designation', 'departmentId'], include: [{ model: User, as: 'user', attributes: ['id', 'name'] }] }, { model: PerformanceCycle, as: 'cycle', attributes: ['id', 'name', 'year', 'status'] }, { model: User, as: 'generator', attributes: ['id', 'name'] }];
@@ -37,7 +38,7 @@ async function sourceData(auth, cycleId, employeeId) {
   return { snapshot, review, evidenceCoverage, signature, equivalenceGroup, promotionAssessment, promotionProfile };
 }
 
-export async function getAppraisalExplanation(auth, cycleId, employeeId) { await employeeFor(auth, employeeId); const explanation = await PerformanceAppraisalExplanation.findOne({ where: { tenantId: auth.tenantId, cycleId, employeeId }, include: employeeInclude }); if (!explanation) throw new AppError('Appraisal explanation has not been generated yet', 404, 'APPRAISAL_EXPLANATION_NOT_FOUND'); return explanation; }
+export async function getAppraisalExplanation(auth, cycleId, employeeId) { const cycle = await PerformanceCycle.findOne({ where: { id: cycleId, tenantId: auth.tenantId } }); if (!cycle) throw new AppError('Performance cycle not found', 404, 'PERFORMANCE_CYCLE_NOT_FOUND'); await employeeFor(auth, employeeId); assertEmployeeRelease(auth, cycle); const explanation = await PerformanceAppraisalExplanation.findOne({ where: { tenantId: auth.tenantId, cycleId, employeeId }, include: employeeInclude }); if (!explanation) throw new AppError('Appraisal explanation has not been generated yet', 404, 'APPRAISAL_EXPLANATION_NOT_FOUND'); return explanation; }
 
 export async function generateCycleExplanations(auth, cycleId) {
   const cycle = await PerformanceCycle.findOne({ where: { id: cycleId, tenantId: auth.tenantId } }); if (!cycle) throw new AppError('Performance cycle not found', 404, 'PERFORMANCE_CYCLE_NOT_FOUND');

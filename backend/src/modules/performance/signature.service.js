@@ -3,6 +3,7 @@ import { Employee, PerformanceCycle, PerformanceScoreSnapshot, PerformanceSignat
 import { sequelize } from '../../config/database.js';
 import { AppError } from '../../middleware/error.js';
 import { recordAudit } from '../../services/audit.service.js';
+import { assertEmployeeRelease } from './access.js';
 
 const normalize = value => String(value || '').trim().toLowerCase();
 
@@ -48,7 +49,10 @@ async function employeeFor(auth, id) {
 }
 
 export async function getEmployeeSignature(auth, cycleId, employeeId) {
+  const cycle = await PerformanceCycle.findOne({ where: { id: cycleId, tenantId: auth.tenantId } });
+  if (!cycle) throw new AppError('Performance cycle not found', 404, 'PERFORMANCE_CYCLE_NOT_FOUND');
   await employeeFor(auth, employeeId);
+  assertEmployeeRelease(auth, cycle);
   const signature = await PerformanceSignature.findOne({ where: { tenantId: auth.tenantId, cycleId, employeeId }, include: [{ model: Employee, as: 'employee', attributes: ['id', 'employeeCode'], include: [{ model: User, as: 'user', attributes: ['id', 'name'] }] }, { model: PerformanceCycle, as: 'cycle', attributes: ['id', 'name', 'year', 'status'] }, { model: PerformanceSignatureRule, as: 'rule', attributes: ['id', 'name', 'categories'] }] });
   if (!signature) throw new AppError('Performance signature has not been generated yet', 404, 'PERFORMANCE_SIGNATURE_NOT_FOUND');
   return signature;

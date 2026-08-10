@@ -4,6 +4,7 @@ import { findRatingBand } from './rating-bands.service.js';
 import { sequelize } from '../../config/database.js';
 import { AppError } from '../../middleware/error.js';
 import { recordAudit } from '../../services/audit.service.js';
+import { assertEmployeeRelease } from './access.js';
 
 const reviewInclude = [{ model: PerformanceReviewScore, as: 'scores', include: [{ model: PerformanceCriterion, as: 'criterion', attributes: ['id', 'name', 'category', 'weight', 'ratingScaleMin', 'ratingScaleMax'] }] }];
 
@@ -42,8 +43,9 @@ function reviewPriority(review) { return ({ final: 4, manager: 3, self: 2, peer:
 function chooseReview(reviews) { return [...reviews].sort((a, b) => reviewPriority(b) - reviewPriority(a) || b.id - a.id)[0]; }
 
 export async function getEmployeeScore(auth, cycleId, employeeId) {
-  await cycleFor(auth, cycleId);
+  const cycle = await cycleFor(auth, cycleId);
   await employeeFor(auth, employeeId);
+  assertEmployeeRelease(auth, cycle);
   const snapshot = await PerformanceScoreSnapshot.findOne({ where: { tenantId: auth.tenantId, cycleId, employeeId }, include: [{ model: Employee, as: 'employee', attributes: ['id', 'employeeCode'], include: [{ model: User, as: 'user', attributes: ['id', 'name'] }] }, { model: PerformanceCycle, as: 'cycle', attributes: ['id', 'name', 'year', 'status'] }, { model: User, as: 'generator', attributes: ['id', 'name'] }] });
   if (!snapshot) throw new AppError('Performance score has not been calculated yet', 404, 'PERFORMANCE_SCORE_NOT_FOUND');
   return snapshot;

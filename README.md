@@ -147,6 +147,10 @@ Sensitive FairRank mutations continue to write to the existing `audit_logs` tabl
 
 All 23 FairRank-owned tables now carry a direct `tenant_id`, including equivalence members and promotion-readiness criteria that were previously scoped only through parent records. The backend verification command `node backend/scripts/verify-performance-isolation.js` checks this invariant against the live MySQL schema.
 
+## FairRank Phase 23 role permissions
+
+FairRank permissions now enforce the product role model: admins manage configuration, calibration, finalization, rewards, and audit history; managers work only with authorized department employees; employees can submit/access permitted self-appraisal data and only released performance results; and Super Admin is not included in FairRank employee-data routes. Employee score, signature, promotion-readiness, explanation, and manager-feedback reads are release-gated.
+
 After adding backend routes, restart the API process so its in-memory Express route registry reloads. A stale process on port `5000` can return `Route not found` even when the route exists in source code.
 
 If `npm run dev` reports `EADDRINUSE`, find and stop the listener before starting the watcher:

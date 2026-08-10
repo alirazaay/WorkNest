@@ -3,6 +3,7 @@ import { Employee, PerformanceCriterion, PerformanceCycle, PerformanceEvidence, 
 import { sequelize } from '../../config/database.js';
 import { AppError } from '../../middleware/error.js';
 import { recordAudit } from '../../services/audit.service.js';
+import { releasedCycleStatuses } from './access.js';
 
 const include = [
   { model: Employee, as: 'employee', attributes: ['id', 'userId', 'employeeCode', 'departmentId'], include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email'] }] },
@@ -32,6 +33,7 @@ async function reviewFor(auth, id) {
   const review = await PerformanceReview.findOne({ where: { id, tenantId: auth.tenantId }, include });
   if (!review) throw new AppError('Performance review not found', 404, 'PERFORMANCE_REVIEW_NOT_FOUND');
   await assertEmployeeScope(auth, review.employee);
+  if (auth.role === 'employee' && review.reviewType !== 'self' && !releasedCycleStatuses.includes(review.cycle?.status)) throw new AppError('This manager feedback has not been released yet', 403, 'REVIEW_NOT_RELEASED');
   return review;
 }
 
@@ -51,7 +53,7 @@ async function assertCycle(auth, id) {
 export async function listReviews(auth, query = {}) {
   const where = { tenantId: auth.tenantId, ...(query.cycleId ? { cycleId: query.cycleId } : {}), ...(query.reviewType ? { reviewType: query.reviewType } : {}), ...(query.status ? { status: query.status } : {}), ...(query.reviewerId ? { reviewerId: query.reviewerId } : {}) };
   if (query.employeeId) where.employeeId = query.employeeId;
-  if (auth.role === 'employee') where.employeeId = (await Employee.findOne({ where: { tenantId: auth.tenantId, userId: auth.userId }, attributes: ['id'] }))?.id;
+  if (auth.role === 'employee') { where.employeeId = (await Employee.findOne({ where: { tenantId: auth.tenantId, userId: auth.userId }, attributes: ['id'] }))?.id; if (query.reviewType !== 'self') where.status = 'released'; }
   if (auth.role === 'manager') {
     const manager = await managerFor(auth);
     const employees = await Employee.findAll({ where: { tenantId: auth.tenantId, departmentId: manager.departmentId }, attributes: ['id'] });
