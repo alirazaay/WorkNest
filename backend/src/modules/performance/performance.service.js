@@ -1,8 +1,9 @@
 import { Op } from 'sequelize';
 import { sequelize } from '../../config/database.js';
-import { PerformanceCycle, User } from '../../database/models/index.js';
+import { Employee, PerformanceAppraisalExplanation, PerformanceCycle, User } from '../../database/models/index.js';
 import { AppError } from '../../middleware/error.js';
 import { recordAudit } from '../../services/audit.service.js';
+import { createNotification } from '../../services/notification.service.js';
 
 const statuses = ['draft', 'active', 'review', 'calibration', 'completed', 'archived'];
 const transitions = { draft: ['active', 'archived'], active: ['review', 'archived'], review: ['calibration', 'completed'], calibration: ['completed'], completed: ['archived'], archived: [] };
@@ -51,5 +52,28 @@ export async function updatePerformanceCycle(auth, id, input) {
   const before = cycle.toJSON();
   await cycle.update(input);
   await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: input.status ? `performance_cycle_${input.status}` : 'performance_cycle_updated', entityType: 'performance_cycle', entityId: id, beforeData: before, afterData: cycle.toJSON() });
+  if (input.status === 'review') await notifyManagersForReview(auth);
+  if (input.status === 'calibration') await notifyAdminsForCalibration(auth);
+  if (input.status === 'completed') await notifyReleasedAppraisals(auth, id);
   return getPerformanceCycle(auth, id);
+}
+
+async function notifyManagersForReview(auth) {
+  const [managers, employeeCount] = await Promise.all([
+    User.findAll({ where: { tenantId: auth.tenantId, role: 'manager' }, attributes: ['id'] }),
+    Employee.count({ where: { tenantId: auth.tenantId, employmentStatus: { [Op.ne]: 'terminated' } } })
+  ]);
+  await Promise.all(managers.map(manager => createNotification({ tenantId: auth.tenantId, userId: manager.id, type: 'performance_reviews_awaiting', title: 'Performance reviews awaiting submission', message: `${employeeCount} employee review${employeeCount === 1 ? '' : 's'} ${employeeCount === 1 ? 'is' : 'are'} awaiting submission.`, entityType: 'performance_cycle' })));
+}
+
+async function notifyAdminsForCalibration(auth) {
+  const admins = await User.findAll({ where: { tenantId: auth.tenantId, role: 'admin' }, attributes: ['id'] });
+  await Promise.all(admins.map(admin => createNotification({ tenantId: auth.tenantId, userId: admin.id, type: 'performance_calibration_started', title: 'Performance calibration begins', message: 'The performance calibration workspace is ready for HR review.', entityType: 'performance_cycle' })));
+}
+
+async function notifyReleasedAppraisals(auth, cycleId) {
+  const explanations = await PerformanceAppraisalExplanation.findAll({ where: { tenantId: auth.tenantId, cycleId }, attributes: ['employeeId', 'id'] });
+  if (!explanations.length) return;
+  const employees = await Employee.findAll({ where: { tenantId: auth.tenantId, id: explanations.map(row => row.employeeId) }, attributes: ['id', 'userId'] });
+  await Promise.all(employees.filter(employee => employee.userId).map(employee => createNotification({ tenantId: auth.tenantId, userId: employee.userId, type: 'performance_review_released', title: 'Your performance review has been released', message: 'Your finalized performance appraisal is now available in My Performance.', entityType: 'performance_appraisal_explanation', entityId: explanations.find(row => row.employeeId === employee.id)?.id })));
 }

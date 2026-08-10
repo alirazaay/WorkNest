@@ -3,8 +3,9 @@ import { Department, Employee, PerformanceCalibrationDecision, PerformanceCalibr
 import { sequelize } from '../../config/database.js';
 import { AppError } from '../../middleware/error.js';
 import { recordAudit } from '../../services/audit.service.js';
+import { createNotification } from '../../services/notification.service.js';
 
-const reviewInclude = [{ model: Employee, as: 'employee', attributes: ['id', 'employeeCode', 'designation', 'departmentId'], include: [{ model: User, as: 'user', attributes: ['id', 'name'] }, { model: Department, as: 'department', attributes: ['id', 'name'] }] }, { model: PerformanceCycle, as: 'cycle', attributes: ['id', 'name', 'year', 'status'] }, { model: PerformanceReviewScore, as: 'scores', include: [{ model: PerformanceCriterion, as: 'criterion', attributes: ['id', 'name', 'category', 'weight'] }] }];
+const reviewInclude = [{ model: Employee, as: 'employee', attributes: ['id', 'userId', 'employeeCode', 'designation', 'departmentId'], include: [{ model: User, as: 'user', attributes: ['id', 'name'] }, { model: Department, as: 'department', attributes: ['id', 'name'] }] }, { model: PerformanceCycle, as: 'cycle', attributes: ['id', 'name', 'year', 'status'] }, { model: PerformanceReviewScore, as: 'scores', include: [{ model: PerformanceCriterion, as: 'criterion', attributes: ['id', 'name', 'category', 'weight'] }] }];
 
 export async function getCalibrationSettings(auth) { return (await PerformanceCalibrationSetting.findOne({ where: { tenantId: auth.tenantId } })) ?? { tenantId: auth.tenantId, blindReviewEnabled: false, isDefault: true }; }
 
@@ -56,6 +57,7 @@ export async function calibrateReview(auth, id, input) {
     const values = { tenantId: auth.tenantId, cycleId: review.cycleId, reviewId: id, employeeId: review.employeeId, status: input.action === 'confirm' ? 'confirmed' : 'clarification_requested', previousScore: review.overallScore, newScore: review.overallScore, previousRatingBand: review.ratingBand, newRatingBand: review.ratingBand, justification: input.justification ?? null, decidedBy: auth.userId, decidedAt: new Date() };
     const decision = previous ? await previous.update(values, { transaction }) : await PerformanceCalibrationDecision.create(values, { transaction });
     await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: `performance_calibration_${values.status}`, entityType: 'performance_review', entityId: id, beforeData: previous?.toJSON() ?? null, afterData: decision.toJSON(), transaction });
+    await notifyCalibrationDecision(auth, review, values.status, transaction);
     return decision;
   });
 }
@@ -68,6 +70,19 @@ export async function overrideReview(auth, id, input) {
     const values = { tenantId: auth.tenantId, cycleId: review.cycleId, reviewId: id, employeeId: review.employeeId, status: 'overridden', previousScore: beforeReview.overallScore, newScore: nextScore, previousRatingBand: beforeReview.ratingBand, newRatingBand: input.newRatingBand, justification: input.justification, decidedBy: auth.userId, decidedAt: new Date() };
     const decision = previous ? await previous.update(values, { transaction }) : await PerformanceCalibrationDecision.create(values, { transaction });
     await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'performance_calibration_override', entityType: 'performance_review', entityId: id, beforeData: { review: beforeReview, decision: previous?.toJSON() ?? null }, afterData: { review: review.toJSON(), decision: decision.toJSON() }, transaction });
+    await notifyCalibrationOverride(auth, review, transaction);
     return decision;
   });
 }
+
+async function notifyCalibrationDecision(auth, review, status, transaction) {
+  if (status !== 'clarification_requested' || !review.employee?.userId) return;
+  await createNotification({ tenantId: auth.tenantId, userId: review.employee.userId, type: 'performance_clarification_requested', title: 'Clarification requested for your performance review', message: 'HR requested clarification during performance calibration. Please contact your manager or HR team.', entityType: 'performance_review', entityId: review.id, transaction });
+}
+
+async function notifyCalibrationOverride(auth, review, transaction) {
+  if (!review.employee?.userId) return;
+  await createNotification({ tenantId: auth.tenantId, userId: review.employee.userId, type: 'performance_rating_updated', title: 'Your performance rating was updated', message: 'Your performance rating was updated during calibration. The finalized appraisal will be available when released.', entityType: 'performance_review', entityId: review.id, transaction });
+}
+
+

@@ -135,6 +135,10 @@ The protected `/performance` workspace provides API-backed FairRank views for ov
 
 Employees can use the FairRank `My Performance` view to read only their own released appraisal reports, criterion breakdowns, completed goals, achievements, and released manager feedback. Unreleased reviews, calibration notes, other employees' data, salary information, and promotion details are not returned by the employee transparency API.
 
+## FairRank Phase 20 notifications
+
+FairRank lifecycle events now use the existing tenant-scoped notification system. Managers are notified when reviews enter the review stage, HR is notified when calibration starts, employees are notified when finalized explanations are released, and employees receive notices for calibration clarification requests or rating updates. Performance notifications link back to the FairRank workspace.
+
 After adding backend routes, restart the API process so its in-memory Express route registry reloads. A stale process on port `5000` can return `Route not found` even when the route exists in source code.
 
 If `npm run dev` reports `EADDRINUSE`, find and stop the listener before starting the watcher:

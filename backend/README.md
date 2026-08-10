@@ -335,3 +335,7 @@ The frontend now exposes the protected `/performance` workspace through the exis
 ## FairRank Phase 19: employee-facing transparency
 
 `GET /api/v1/performance/me` is an employee-only, tenant-scoped read model for released appraisal transparency. It returns the authenticated employee's released-cycle appraisal explanations, completed/current goals from finalized cycles, and released manager feedback. It excludes confidential calibration records, other employees, salary data, and unreleased reviews. No migration was required because the endpoint composes existing immutable explanations, goals, cycles, and released reviews.
+
+## FairRank Phase 20: notifications
+
+FairRank uses the existing `notifications` table and `createNotification` service. Cycle transitions create manager review reminders, HR calibration notices, and employee release notices when appraisal explanations exist. Calibration clarification requests and rating overrides notify the affected employee. All notifications remain scoped by `tenant_id` and `user_id`; no migration was required.
