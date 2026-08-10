@@ -254,3 +254,12 @@ The calculation service selects the highest-priority submitted review (`calibrat
 - `PATCH /api/v1/performance/rating-bands/:id`
 
 Rating bands are tenant-configurable and stored in `performance_rating_bands`. Active ranges cannot overlap, and bands are deactivated rather than physically deleted. When a score is calculated, the matching active band's name and ID are copied into the immutable score snapshot. Existing snapshots are not recalculated after band configuration changes.
+
+## FairRank Phase 9: equivalence groups
+
+- `GET /api/v1/performance/equivalence-settings`
+- `PATCH /api/v1/performance/equivalence-settings`
+- `GET /api/v1/performance/cycles/:cycleId/equivalence-groups`
+- `POST /api/v1/performance/cycles/:cycleId/recalculate-equivalence`
+
+The default equivalence threshold is 1 performance point and can be configured per tenant. Recalculation groups employees only within the same rating band when the score spread from the group's highest score is within the threshold. Groups contain member score snapshots and the threshold used, and managers only see groups entirely within their department. No employee score or rating is changed by equivalence grouping.

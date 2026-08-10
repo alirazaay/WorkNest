@@ -6,8 +6,8 @@ import { env } from '../../config/env.js';
 import { authenticate } from '../../middleware/authenticate.js';
 import { authorize } from '../../middleware/authorize.js';
 import { validate } from '../../middleware/validate.js';
-import { criteriaList, criterionCreate, criterionUpdate, cycleCreate, cycleGet, cycleScoresCalculate, cyclesList, cycleUpdate, employeeEvidenceList, employeeGoalsList, employeeScoreGet, evidenceCreate, evidenceList, evidenceVerify, goalCreate, goalGet, goalsList, goalUpdate, ratingBandCreate, ratingBandUpdate, ratingBandsList, reviewCreate, reviewGet, reviewsList, reviewSubmit, templateCreate, templateCriterionAdd, templateCriterionRemove, templateCriterionUpdate, templateGet, templatesList, templateUpdate } from './performance.controller.js';
-import { performanceCriterionCreateSchema, performanceCriterionUpdateSchema, performanceCycleCreateSchema, performanceCycleQuerySchema, performanceCycleUpdateSchema, performanceEvidenceCreateSchema, performanceEvidenceQuerySchema, performanceEvidenceVerifySchema, performanceGoalCreateSchema, performanceGoalQuerySchema, performanceGoalUpdateSchema, performanceRatingBandCreateSchema, performanceRatingBandUpdateSchema, performanceReviewCreateSchema, performanceReviewQuerySchema, performanceScoreQuerySchema, performanceTemplateCreateSchema, performanceTemplateUpdateSchema, templateCriterionSchema, templateCriterionUpdateSchema } from './performance.schemas.js';
+import { criteriaList, criterionCreate, criterionUpdate, cycleCreate, cycleGet, cycleScoresCalculate, cyclesList, cycleUpdate, employeeEvidenceList, employeeGoalsList, employeeScoreGet, equivalenceGroupsList, equivalenceRecalculate, equivalenceSettingsGet, equivalenceSettingsUpdate, evidenceCreate, evidenceList, evidenceVerify, goalCreate, goalGet, goalsList, goalUpdate, ratingBandCreate, ratingBandUpdate, ratingBandsList, reviewCreate, reviewGet, reviewsList, reviewSubmit, templateCreate, templateCriterionAdd, templateCriterionRemove, templateCriterionUpdate, templateGet, templatesList, templateUpdate } from './performance.controller.js';
+import { performanceCriterionCreateSchema, performanceCriterionUpdateSchema, performanceCycleCreateSchema, performanceCycleQuerySchema, performanceCycleUpdateSchema, performanceEquivalenceQuerySchema, performanceEquivalenceSettingsSchema, performanceEvidenceCreateSchema, performanceEvidenceQuerySchema, performanceEvidenceVerifySchema, performanceGoalCreateSchema, performanceGoalQuerySchema, performanceGoalUpdateSchema, performanceRatingBandCreateSchema, performanceRatingBandUpdateSchema, performanceReviewCreateSchema, performanceReviewQuerySchema, performanceScoreQuerySchema, performanceTemplateCreateSchema, performanceTemplateUpdateSchema, templateCriterionSchema, templateCriterionUpdateSchema } from './performance.schemas.js';
 
 const router = Router();
 const evidenceUploadRoot = path.resolve(env.FILE_STORAGE_ROOT, 'performance-evidence');
@@ -46,4 +46,8 @@ router.post('/cycles/:cycleId/calculate', authorize('admin'), cycleScoresCalcula
 router.get('/rating-bands', authorize('admin', 'manager', 'employee'), ratingBandsList);
 router.post('/rating-bands', authorize('admin'), validate(performanceRatingBandCreateSchema), ratingBandCreate);
 router.patch('/rating-bands/:id', authorize('admin'), validate(performanceRatingBandUpdateSchema), ratingBandUpdate);
+router.get('/equivalence-settings', authorize('admin', 'manager'), equivalenceSettingsGet);
+router.patch('/equivalence-settings', authorize('admin'), validate(performanceEquivalenceSettingsSchema), equivalenceSettingsUpdate);
+router.get('/cycles/:cycleId/equivalence-groups', authorize('admin', 'manager'), equivalenceGroupsList);
+router.post('/cycles/:cycleId/recalculate-equivalence', authorize('admin'), equivalenceRecalculate);
 export default router;

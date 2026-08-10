@@ -41,3 +41,5 @@ export const performanceScoreQuerySchema = z.object({ cycleId: z.coerce.number()
 const performanceRatingBandFields = z.object({ name: z.string().min(2).max(100), minScore: z.coerce.number().min(0).max(100), maxScore: z.coerce.number().min(0).max(100), description: z.string().max(1000).optional().nullable(), sortOrder: z.coerce.number().int().min(0).default(0) });
 export const performanceRatingBandCreateSchema = performanceRatingBandFields.superRefine((value, ctx) => { if (value.minScore >= value.maxScore) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['maxScore'], message: 'Maximum score must be greater than minimum score' }); });
 export const performanceRatingBandUpdateSchema = performanceRatingBandFields.partial().extend({ isActive: z.boolean().optional() });
+export const performanceEquivalenceSettingsSchema = z.object({ threshold: z.coerce.number().min(0).max(10), strictRanking: z.boolean().optional() });
+export const performanceEquivalenceQuerySchema = z.object({ cycleId: z.coerce.number().int().positive().optional() });
