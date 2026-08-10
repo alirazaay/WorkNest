@@ -1,0 +1,9 @@
+export async function up(queryInterface, Sequelize) {
+  const { DataTypes } = Sequelize;
+  await queryInterface.createTable('performance_rewards', {
+    id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true }, tenant_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'tenants', key: 'id' }, onDelete: 'CASCADE' }, cycle_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'performance_cycles', key: 'id' }, onDelete: 'RESTRICT' }, employee_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'employees', key: 'id' }, onDelete: 'RESTRICT' }, reward_type: { type: DataTypes.STRING(40), allowNull: false }, recommended_value: { type: DataTypes.DECIMAL(14, 2), allowNull: false }, approved_value: DataTypes.DECIMAL(14, 2), reason: { type: DataTypes.TEXT, allowNull: false }, status: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'recommended' }, recommended_by: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'users', key: 'id' }, onDelete: 'RESTRICT' }, approved_by: { type: DataTypes.INTEGER, references: { model: 'users', key: 'id' }, onDelete: 'SET NULL' }, approved_at: DataTypes.DATE, approval_reason: DataTypes.TEXT, created_at: { type: DataTypes.DATE, allowNull: false, defaultValue: Sequelize.literal('CURRENT_TIMESTAMP') }, updated_at: { type: DataTypes.DATE, allowNull: false, defaultValue: Sequelize.literal('CURRENT_TIMESTAMP') }
+  });
+  await queryInterface.addIndex('performance_rewards', ['tenant_id', 'cycle_id', 'employee_id', 'reward_type'], { unique: true, name: 'uq_performance_reward_type' });
+  await queryInterface.addIndex('performance_rewards', ['tenant_id', 'status'], { name: 'idx_performance_rewards_status' });
+}
+export async function down(queryInterface) { await queryInterface.dropTable('performance_rewards'); }

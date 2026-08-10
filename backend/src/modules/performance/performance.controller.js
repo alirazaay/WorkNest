@@ -8,6 +8,7 @@ import { createRatingBand, listRatingBands, updateRatingBand } from './rating-ba
 import { getEquivalenceSettings, listEquivalenceGroups, recalculateEquivalence, updateEquivalenceSettings } from './equivalence.service.js';
 import { createSignatureRule, generateCycleSignatures, getEmployeeSignature, listSignatureRules, selectPerformanceSignature, updateSignatureRule } from './signature.service.js';
 import { createPromotionAssessment, createPromotionProfile, getEmployeePromotionReadiness, listPromotionProfiles, updatePromotionProfile } from './promotion.service.js';
+import { approveReward, createReward, listRewards, rejectReward } from './rewards.service.js';
 
 const send = (res, data, status = 200) => res.status(status).json({ success: true, data });
 export async function cyclesList(req, res, next) { try { send(res, await listPerformanceCycles(req.auth, req.validated.query)); } catch (error) { next(error); } }
@@ -56,4 +57,8 @@ export async function promotionProfileCreate(req, res, next) { try { send(res, a
 export async function promotionProfileUpdate(req, res, next) { try { send(res, await updatePromotionProfile(req.auth, Number(req.params.id), req.validated.body)); } catch (error) { next(error); } }
 export async function promotionAssessmentCreate(req, res, next) { try { send(res, await createPromotionAssessment(req.auth, req.validated.body), 201); } catch (error) { next(error); } }
 export async function employeePromotionReadinessGet(req, res, next) { try { send(res, await getEmployeePromotionReadiness(req.auth, Number(req.params.employeeId), req.validated.query)); } catch (error) { next(error); } }
+export async function rewardsList(req, res, next) { try { send(res, await listRewards(req.auth, req.validated.query)); } catch (error) { next(error); } }
+export async function rewardCreate(req, res, next) { try { send(res, await createReward(req.auth, req.validated.body), 201); } catch (error) { next(error); } }
+export async function rewardApprove(req, res, next) { try { send(res, await approveReward(req.auth, Number(req.params.id), req.validated.body)); } catch (error) { next(error); } }
+export async function rewardReject(req, res, next) { try { send(res, await rejectReward(req.auth, Number(req.params.id), req.validated.body)); } catch (error) { next(error); } }
 import { unlink } from 'node:fs/promises';

@@ -34,6 +34,7 @@ import { PerformanceSignature } from './PerformanceSignature.js';
 import { PromotionProfile } from './PromotionProfile.js';
 import { PromotionReadinessCriterion } from './PromotionReadinessCriterion.js';
 import { EmployeePromotionAssessment } from './EmployeePromotionAssessment.js';
+import { PerformanceReward } from './PerformanceReward.js';
 import { EmployeeDocument } from './EmployeeDocument.js';
 import { AttendanceRecord } from './AttendanceRecord.js';
 import { LeaveType } from './LeaveType.js';
@@ -72,6 +73,7 @@ Tenant.hasMany(PerformanceSignatureRule, { foreignKey: 'tenantId', as: 'performa
 Tenant.hasMany(PerformanceSignature, { foreignKey: 'tenantId', as: 'performanceSignatures' });
 Tenant.hasMany(PromotionProfile, { foreignKey: 'tenantId', as: 'promotionProfiles' });
 Tenant.hasMany(EmployeePromotionAssessment, { foreignKey: 'tenantId', as: 'promotionAssessments' });
+Tenant.hasMany(PerformanceReward, { foreignKey: 'tenantId', as: 'performanceRewards' });
 User.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
 User.hasMany(UserSession, { foreignKey: 'userId', as: 'sessions' });
 User.hasMany(PasswordResetToken, { foreignKey: 'userId', as: 'passwordResetTokens' });
@@ -156,6 +158,10 @@ EmployeePromotionAssessment.belongsTo(PerformanceCycle, { foreignKey: 'cycleId',
 EmployeePromotionAssessment.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
 EmployeePromotionAssessment.belongsTo(PromotionProfile, { foreignKey: 'promotionProfileId', as: 'profile' });
 EmployeePromotionAssessment.belongsTo(User, { foreignKey: 'assessedBy', as: 'assessor' });
+PerformanceReward.belongsTo(PerformanceCycle, { foreignKey: 'cycleId', as: 'cycle' });
+PerformanceReward.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
+PerformanceReward.belongsTo(User, { foreignKey: 'recommendedBy', as: 'recommender' });
+PerformanceReward.belongsTo(User, { foreignKey: 'approvedBy', as: 'approver' });
 EmployeeDocument.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
 EmployeeDocument.belongsTo(User, { foreignKey: 'uploadedBy', as: 'uploader' });
 Employee.hasMany(AttendanceRecord, { foreignKey: 'employeeId', as: 'attendanceRecords' });
@@ -187,4 +193,4 @@ PayrollItemLine.belongsTo(PayrollItem, { foreignKey: 'payrollItemId', as: 'item'
 AuditLog.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
 AuditLog.belongsTo(User, { foreignKey: 'actorUserId', as: 'actor' });
 
-export { Tenant, TenantSetting, User, UserSession, Invitation, PasswordResetToken, Department, Employee, EmployeeSalaryStructure, SalaryComponent, EmployeeSalaryComponent, Bonus, EmployeeDeduction, EmployeeLoan, LoanInstallment, EmployeeBankAccount, EmployeeTaxConfiguration, PayrollAdjustment, PerformanceCycle, PerformanceCriterion, PerformanceTemplate, PerformanceTemplateCriterion, PerformanceGoal, PerformanceEvidence, PerformanceReview, PerformanceReviewScore, PerformanceScoreSnapshot, PerformanceRatingBand, PerformanceEquivalenceSetting, PerformanceEquivalenceGroup, PerformanceEquivalenceMember, PerformanceSignatureRule, PerformanceSignature, PromotionProfile, PromotionReadinessCriterion, EmployeePromotionAssessment, EmployeeDocument, AttendanceRecord, LeaveType, LeaveBalance, LeaveRequest, Notification, PayrollRun, PayrollItem, PayrollItemLine, AuditLog };
+export { Tenant, TenantSetting, User, UserSession, Invitation, PasswordResetToken, Department, Employee, EmployeeSalaryStructure, SalaryComponent, EmployeeSalaryComponent, Bonus, EmployeeDeduction, EmployeeLoan, LoanInstallment, EmployeeBankAccount, EmployeeTaxConfiguration, PayrollAdjustment, PerformanceCycle, PerformanceCriterion, PerformanceTemplate, PerformanceTemplateCriterion, PerformanceGoal, PerformanceEvidence, PerformanceReview, PerformanceReviewScore, PerformanceScoreSnapshot, PerformanceRatingBand, PerformanceEquivalenceSetting, PerformanceEquivalenceGroup, PerformanceEquivalenceMember, PerformanceSignatureRule, PerformanceSignature, PromotionProfile, PromotionReadinessCriterion, EmployeePromotionAssessment, PerformanceReward, EmployeeDocument, AttendanceRecord, LeaveType, LeaveBalance, LeaveRequest, Notification, PayrollRun, PayrollItem, PayrollItemLine, AuditLog };

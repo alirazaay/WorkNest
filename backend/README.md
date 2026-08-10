@@ -283,3 +283,12 @@ Signature rules map configurable labels to criterion categories, such as Executi
 - `GET /api/v1/performance/employees/:employeeId/promotion-readiness`
 
 Promotion profiles define target roles and criteria such as leadership, decision-making, communication, and technical expertise. Criterion weights must total 100%. Readiness is calculated independently from annual performance, stored with a profile/criteria snapshot, and classified as `ready`, `developing`, or `not_ready`. Employees can view only their own readiness; managers are limited to their department.
+
+## FairRank Phase 12: reward recommendations
+
+- `GET /api/v1/performance/rewards`
+- `POST /api/v1/performance/rewards`
+- `POST /api/v1/performance/rewards/:id/approve`
+- `POST /api/v1/performance/rewards/:id/reject`
+
+Rewards are stored separately in `performance_rewards` and support salary increments, performance bonuses, promotions, recognition, and development opportunities. Managers can recommend rewards for their department; only administrators can approve or reject them. Reward recommendations and approvals do not alter annual performance scores, rating bands, or equivalence groups.
