@@ -22,6 +22,17 @@
 .performance-list-card { display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 14px 0; border-top: 1px solid #edf0f5; }
 .performance-list-card div { display: grid; gap: 4px; min-width: 0; }
 .performance-empty { display: grid; place-items: center; gap: 8px; min-height: 150px; color: #7b849b; text-align: center; }
+.my-performance { display: grid; gap: 18px; }
+.appraisal-rating { display: grid; gap: 3px; margin: 18px 0; }
+.appraisal-rating strong { font-size: 38px; color: #6f5ce7; }
+.appraisal-rating span { color: #727a92; }
+.appraisal-breakdown { display: grid; gap: 8px; margin: 18px 0; }
+.appraisal-breakdown div { display: flex; justify-content: space-between; gap: 14px; padding: 10px 0; border-bottom: 1px solid #edf0f5; }
+.appraisal-note { margin-top: 16px; padding: 14px; border-radius: 12px; background: #f7f6ff; }
+.appraisal-note p { margin-bottom: 0; }
+.feedback-list { display: grid; gap: 14px; margin-top: 16px; }
+.feedback-item { padding: 14px; border: 1px solid #edf0f5; border-radius: 12px; }
+.feedback-item p { margin: 8px 0; }
 .performance-modal { max-height: calc(100vh - 32px); overflow-y: auto; }
 .performance-modal label { display: grid; gap: 7px; margin: 14px 0; color: #4e5872; }
 .performance-modal input, .performance-modal select { width: 100%; box-sizing: border-box; border: 1px solid #dfe2eb; border-radius: 9px; padding: 11px 12px; font: inherit; }

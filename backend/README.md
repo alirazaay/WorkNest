@@ -331,3 +331,7 @@ Rule-based flags cover Exceptional ratings with weak evidence, large manager/cal
 ## FairRank Phase 18 frontend integration
 
 The frontend now exposes the protected `/performance` workspace through the existing React shell. It reads cycles, templates, goals, evidence, reviews, calibration/equivalence data, promotion profiles, and rewards from the FairRank API and provides role-aware tabs, responsive states, and administrator cycle creation. No new database migration was required for this UI phase.
+
+## FairRank Phase 19: employee-facing transparency
+
+`GET /api/v1/performance/me` is an employee-only, tenant-scoped read model for released appraisal transparency. It returns the authenticated employee's released-cycle appraisal explanations, completed/current goals from finalized cycles, and released manager feedback. It excludes confidential calibration records, other employees, salary data, and unreleased reviews. No migration was required because the endpoint composes existing immutable explanations, goals, cycles, and released reviews.

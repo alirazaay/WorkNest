@@ -131,6 +131,10 @@ The local development servers use port `5173` for the frontend and port `5000` f
 
 The protected `/performance` workspace provides API-backed FairRank views for overview, cycles, criteria/templates, goals, evidence, reviews, calibration, equivalence groups, promotion readiness, and rewards. The page uses the existing WorkNest shell, role-aware tabs, responsive layouts, real loading/error/empty states, and an administrator cycle-creation form. It does not fabricate performance records; values are loaded from `/api/v1/performance`.
 
+## FairRank Phase 19 employee transparency
+
+Employees can use the FairRank `My Performance` view to read only their own released appraisal reports, criterion breakdowns, completed goals, achievements, and released manager feedback. Unreleased reviews, calibration notes, other employees' data, salary information, and promotion details are not returned by the employee transparency API.
+
 After adding backend routes, restart the API process so its in-memory Express route registry reloads. A stale process on port `5000` can return `Route not found` even when the route exists in source code.
 
 If `npm run dev` reports `EADDRINUSE`, find and stop the listener before starting the watcher:
