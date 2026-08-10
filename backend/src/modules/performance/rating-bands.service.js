@@ -13,6 +13,10 @@ async function assertNoOverlap(auth, input, id = null) {
   if (overlap) throw new AppError(`Rating band overlaps with ${overlap.name}`, 409, 'RATING_BAND_OVERLAP');
 }
 
+export function selectRatingBand(bands, score) {
+  return bands.find(band => Number(score) >= Number(band.minScore) && Number(score) <= Number(band.maxScore)) ?? null;
+}
+
 export async function listRatingBands(auth) { return PerformanceRatingBand.findAll({ where: { tenantId: auth.tenantId }, order: [['sort_order', 'ASC'], ['min_score', 'ASC']] }); }
 
 export async function createRatingBand(auth, input) {
@@ -34,5 +38,5 @@ export async function updateRatingBand(auth, id, input) {
 
 export async function findRatingBand(tenantId, score, transaction) {
   const bands = await PerformanceRatingBand.findAll({ where: { tenantId, isActive: true }, order: [['sort_order', 'ASC'], ['min_score', 'ASC']], transaction });
-  return bands.find(band => Number(score) >= Number(band.minScore) && Number(score) <= Number(band.maxScore)) ?? null;
+  return selectRatingBand(bands, score);
 }

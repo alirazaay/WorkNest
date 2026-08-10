@@ -163,6 +163,10 @@ FairRank schema changes use Sequelize migrations only. `node backend/scripts/ver
 
 Cycle finalization, review submission, evidence verification, and promotion-readiness assessments now commit their domain update and audit entry in the same Sequelize transaction. This prevents a successful business mutation from being left without its required audit trail when a later write fails. Existing transactional score, calibration, explanation, signature, equivalence, fairness, and reward-approval workflows remain protected.
 
+## FairRank Phase 27 testing
+
+The FairRank test suite now explicitly covers score weights, rating-band assignment, equivalence grouping, promotion/performance separation, review and override validation, employee release policy, finalized-cycle immutability guards, tenant scoping, and manager department boundaries. The focused suite can be run with `node --test backend/test/performance-*.test.js`.
+
 After adding backend routes, restart the API process so its in-memory Express route registry reloads. A stale process on port `5000` can return `Route not found` even when the route exists in source code.
 
 If `npm run dev` reports `EADDRINUSE`, find and stop the listener before starting the watcher:

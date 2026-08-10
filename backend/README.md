@@ -363,3 +363,7 @@ FairRank does not use `sequelize.sync({ alter: true })` or destructive sync opti
 ## FairRank Phase 26: transaction safety
 
 Critical finalization mutations now use Sequelize transactions for the business write and its audit record: cycle transitions, review submission, evidence verification, and promotion-readiness assessment creation. If an audit write fails, the associated domain mutation rolls back. Existing transactions for score generation, calibration, explanations, signatures, equivalence, fairness, and reward approval remain in place. Regression coverage is in `test/performance-transactions.test.js`.
+
+## FairRank Phase 27: testing
+
+FairRank now has explicit regression coverage for weight totals, server-side score calculation, rating-band selection, equivalence thresholds, separate promotion readiness, review/override validation, employee release gates, finalized-cycle guards, tenant scoping, and manager department scoping. Run `node --test test/performance-*.test.js` for the performance suite. Database-backed integration tests remain opt-in until a dedicated isolated test database fixture is configured.
