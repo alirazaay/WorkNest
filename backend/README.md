@@ -327,3 +327,7 @@ Score snapshots now preserve `evidence_coverage_percentage` and `evidence_confid
 - `PATCH /api/v1/performance/fairness-flags/:id`
 
 Rule-based flags cover Exceptional ratings with weak evidence, large manager/calculated score differences, large manual overrides, missing override justification, and substantially different rewards inside an equivalence group. Flags are investigation aids, not legal conclusions or claims that bias has been eliminated.
+
+## FairRank Phase 18 frontend integration
+
+The frontend now exposes the protected `/performance` workspace through the existing React shell. It reads cycles, templates, goals, evidence, reviews, calibration/equivalence data, promotion profiles, and rewards from the FairRank API and provides role-aware tabs, responsive states, and administrator cycle creation. No new database migration was required for this UI phase.
