@@ -151,6 +151,10 @@ All 23 FairRank-owned tables now carry a direct `tenant_id`, including equivalen
 
 FairRank permissions now enforce the product role model: admins manage configuration, calibration, finalization, rewards, and audit history; managers work only with authorized department employees; employees can submit/access permitted self-appraisal data and only released performance results; and Super Admin is not included in FairRank employee-data routes. Employee score, signature, promotion-readiness, explanation, and manager-feedback reads are release-gated.
 
+## FairRank Phase 24 API design
+
+The canonical employee transparency contract remains `GET /api/v1/performance/me`, which avoids duplicating `/me/reviews` and `/me/goals`. FairRank comparison is now available through `POST /api/v1/performance/compare` for admins and managers, accepts 2–5 employee IDs plus a cycle, and returns scores, bands, signatures, equivalence status, spread, and threshold without creating an artificial rank.
+
 After adding backend routes, restart the API process so its in-memory Express route registry reloads. A stale process on port `5000` can return `Route not found` even when the route exists in source code.
 
 If `npm run dev` reports `EADDRINUSE`, find and stop the listener before starting the watcher:

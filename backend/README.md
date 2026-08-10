@@ -351,3 +351,7 @@ Migration `20260810001700-add-performance-child-tenant-scope.js` adds and backfi
 ## FairRank Phase 23: role permissions
 
 FairRank routes explicitly authorize `admin`, `manager`, or `employee` capabilities; `super_admin` is intentionally excluded. Employee-owned score, signature, explanation, promotion-readiness, and non-self review reads are restricted to finalized cycle statuses (`completed` or `archived`). Manager access remains department-scoped in service authorization, and administrative configuration/calibration/audit actions remain admin-only. Added release policy: `src/modules/performance/access.js`.
+
+## FairRank Phase 24: API design completion
+
+Added `POST /api/v1/performance/compare` with Zod validation for `cycleId` and 2–5 unique `employeeIds`. The comparison service is tenant-scoped, manager department-scoped, requires complete calculated scores, includes deterministic signatures, and reports `Performance Equivalent` when the selected employees share a rating band and remain within the configured threshold. Existing `/performance/me` remains the canonical employee aggregate rather than introducing duplicate read routes.
