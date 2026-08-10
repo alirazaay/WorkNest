@@ -319,3 +319,11 @@ Reports are generated from immutable score snapshots and preserve criterion brea
 ## FairRank Phase 16: evidence confidence
 
 Score snapshots now preserve `evidence_coverage_percentage` and `evidence_confidence`. Coverage is classified as `high` (80%+), `moderate` (50–79.99%), or `low` (below 50%). Confidence is informational and never silently reduces or recalculates the authoritative performance score.
+
+## FairRank Phase 17: fairness flags
+
+- `GET /api/v1/performance/cycles/:cycleId/fairness-flags`
+- `POST /api/v1/performance/cycles/:cycleId/generate-fairness-flags`
+- `PATCH /api/v1/performance/fairness-flags/:id`
+
+Rule-based flags cover Exceptional ratings with weak evidence, large manager/calculated score differences, large manual overrides, missing override justification, and substantially different rewards inside an equivalence group. Flags are investigation aids, not legal conclusions or claims that bias has been eliminated.

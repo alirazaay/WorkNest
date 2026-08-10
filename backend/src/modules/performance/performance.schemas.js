@@ -62,3 +62,5 @@ export const performanceCalibrationOverrideSchema = z.object({ newScore: z.coerc
 export const performanceCalibrationSettingsSchema = z.object({ blindReviewEnabled: z.boolean() });
 export const performanceCalibrationRevealQuerySchema = z.object({ revealIdentity: z.coerce.boolean().optional().default(false) });
 export const performanceExplanationQuerySchema = z.object({ cycleId: z.coerce.number().int().positive() });
+export const performanceFairnessQuerySchema = z.object({ status: z.enum(['open', 'acknowledged', 'resolved']).optional(), severity: z.enum(['info', 'warning', 'error']).optional() });
+export const performanceFairnessResolveSchema = z.object({ status: z.enum(['acknowledged', 'resolved']), resolutionNote: z.string().min(5).max(2000) });

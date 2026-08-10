@@ -38,6 +38,7 @@ import { PerformanceReward } from './PerformanceReward.js';
 import { PerformanceCalibrationDecision } from './PerformanceCalibrationDecision.js';
 import { PerformanceCalibrationSetting } from './PerformanceCalibrationSetting.js';
 import { PerformanceAppraisalExplanation } from './PerformanceAppraisalExplanation.js';
+import { PerformanceFairnessFlag } from './PerformanceFairnessFlag.js';
 import { EmployeeDocument } from './EmployeeDocument.js';
 import { AttendanceRecord } from './AttendanceRecord.js';
 import { LeaveType } from './LeaveType.js';
@@ -80,6 +81,7 @@ Tenant.hasMany(PerformanceReward, { foreignKey: 'tenantId', as: 'performanceRewa
 Tenant.hasMany(PerformanceCalibrationDecision, { foreignKey: 'tenantId', as: 'performanceCalibrationDecisions' });
 Tenant.hasOne(PerformanceCalibrationSetting, { foreignKey: 'tenantId', as: 'performanceCalibrationSetting' });
 Tenant.hasMany(PerformanceAppraisalExplanation, { foreignKey: 'tenantId', as: 'performanceAppraisalExplanations' });
+Tenant.hasMany(PerformanceFairnessFlag, { foreignKey: 'tenantId', as: 'performanceFairnessFlags' });
 User.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
 User.hasMany(UserSession, { foreignKey: 'userId', as: 'sessions' });
 User.hasMany(PasswordResetToken, { foreignKey: 'userId', as: 'passwordResetTokens' });
@@ -177,6 +179,11 @@ PerformanceCalibrationSetting.belongsTo(User, { foreignKey: 'updatedBy', as: 'up
 PerformanceAppraisalExplanation.belongsTo(PerformanceCycle, { foreignKey: 'cycleId', as: 'cycle' });
 PerformanceAppraisalExplanation.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
 PerformanceAppraisalExplanation.belongsTo(User, { foreignKey: 'generatedBy', as: 'generator' });
+PerformanceFairnessFlag.belongsTo(PerformanceCycle, { foreignKey: 'cycleId', as: 'cycle' });
+PerformanceFairnessFlag.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
+PerformanceFairnessFlag.belongsTo(PerformanceReview, { foreignKey: 'reviewId', as: 'review' });
+PerformanceFairnessFlag.belongsTo(User, { foreignKey: 'resolvedBy', as: 'resolver' });
+PerformanceFairnessFlag.belongsTo(User, { foreignKey: 'generatedBy', as: 'generator' });
 EmployeeDocument.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
 EmployeeDocument.belongsTo(User, { foreignKey: 'uploadedBy', as: 'uploader' });
 Employee.hasMany(AttendanceRecord, { foreignKey: 'employeeId', as: 'attendanceRecords' });
@@ -208,4 +215,4 @@ PayrollItemLine.belongsTo(PayrollItem, { foreignKey: 'payrollItemId', as: 'item'
 AuditLog.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
 AuditLog.belongsTo(User, { foreignKey: 'actorUserId', as: 'actor' });
 
-export { Tenant, TenantSetting, User, UserSession, Invitation, PasswordResetToken, Department, Employee, EmployeeSalaryStructure, SalaryComponent, EmployeeSalaryComponent, Bonus, EmployeeDeduction, EmployeeLoan, LoanInstallment, EmployeeBankAccount, EmployeeTaxConfiguration, PayrollAdjustment, PerformanceCycle, PerformanceCriterion, PerformanceTemplate, PerformanceTemplateCriterion, PerformanceGoal, PerformanceEvidence, PerformanceReview, PerformanceReviewScore, PerformanceScoreSnapshot, PerformanceRatingBand, PerformanceEquivalenceSetting, PerformanceEquivalenceGroup, PerformanceEquivalenceMember, PerformanceSignatureRule, PerformanceSignature, PromotionProfile, PromotionReadinessCriterion, EmployeePromotionAssessment, PerformanceReward, PerformanceCalibrationDecision, PerformanceCalibrationSetting, PerformanceAppraisalExplanation, EmployeeDocument, AttendanceRecord, LeaveType, LeaveBalance, LeaveRequest, Notification, PayrollRun, PayrollItem, PayrollItemLine, AuditLog };
+export { Tenant, TenantSetting, User, UserSession, Invitation, PasswordResetToken, Department, Employee, EmployeeSalaryStructure, SalaryComponent, EmployeeSalaryComponent, Bonus, EmployeeDeduction, EmployeeLoan, LoanInstallment, EmployeeBankAccount, EmployeeTaxConfiguration, PayrollAdjustment, PerformanceCycle, PerformanceCriterion, PerformanceTemplate, PerformanceTemplateCriterion, PerformanceGoal, PerformanceEvidence, PerformanceReview, PerformanceReviewScore, PerformanceScoreSnapshot, PerformanceRatingBand, PerformanceEquivalenceSetting, PerformanceEquivalenceGroup, PerformanceEquivalenceMember, PerformanceSignatureRule, PerformanceSignature, PromotionProfile, PromotionReadinessCriterion, EmployeePromotionAssessment, PerformanceReward, PerformanceCalibrationDecision, PerformanceCalibrationSetting, PerformanceAppraisalExplanation, PerformanceFairnessFlag, EmployeeDocument, AttendanceRecord, LeaveType, LeaveBalance, LeaveRequest, Notification, PayrollRun, PayrollItem, PayrollItemLine, AuditLog };

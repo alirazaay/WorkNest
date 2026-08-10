@@ -11,6 +11,7 @@ import { createPromotionAssessment, createPromotionProfile, getEmployeePromotion
 import { approveReward, createReward, listRewards, rejectReward } from './rewards.service.js';
 import { calibrateReview, getCalibrationSettings, listCalibration, overrideReview, updateCalibrationSettings } from './calibration.service.js';
 import { generateCycleExplanations, getAppraisalExplanation } from './explanation.service.js';
+import { generateFairnessFlags, listFairnessFlags, resolveFairnessFlag } from './fairness.service.js';
 
 const send = (res, data, status = 200) => res.status(status).json({ success: true, data });
 export async function cyclesList(req, res, next) { try { send(res, await listPerformanceCycles(req.auth, req.validated.query)); } catch (error) { next(error); } }
@@ -70,4 +71,7 @@ export async function calibrationSettingsGet(req, res, next) { try { send(res, a
 export async function calibrationSettingsUpdate(req, res, next) { try { send(res, await updateCalibrationSettings(req.auth, req.validated.body)); } catch (error) { next(error); } }
 export async function appraisalExplanationGet(req, res, next) { try { send(res, await getAppraisalExplanation(req.auth, req.validated.query.cycleId, Number(req.params.employeeId))); } catch (error) { next(error); } }
 export async function cycleExplanationsGenerate(req, res, next) { try { send(res, await generateCycleExplanations(req.auth, Number(req.params.cycleId))); } catch (error) { next(error); } }
+export async function fairnessFlagsList(req, res, next) { try { send(res, await listFairnessFlags(req.auth, Number(req.params.cycleId), req.validated.query)); } catch (error) { next(error); } }
+export async function fairnessFlagsGenerate(req, res, next) { try { send(res, await generateFairnessFlags(req.auth, Number(req.params.cycleId))); } catch (error) { next(error); } }
+export async function fairnessFlagResolve(req, res, next) { try { send(res, await resolveFairnessFlag(req.auth, Number(req.params.id), req.validated.body)); } catch (error) { next(error); } }
 import { unlink } from 'node:fs/promises';
