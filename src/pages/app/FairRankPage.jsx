@@ -15,9 +15,9 @@ const tabs = [
   ['criteria', 'Criteria', ['admin', 'manager']], ['goals', 'Goals', ['admin', 'manager', 'employee']],
   ['evidence', 'Evidence', ['admin', 'manager', 'employee']], ['reviews', 'Reviews', ['admin', 'manager', 'employee']],
   ['calibration', 'Calibration', ['admin', 'manager']], ['fairrank', 'FairRank', ['admin', 'manager']],
-  ['readiness', 'Readiness', ['admin', 'manager']], ['rewards', 'Rewards', ['admin', 'manager']]
+  ['readiness', 'Readiness', ['admin', 'manager']], ['rewards', 'Rewards', ['admin', 'manager']], ['audit', 'Audit log', ['admin']]
 ];
-const endpoints = { cycles: '/performance/cycles', criteria: '/performance/templates', goals: '/performance/goals', evidence: '/performance/evidence', reviews: '/performance/reviews', readiness: '/performance/promotion-profiles', rewards: '/performance/rewards' };
+const endpoints = { cycles: '/performance/cycles', criteria: '/performance/templates', goals: '/performance/goals', evidence: '/performance/evidence', reviews: '/performance/reviews', readiness: '/performance/promotion-profiles', rewards: '/performance/rewards', audit: '/performance/audit' };
 
 function responseData(response) { return response?.data?.data ?? response?.data ?? []; }
 function titleCase(value) { return String(value || '').replaceAll('_', ' ').replace(/\b\w/g, c => c.toUpperCase()); }
@@ -80,11 +80,14 @@ export default function FairRankPage({ user, onExit }) {
 
 function PageContent({ tab, data, canManage, activeCycle, onRetry }) {
   if (tab === 'my') return <MyPerformance data={data} />;
+  if (tab === 'audit') return <AuditList items={data.items || []} />;
   if (tab === 'overview') { const values = data.overview || []; return <><div className="performance-kpis"><SummaryCard label="Review cycles" value={Array.isArray(values[0]) ? values[0].length : 0} icon={BarChart3} /><SummaryCard label="Rating bands" value={Array.isArray(values[1]) ? values[1].length : 0} icon={CheckCircle2} tone="mint" /><SummaryCard label="Promotion profiles" value={Array.isArray(values[4]) ? values[4].length : 0} icon={Target} tone="blue" /></div><div className="performance-grid"><article className="performance-card"><h2>Performance workflow</h2><p>Set expectations, collect evidence, review fairly, and explain every outcome.</p><div className="performance-workflow">{[['Goals', Target], ['Evidence', FileText], ['Reviews', Users], ['Calibration', BarChart3]].map(([label, Icon]) => <div key={label}><Icon size={19} /><span>{label}</span></div>)}</div></article><article className="performance-card"><h2>Latest cycle</h2>{activeCycle ? <ListCard item={activeCycle} label="cycle" /> : <EmptyState text="No performance cycles have been created yet." />}</article></div></>; }
   if (!canManage && ['cycles', 'criteria', 'calibration', 'fairrank', 'readiness', 'rewards'].includes(tab)) return <EmptyState text="This performance section is available to managers and administrators." />;
   const items = data.items || []; return <article className="performance-card"><div className="performance-card-heading"><div><h2>{titleCase(tab)}</h2><p>{items.length ? `${items.length} record${items.length === 1 ? '' : 's'} found.` : `Manage ${tab} using real workspace data.`}</p></div><button className="icon-button" onClick={onRetry} aria-label="Refresh"><RefreshCw size={17} /></button></div>{items.length ? <div className="performance-list">{items.map(item => <ListCard item={item} label={tab} key={item.id || item.code || item.name} />)}</div> : <EmptyState text={`No ${tab} records are available yet.`} />}</article>;
 }
 function EmptyState({ text }) { return <div className="performance-empty"><CircleAlert size={22} /><p>{text}</p></div>; }
+
+function AuditList({ items }) { return <article className="performance-card"><div className="performance-card-heading"><div><h2>FairRank audit log</h2><p>Tenant-scoped sensitive performance actions. Private before/after payloads are intentionally not exposed here.</p></div></div>{items.length ? <div className="performance-list">{items.map(item => <article className="performance-list-card" key={item.id}><div><strong>{titleCase(item.action)}</strong><small>{item.entityType} #{item.entityId || '—'} · {item.actor?.name || 'System'} · {item.createdAt ? new Date(item.createdAt).toLocaleString() : ''}</small></div><StatusBadge status="Recorded" /></article>)}</div> : <EmptyState text="No FairRank audit events have been recorded yet." />}</article>; }
 
 function MyPerformance({ data }) {
   const reports = data.reports || [];

@@ -13,6 +13,7 @@ import { calibrateReview, getCalibrationSettings, listCalibration, overrideRevie
 import { generateCycleExplanations, getAppraisalExplanation } from './explanation.service.js';
 import { generateFairnessFlags, listFairnessFlags, resolveFairnessFlag } from './fairness.service.js';
 import { getEmployeeTransparency } from './transparency.service.js';
+import { listPerformanceAuditLogs } from './audit.service.js';
 
 const send = (res, data, status = 200) => res.status(status).json({ success: true, data });
 export async function cyclesList(req, res, next) { try { send(res, await listPerformanceCycles(req.auth, req.validated.query)); } catch (error) { next(error); } }
@@ -76,4 +77,5 @@ export async function fairnessFlagsList(req, res, next) { try { send(res, await 
 export async function fairnessFlagsGenerate(req, res, next) { try { send(res, await generateFairnessFlags(req.auth, Number(req.params.cycleId))); } catch (error) { next(error); } }
 export async function fairnessFlagResolve(req, res, next) { try { send(res, await resolveFairnessFlag(req.auth, Number(req.params.id), req.validated.body)); } catch (error) { next(error); } }
 export async function employeeTransparencyGet(req, res, next) { try { send(res, await getEmployeeTransparency(req.auth, req.validated.query.cycleId)); } catch (error) { next(error); } }
+export async function performanceAuditList(req, res, next) { try { send(res, await listPerformanceAuditLogs(req.auth, req.validated.query)); } catch (error) { next(error); } }
 import { unlink } from 'node:fs/promises';

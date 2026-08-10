@@ -139,6 +139,10 @@ Employees can use the FairRank `My Performance` view to read only their own rele
 
 FairRank lifecycle events now use the existing tenant-scoped notification system. Managers are notified when reviews enter the review stage, HR is notified when calibration starts, employees are notified when finalized explanations are released, and employees receive notices for calibration clarification requests or rating updates. Performance notifications link back to the FairRank workspace.
 
+## FairRank Phase 21 audit logging
+
+Sensitive FairRank mutations continue to write to the existing `audit_logs` table. Administrators can review a tenant-scoped FairRank audit timeline from the Audit log tab; it shows action, actor, entity, timestamp, request ID, and IP metadata without exposing private before/after appraisal payloads.
+
 After adding backend routes, restart the API process so its in-memory Express route registry reloads. A stale process on port `5000` can return `Route not found` even when the route exists in source code.
 
 If `npm run dev` reports `EADDRINUSE`, find and stop the listener before starting the watcher:

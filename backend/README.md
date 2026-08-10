@@ -339,3 +339,7 @@ The frontend now exposes the protected `/performance` workspace through the exis
 ## FairRank Phase 20: notifications
 
 FairRank uses the existing `notifications` table and `createNotification` service. Cycle transitions create manager review reminders, HR calibration notices, and employee release notices when appraisal explanations exist. Calibration clarification requests and rating overrides notify the affected employee. All notifications remain scoped by `tenant_id` and `user_id`; no migration was required.
+
+## FairRank Phase 21: audit logging
+
+FairRank mutations use the existing `recordAudit` service for cycles, criteria/templates, goals, evidence, reviews, score snapshots, rating bands, equivalence settings/groups, signatures, promotion readiness, rewards, calibration, explanations, and fairness flags. Administrators can query `GET /api/v1/performance/audit?limit=50` for a tenant-scoped timeline. The endpoint returns metadata only and intentionally omits private before/after JSON payloads.
