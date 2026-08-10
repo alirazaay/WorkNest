@@ -96,6 +96,7 @@ Run the API smoke checks with `backend/scripts/smoke-test.ps1` after the backend
 - FairRank Phase 5 adds tenant-scoped performance evidence with optional PDF/image attachments, goal/criterion references, verification status, employee self-access, manager department scoping, secure attachment metadata responses, and audit logging.
 - FairRank Phase 6 adds role-scoped appraisal reviews and criterion scores. Review creation derives verified evidence counts on the server, prevents duplicate review types per employee/cycle, and submission freezes the review with an audit record. Score calculation and rating bands remain separate later phases.
 - FairRank Phase 7 adds deterministic server-side weighted score calculation and immutable employee/cycle score snapshots. Submitted manager/final reviews are selected by priority, verified evidence counts are preserved in calculation details, and existing snapshots are never overwritten. Rating-band assignment remains reserved for Phase 8.
+- FairRank Phase 8 adds tenant-configurable rating bands with overlap protection. Score generation snapshots the matching band name and ID into the calculation details, so later band configuration changes do not rewrite historical performance results.
 - Payroll also supports effective-dated tax configuration, approved adjustments for locked runs, and standard/HBL/Meezan/UBL bank-export layouts. The UI exposes payroll configuration and the backend endpoints remain authoritative for all financial values.
 
 ### Verification Commands

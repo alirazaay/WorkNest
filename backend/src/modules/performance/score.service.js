@@ -1,5 +1,6 @@
 import { Op } from 'sequelize';
 import { Employee, PerformanceCriterion, PerformanceCycle, PerformanceReview, PerformanceReviewScore, PerformanceScoreSnapshot, User } from '../../database/models/index.js';
+import { findRatingBand } from './rating-bands.service.js';
 import { sequelize } from '../../config/database.js';
 import { AppError } from '../../middleware/error.js';
 import { recordAudit } from '../../services/audit.service.js';
@@ -60,7 +61,8 @@ export async function calculateCycleScores(auth, cycleId) {
       if (existing) { skipped.push({ employeeId, snapshotId: existing.id, reason: 'immutable_snapshot_exists' }); continue; }
       const review = chooseReview(employeeReviews);
       const calculation = calculateWeightedScore(review.scores);
-      const snapshot = await PerformanceScoreSnapshot.create({ tenantId: auth.tenantId, cycleId, employeeId, finalScore: calculation.finalScore, ratingBand: null, calculationDetails: { version: 1, sourceReviewId: review.id, sourceReviewType: review.reviewType, totalWeight: calculation.totalWeight, lines: calculation.lines, generatedAt: new Date().toISOString() }, generatedBy: auth.userId, generatedAt: new Date() }, { transaction });
+      const band = await findRatingBand(auth.tenantId, calculation.finalScore, transaction);
+      const snapshot = await PerformanceScoreSnapshot.create({ tenantId: auth.tenantId, cycleId, employeeId, finalScore: calculation.finalScore, ratingBand: band?.name ?? null, calculationDetails: { version: 1, sourceReviewId: review.id, sourceReviewType: review.reviewType, totalWeight: calculation.totalWeight, ratingBandId: band?.id ?? null, ratingBandName: band?.name ?? null, lines: calculation.lines, generatedAt: new Date().toISOString() }, generatedBy: auth.userId, generatedAt: new Date() }, { transaction });
       for (const line of calculation.lines) await review.scores.find(score => score.criterionId === line.criterionId)?.update({ weightedScore: line.weightedScore }, { transaction });
       await review.update({ overallScore: calculation.finalScore }, { transaction });
       await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'performance_score_calculated', entityType: 'performance_score_snapshot', entityId: snapshot.id, afterData: { cycleId, employeeId, finalScore: calculation.finalScore, sourceReviewId: review.id }, transaction });

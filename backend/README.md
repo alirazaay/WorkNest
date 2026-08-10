@@ -246,3 +246,11 @@ Reviews support `self`, `manager`, `peer`, `calibration`, and `final` types. Emp
 - `POST /api/v1/performance/cycles/:cycleId/calculate`
 
 The calculation service selects the highest-priority submitted review (`calibration`, `final`, `manager`, then `self`), applies criterion weights on the server, writes weighted criterion scores, and stores an immutable row in `performance_score_snapshots` with calculation details. Existing snapshots are skipped rather than overwritten. No frontend-provided final score is trusted, and rating bands are intentionally deferred to Phase 8.
+
+## FairRank Phase 8: performance rating bands
+
+- `GET /api/v1/performance/rating-bands`
+- `POST /api/v1/performance/rating-bands`
+- `PATCH /api/v1/performance/rating-bands/:id`
+
+Rating bands are tenant-configurable and stored in `performance_rating_bands`. Active ranges cannot overlap, and bands are deactivated rather than physically deleted. When a score is calculated, the matching active band's name and ID are copied into the immutable score snapshot. Existing snapshots are not recalculated after band configuration changes.
