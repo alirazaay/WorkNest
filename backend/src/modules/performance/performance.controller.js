@@ -1,7 +1,18 @@
 import { createPerformanceCycle, getPerformanceCycle, listPerformanceCycles, updatePerformanceCycle } from './performance.service.js';
+import { addTemplateCriterion, createCriterion, createTemplate, getTemplate, listCriteria, listTemplates, removeTemplateCriterion, updateCriterion, updateTemplate, updateTemplateCriterion } from './criteria.service.js';
 
 const send = (res, data, status = 200) => res.status(status).json({ success: true, data });
 export async function cyclesList(req, res, next) { try { send(res, await listPerformanceCycles(req.auth, req.validated.query)); } catch (error) { next(error); } }
 export async function cycleGet(req, res, next) { try { send(res, await getPerformanceCycle(req.auth, Number(req.params.id))); } catch (error) { next(error); } }
 export async function cycleCreate(req, res, next) { try { send(res, await createPerformanceCycle(req.auth, req.validated.body), 201); } catch (error) { next(error); } }
 export async function cycleUpdate(req, res, next) { try { send(res, await updatePerformanceCycle(req.auth, Number(req.params.id), req.validated.body)); } catch (error) { next(error); } }
+export async function criteriaList(req, res, next) { try { send(res, await listCriteria(req.auth)); } catch (error) { next(error); } }
+export async function criterionCreate(req, res, next) { try { send(res, await createCriterion(req.auth, req.validated.body), 201); } catch (error) { next(error); } }
+export async function criterionUpdate(req, res, next) { try { send(res, await updateCriterion(req.auth, Number(req.params.id), req.validated.body)); } catch (error) { next(error); } }
+export async function templatesList(req, res, next) { try { send(res, await listTemplates(req.auth)); } catch (error) { next(error); } }
+export async function templateGet(req, res, next) { try { send(res, await getTemplate(req.auth, Number(req.params.id))); } catch (error) { next(error); } }
+export async function templateCreate(req, res, next) { try { send(res, await createTemplate(req.auth, req.validated.body), 201); } catch (error) { next(error); } }
+export async function templateUpdate(req, res, next) { try { send(res, await updateTemplate(req.auth, Number(req.params.id), req.validated.body)); } catch (error) { next(error); } }
+export async function templateCriterionAdd(req, res, next) { try { send(res, await addTemplateCriterion(req.auth, Number(req.params.id), req.validated.body), 201); } catch (error) { next(error); } }
+export async function templateCriterionUpdate(req, res, next) { try { send(res, await updateTemplateCriterion(req.auth, Number(req.params.id), Number(req.params.assignmentId), req.validated.body)); } catch (error) { next(error); } }
+export async function templateCriterionRemove(req, res, next) { try { send(res, await removeTemplateCriterion(req.auth, Number(req.params.id), Number(req.params.assignmentId))); } catch (error) { next(error); } }

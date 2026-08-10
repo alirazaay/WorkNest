@@ -91,6 +91,7 @@ Run the API smoke checks with `backend/scripts/smoke-test.ps1` after the backend
 - Payroll list queries use the database's underscored timestamp fields (`created_at`) so bonus and loan configuration panels do not cause the main Payroll page to fail.
 - WorkNest FairRank Phase 1 audit is documented in [performance_phase1_audit.md](performance_phase1_audit.md). Performance implementation is intentionally staged and has not yet changed the existing modules.
 - FairRank Phase 2 adds tenant-scoped performance-cycle lifecycle APIs under `/api/v1/performance/cycles`.
+- FairRank Phase 3 adds tenant-scoped criteria and role-specific template APIs with draft weight assembly, 100% activation validation, and frozen active configuration.
 - Payroll also supports effective-dated tax configuration, approved adjustments for locked runs, and standard/HBL/Meezan/UBL bank-export layouts. The UI exposes payroll configuration and the backend endpoints remain authoritative for all financial values.
 
 ### Verification Commands

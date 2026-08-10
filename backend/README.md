@@ -43,6 +43,17 @@ The FairRank performance-management Phase 1 audit is maintained in the repositor
 
 Performance cycles are tenant-scoped. Only administrators can create or update cycles. Lifecycle transitions are validated, cycle configuration freezes after activation, and only one active cycle is permitted per tenant/year/type.
 
+Phase 3 FairRank APIs:
+
+- `GET|POST /api/v1/performance/criteria`
+- `PATCH /api/v1/performance/criteria/:id`
+- `GET|POST /api/v1/performance/templates`
+- `GET|PATCH /api/v1/performance/templates/:id`
+- `POST /api/v1/performance/templates/:id/criteria`
+- `PATCH|DELETE /api/v1/performance/templates/:id/criteria/:assignmentId`
+
+Templates may be assembled while in `draft`. Assignment weights cannot exceed 100%; activating a template requires an exact 100% total. Active templates and criteria used by active templates are frozen.
+
 ## Phase 2 auth endpoints
 
 - `POST /api/v1/auth/register-company`

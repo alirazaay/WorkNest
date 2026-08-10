@@ -17,6 +17,9 @@ import { EmployeeBankAccount } from './EmployeeBankAccount.js';
 import { EmployeeTaxConfiguration } from './EmployeeTaxConfiguration.js';
 import { PayrollAdjustment } from './PayrollAdjustment.js';
 import { PerformanceCycle } from './PerformanceCycle.js';
+import { PerformanceCriterion } from './PerformanceCriterion.js';
+import { PerformanceTemplate } from './PerformanceTemplate.js';
+import { PerformanceTemplateCriterion } from './PerformanceTemplateCriterion.js';
 import { EmployeeDocument } from './EmployeeDocument.js';
 import { AttendanceRecord } from './AttendanceRecord.js';
 import { LeaveType } from './LeaveType.js';
@@ -42,6 +45,8 @@ Tenant.hasMany(EmployeeBankAccount, { foreignKey: 'tenantId', as: 'bankAccounts'
 Tenant.hasMany(EmployeeTaxConfiguration, { foreignKey: 'tenantId', as: 'taxConfigurations' });
 Tenant.hasMany(PayrollAdjustment, { foreignKey: 'tenantId', as: 'payrollAdjustments' });
 Tenant.hasMany(PerformanceCycle, { foreignKey: 'tenantId', as: 'performanceCycles' });
+Tenant.hasMany(PerformanceCriterion, { foreignKey: 'tenantId', as: 'performanceCriteria' });
+Tenant.hasMany(PerformanceTemplate, { foreignKey: 'tenantId', as: 'performanceTemplates' });
 User.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
 User.hasMany(UserSession, { foreignKey: 'userId', as: 'sessions' });
 User.hasMany(PasswordResetToken, { foreignKey: 'userId', as: 'passwordResetTokens' });
@@ -78,6 +83,13 @@ PayrollRun.hasMany(PayrollAdjustment, { foreignKey: 'payrollRunId', as: 'adjustm
 PayrollAdjustment.belongsTo(PayrollRun, { foreignKey: 'payrollRunId', as: 'run' });
 PerformanceCycle.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
 PerformanceCycle.belongsTo(User, { foreignKey: 'createdBy', as: 'creator' });
+PerformanceCriterion.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
+PerformanceTemplate.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
+PerformanceTemplate.belongsTo(User, { foreignKey: 'createdBy', as: 'creator' });
+PerformanceTemplate.hasMany(PerformanceTemplateCriterion, { foreignKey: 'templateId', as: 'criteria' });
+PerformanceTemplateCriterion.belongsTo(PerformanceTemplate, { foreignKey: 'templateId', as: 'template' });
+PerformanceTemplateCriterion.belongsTo(PerformanceCriterion, { foreignKey: 'criterionId', as: 'criterion' });
+PerformanceCriterion.hasMany(PerformanceTemplateCriterion, { foreignKey: 'criterionId', as: 'templateAssignments' });
 EmployeeDocument.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
 EmployeeDocument.belongsTo(User, { foreignKey: 'uploadedBy', as: 'uploader' });
 Employee.hasMany(AttendanceRecord, { foreignKey: 'employeeId', as: 'attendanceRecords' });
@@ -109,4 +121,4 @@ PayrollItemLine.belongsTo(PayrollItem, { foreignKey: 'payrollItemId', as: 'item'
 AuditLog.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
 AuditLog.belongsTo(User, { foreignKey: 'actorUserId', as: 'actor' });
 
-export { Tenant, TenantSetting, User, UserSession, Invitation, PasswordResetToken, Department, Employee, EmployeeSalaryStructure, SalaryComponent, EmployeeSalaryComponent, Bonus, EmployeeDeduction, EmployeeLoan, LoanInstallment, EmployeeBankAccount, EmployeeTaxConfiguration, PayrollAdjustment, PerformanceCycle, EmployeeDocument, AttendanceRecord, LeaveType, LeaveBalance, LeaveRequest, Notification, PayrollRun, PayrollItem, PayrollItemLine, AuditLog };
+export { Tenant, TenantSetting, User, UserSession, Invitation, PasswordResetToken, Department, Employee, EmployeeSalaryStructure, SalaryComponent, EmployeeSalaryComponent, Bonus, EmployeeDeduction, EmployeeLoan, LoanInstallment, EmployeeBankAccount, EmployeeTaxConfiguration, PayrollAdjustment, PerformanceCycle, PerformanceCriterion, PerformanceTemplate, PerformanceTemplateCriterion, EmployeeDocument, AttendanceRecord, LeaveType, LeaveBalance, LeaveRequest, Notification, PayrollRun, PayrollItem, PayrollItemLine, AuditLog };

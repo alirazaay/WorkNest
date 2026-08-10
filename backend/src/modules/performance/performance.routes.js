@@ -2,8 +2,8 @@ import { Router } from 'express';
 import { authenticate } from '../../middleware/authenticate.js';
 import { authorize } from '../../middleware/authorize.js';
 import { validate } from '../../middleware/validate.js';
-import { cycleCreate, cycleGet, cyclesList, cycleUpdate } from './performance.controller.js';
-import { performanceCycleCreateSchema, performanceCycleQuerySchema, performanceCycleUpdateSchema } from './performance.schemas.js';
+import { criteriaList, criterionCreate, criterionUpdate, cycleCreate, cycleGet, cyclesList, cycleUpdate, templateCreate, templateCriterionAdd, templateCriterionRemove, templateCriterionUpdate, templateGet, templatesList, templateUpdate } from './performance.controller.js';
+import { performanceCriterionCreateSchema, performanceCriterionUpdateSchema, performanceCycleCreateSchema, performanceCycleQuerySchema, performanceCycleUpdateSchema, performanceTemplateCreateSchema, performanceTemplateUpdateSchema, templateCriterionSchema, templateCriterionUpdateSchema } from './performance.schemas.js';
 
 const router = Router();
 router.use(authenticate);
@@ -11,4 +11,14 @@ router.get('/cycles', authorize('admin', 'manager', 'employee'), validate(perfor
 router.post('/cycles', authorize('admin'), validate(performanceCycleCreateSchema), cycleCreate);
 router.get('/cycles/:id', authorize('admin', 'manager', 'employee'), cycleGet);
 router.patch('/cycles/:id', authorize('admin'), validate(performanceCycleUpdateSchema), cycleUpdate);
+router.get('/criteria', authorize('admin', 'manager'), criteriaList);
+router.post('/criteria', authorize('admin'), validate(performanceCriterionCreateSchema), criterionCreate);
+router.patch('/criteria/:id', authorize('admin'), validate(performanceCriterionUpdateSchema), criterionUpdate);
+router.get('/templates', authorize('admin', 'manager'), templatesList);
+router.post('/templates', authorize('admin'), validate(performanceTemplateCreateSchema), templateCreate);
+router.get('/templates/:id', authorize('admin', 'manager'), templateGet);
+router.patch('/templates/:id', authorize('admin'), validate(performanceTemplateUpdateSchema), templateUpdate);
+router.post('/templates/:id/criteria', authorize('admin'), validate(templateCriterionSchema), templateCriterionAdd);
+router.patch('/templates/:id/criteria/:assignmentId', authorize('admin'), validate(templateCriterionUpdateSchema), templateCriterionUpdate);
+router.delete('/templates/:id/criteria/:assignmentId', authorize('admin'), templateCriterionRemove);
 export default router;
