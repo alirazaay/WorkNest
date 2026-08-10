@@ -273,3 +273,13 @@ The default equivalence threshold is 1 performance point and can be configured p
 - `POST /api/v1/performance/cycles/:cycleId/generate-signatures`
 
 Signature rules map configurable labels to criterion categories, such as Execution Leader or Innovation Contributor. Generation reads immutable score-snapshot calculation lines, selects the highest-scoring matching rule, stores the strongest factors, and preserves the source snapshot. Existing signatures are not overwritten; managers are restricted to their department and employees to their own signature.
+
+## FairRank Phase 11: advancement readiness
+
+- `GET /api/v1/performance/promotion-profiles`
+- `POST /api/v1/performance/promotion-profiles`
+- `PATCH /api/v1/performance/promotion-profiles/:id`
+- `POST /api/v1/performance/promotion-assessments`
+- `GET /api/v1/performance/employees/:employeeId/promotion-readiness`
+
+Promotion profiles define target roles and criteria such as leadership, decision-making, communication, and technical expertise. Criterion weights must total 100%. Readiness is calculated independently from annual performance, stored with a profile/criteria snapshot, and classified as `ready`, `developing`, or `not_ready`. Employees can view only their own readiness; managers are limited to their department.

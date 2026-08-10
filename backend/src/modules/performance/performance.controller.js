@@ -7,6 +7,7 @@ import { calculateCycleScores, getEmployeeScore } from './score.service.js';
 import { createRatingBand, listRatingBands, updateRatingBand } from './rating-bands.service.js';
 import { getEquivalenceSettings, listEquivalenceGroups, recalculateEquivalence, updateEquivalenceSettings } from './equivalence.service.js';
 import { createSignatureRule, generateCycleSignatures, getEmployeeSignature, listSignatureRules, selectPerformanceSignature, updateSignatureRule } from './signature.service.js';
+import { createPromotionAssessment, createPromotionProfile, getEmployeePromotionReadiness, listPromotionProfiles, updatePromotionProfile } from './promotion.service.js';
 
 const send = (res, data, status = 200) => res.status(status).json({ success: true, data });
 export async function cyclesList(req, res, next) { try { send(res, await listPerformanceCycles(req.auth, req.validated.query)); } catch (error) { next(error); } }
@@ -50,4 +51,9 @@ export async function signatureRuleCreate(req, res, next) { try { send(res, awai
 export async function signatureRuleUpdate(req, res, next) { try { send(res, await updateSignatureRule(req.auth, Number(req.params.id), req.validated.body)); } catch (error) { next(error); } }
 export async function employeeSignatureGet(req, res, next) { try { send(res, await getEmployeeSignature(req.auth, req.validated.query.cycleId, Number(req.params.employeeId))); } catch (error) { next(error); } }
 export async function cycleSignaturesGenerate(req, res, next) { try { send(res, await generateCycleSignatures(req.auth, Number(req.params.cycleId))); } catch (error) { next(error); } }
+export async function promotionProfilesList(req, res, next) { try { send(res, await listPromotionProfiles(req.auth)); } catch (error) { next(error); } }
+export async function promotionProfileCreate(req, res, next) { try { send(res, await createPromotionProfile(req.auth, req.validated.body), 201); } catch (error) { next(error); } }
+export async function promotionProfileUpdate(req, res, next) { try { send(res, await updatePromotionProfile(req.auth, Number(req.params.id), req.validated.body)); } catch (error) { next(error); } }
+export async function promotionAssessmentCreate(req, res, next) { try { send(res, await createPromotionAssessment(req.auth, req.validated.body), 201); } catch (error) { next(error); } }
+export async function employeePromotionReadinessGet(req, res, next) { try { send(res, await getEmployeePromotionReadiness(req.auth, Number(req.params.employeeId), req.validated.query)); } catch (error) { next(error); } }
 import { unlink } from 'node:fs/promises';
