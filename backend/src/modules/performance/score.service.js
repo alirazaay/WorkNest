@@ -19,6 +19,7 @@ export function calculateWeightedScore(scores) {
   });
   return { finalScore: Math.round(lines.reduce((sum, line) => sum + line.weightedScore, 0) * 1000) / 1000, totalWeight, lines };
 }
+export function classifyEvidenceConfidence(coveragePercentage) { const coverage = Number(coveragePercentage); return coverage >= 80 ? 'high' : coverage >= 50 ? 'moderate' : 'low'; }
 
 async function employeeFor(auth, id) {
   const employee = await Employee.findOne({ where: { id, tenantId: auth.tenantId, employmentStatus: { [Op.ne]: 'terminated' } } });
@@ -62,7 +63,9 @@ export async function calculateCycleScores(auth, cycleId) {
       const review = chooseReview(employeeReviews);
       const calculation = calculateWeightedScore(review.scores);
       const band = await findRatingBand(auth.tenantId, calculation.finalScore, transaction);
-      const snapshot = await PerformanceScoreSnapshot.create({ tenantId: auth.tenantId, cycleId, employeeId, finalScore: calculation.finalScore, ratingBand: band?.name ?? null, calculationDetails: { version: 1, sourceReviewId: review.id, sourceReviewType: review.reviewType, totalWeight: calculation.totalWeight, ratingBandId: band?.id ?? null, ratingBandName: band?.name ?? null, lines: calculation.lines, generatedAt: new Date().toISOString() }, generatedBy: auth.userId, generatedAt: new Date() }, { transaction });
+      const evidenceCoveragePercentage = calculation.lines.length ? Math.round((calculation.lines.filter(line => Number(line.evidenceCount) > 0).length / calculation.lines.length) * 10000) / 100 : 0;
+      const evidenceConfidence = classifyEvidenceConfidence(evidenceCoveragePercentage);
+      const snapshot = await PerformanceScoreSnapshot.create({ tenantId: auth.tenantId, cycleId, employeeId, finalScore: calculation.finalScore, ratingBand: band?.name ?? null, evidenceCoveragePercentage, evidenceConfidence, calculationDetails: { version: 1, sourceReviewId: review.id, sourceReviewType: review.reviewType, totalWeight: calculation.totalWeight, ratingBandId: band?.id ?? null, ratingBandName: band?.name ?? null, evidenceCoveragePercentage, evidenceConfidence, lines: calculation.lines, generatedAt: new Date().toISOString() }, generatedBy: auth.userId, generatedAt: new Date() }, { transaction });
       for (const line of calculation.lines) await review.scores.find(score => score.criterionId === line.criterionId)?.update({ weightedScore: line.weightedScore }, { transaction });
       await review.update({ overallScore: calculation.finalScore }, { transaction });
       await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'performance_score_calculated', entityType: 'performance_score_snapshot', entityId: snapshot.id, afterData: { cycleId, employeeId, finalScore: calculation.finalScore, sourceReviewId: review.id }, transaction });

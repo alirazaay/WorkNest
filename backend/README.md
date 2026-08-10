@@ -315,3 +315,7 @@ When `blindReviewEnabled` is true, calibration payloads hide names, employee cod
 - `POST /api/v1/performance/cycles/:cycleId/generate-explanations`
 
 Reports are generated from immutable score snapshots and preserve criterion breakdowns, evidence coverage, equivalence conclusions, performance signatures, and separate promotion-readiness conclusions. Existing explanations are not overwritten, and employees can access only their own explanation.
+
+## FairRank Phase 16: evidence confidence
+
+Score snapshots now preserve `evidence_coverage_percentage` and `evidence_confidence`. Coverage is classified as `high` (80%+), `moderate` (50–79.99%), or `low` (below 50%). Confidence is informational and never silently reduces or recalculates the authoritative performance score.
