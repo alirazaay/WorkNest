@@ -3,6 +3,7 @@ import { addTemplateCriterion, createCriterion, createTemplate, getTemplate, lis
 import { createGoal, getGoal, listGoals, updateGoal } from './goals.service.js';
 import { createEvidence, listEvidence, verifyEvidence } from './evidence.service.js';
 import { createReview, getReview, listReviews, submitReview } from './reviews.service.js';
+import { calculateCycleScores, getEmployeeScore } from './score.service.js';
 
 const send = (res, data, status = 200) => res.status(status).json({ success: true, data });
 export async function cyclesList(req, res, next) { try { send(res, await listPerformanceCycles(req.auth, req.validated.query)); } catch (error) { next(error); } }
@@ -32,4 +33,6 @@ export async function reviewsList(req, res, next) { try { send(res, await listRe
 export async function reviewGet(req, res, next) { try { send(res, await getReview(req.auth, Number(req.params.id))); } catch (error) { next(error); } }
 export async function reviewCreate(req, res, next) { try { send(res, await createReview(req.auth, req.validated.body), 201); } catch (error) { next(error); } }
 export async function reviewSubmit(req, res, next) { try { send(res, await submitReview(req.auth, Number(req.params.id))); } catch (error) { next(error); } }
+export async function employeeScoreGet(req, res, next) { try { send(res, await getEmployeeScore(req.auth, req.validated.query.cycleId, Number(req.params.employeeId))); } catch (error) { next(error); } }
+export async function cycleScoresCalculate(req, res, next) { try { send(res, await calculateCycleScores(req.auth, Number(req.params.cycleId))); } catch (error) { next(error); } }
 import { unlink } from 'node:fs/promises';

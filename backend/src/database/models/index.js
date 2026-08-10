@@ -24,6 +24,7 @@ import { PerformanceGoal } from './PerformanceGoal.js';
 import { PerformanceEvidence } from './PerformanceEvidence.js';
 import { PerformanceReview } from './PerformanceReview.js';
 import { PerformanceReviewScore } from './PerformanceReviewScore.js';
+import { PerformanceScoreSnapshot } from './PerformanceScoreSnapshot.js';
 import { EmployeeDocument } from './EmployeeDocument.js';
 import { AttendanceRecord } from './AttendanceRecord.js';
 import { LeaveType } from './LeaveType.js';
@@ -54,6 +55,7 @@ Tenant.hasMany(PerformanceTemplate, { foreignKey: 'tenantId', as: 'performanceTe
 Tenant.hasMany(PerformanceGoal, { foreignKey: 'tenantId', as: 'performanceGoals' });
 Tenant.hasMany(PerformanceEvidence, { foreignKey: 'tenantId', as: 'performanceEvidence' });
 Tenant.hasMany(PerformanceReview, { foreignKey: 'tenantId', as: 'performanceReviews' });
+Tenant.hasMany(PerformanceScoreSnapshot, { foreignKey: 'tenantId', as: 'performanceScoreSnapshots' });
 User.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
 User.hasMany(UserSession, { foreignKey: 'userId', as: 'sessions' });
 User.hasMany(PasswordResetToken, { foreignKey: 'userId', as: 'passwordResetTokens' });
@@ -115,6 +117,9 @@ PerformanceReview.belongsTo(User, { foreignKey: 'reviewerId', as: 'reviewer' });
 PerformanceReview.hasMany(PerformanceReviewScore, { foreignKey: 'reviewId', as: 'scores' });
 PerformanceReviewScore.belongsTo(PerformanceReview, { foreignKey: 'reviewId', as: 'review' });
 PerformanceReviewScore.belongsTo(PerformanceCriterion, { foreignKey: 'criterionId', as: 'criterion' });
+PerformanceScoreSnapshot.belongsTo(PerformanceCycle, { foreignKey: 'cycleId', as: 'cycle' });
+PerformanceScoreSnapshot.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
+PerformanceScoreSnapshot.belongsTo(User, { foreignKey: 'generatedBy', as: 'generator' });
 EmployeeDocument.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
 EmployeeDocument.belongsTo(User, { foreignKey: 'uploadedBy', as: 'uploader' });
 Employee.hasMany(AttendanceRecord, { foreignKey: 'employeeId', as: 'attendanceRecords' });
@@ -146,4 +151,4 @@ PayrollItemLine.belongsTo(PayrollItem, { foreignKey: 'payrollItemId', as: 'item'
 AuditLog.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
 AuditLog.belongsTo(User, { foreignKey: 'actorUserId', as: 'actor' });
 
-export { Tenant, TenantSetting, User, UserSession, Invitation, PasswordResetToken, Department, Employee, EmployeeSalaryStructure, SalaryComponent, EmployeeSalaryComponent, Bonus, EmployeeDeduction, EmployeeLoan, LoanInstallment, EmployeeBankAccount, EmployeeTaxConfiguration, PayrollAdjustment, PerformanceCycle, PerformanceCriterion, PerformanceTemplate, PerformanceTemplateCriterion, PerformanceGoal, PerformanceEvidence, PerformanceReview, PerformanceReviewScore, EmployeeDocument, AttendanceRecord, LeaveType, LeaveBalance, LeaveRequest, Notification, PayrollRun, PayrollItem, PayrollItemLine, AuditLog };
+export { Tenant, TenantSetting, User, UserSession, Invitation, PasswordResetToken, Department, Employee, EmployeeSalaryStructure, SalaryComponent, EmployeeSalaryComponent, Bonus, EmployeeDeduction, EmployeeLoan, LoanInstallment, EmployeeBankAccount, EmployeeTaxConfiguration, PayrollAdjustment, PerformanceCycle, PerformanceCriterion, PerformanceTemplate, PerformanceTemplateCriterion, PerformanceGoal, PerformanceEvidence, PerformanceReview, PerformanceReviewScore, PerformanceScoreSnapshot, EmployeeDocument, AttendanceRecord, LeaveType, LeaveBalance, LeaveRequest, Notification, PayrollRun, PayrollItem, PayrollItemLine, AuditLog };

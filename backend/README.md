@@ -239,3 +239,10 @@ Evidence is stored in `performance_evidence`, is linked to the authenticated ten
 - `POST /api/v1/performance/reviews/:id/submit`
 
 Reviews support `self`, `manager`, `peer`, `calibration`, and `final` types. Employees can create self reviews, managers can create authorized manager reviews for their department, and administrators can manage tenant reviews. Criterion scores are validated from 0 to 100, duplicate criteria are rejected, verified evidence counts are derived by the backend, and submitted reviews cannot be resubmitted. Final score calculation and rating-band assignment are intentionally deferred to later FairRank phases.
+
+## FairRank Phase 7: final performance scores
+
+- `GET /api/v1/performance/employees/:employeeId/score?cycleId=:cycleId`
+- `POST /api/v1/performance/cycles/:cycleId/calculate`
+
+The calculation service selects the highest-priority submitted review (`calibration`, `final`, `manager`, then `self`), applies criterion weights on the server, writes weighted criterion scores, and stores an immutable row in `performance_score_snapshots` with calculation details. Existing snapshots are skipped rather than overwritten. No frontend-provided final score is trusted, and rating bands are intentionally deferred to Phase 8.
