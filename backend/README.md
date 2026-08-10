@@ -32,6 +32,17 @@ If `npm run dev` reports `EADDRINUSE`, another API process already owns port `50
 
 Payroll bonus and loan list queries explicitly order by the MySQL `created_at` column. This avoids Sequelize-generated `createdAt` SQL errors with the underscored schema.
 
+The FairRank performance-management Phase 1 audit is maintained in the repository root at `performance_phase1_audit.md`. Performance tables and APIs will be added incrementally in later approved phases.
+
+## FairRank Phase 2
+
+- `GET /api/v1/performance/cycles`
+- `POST /api/v1/performance/cycles`
+- `GET /api/v1/performance/cycles/:id`
+- `PATCH /api/v1/performance/cycles/:id`
+
+Performance cycles are tenant-scoped. Only administrators can create or update cycles. Lifecycle transitions are validated, cycle configuration freezes after activation, and only one active cycle is permitted per tenant/year/type.
+
 ## Phase 2 auth endpoints
 
 - `POST /api/v1/auth/register-company`

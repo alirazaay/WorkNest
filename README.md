@@ -89,6 +89,8 @@ Run the API smoke checks with `backend/scripts/smoke-test.ps1` after the backend
 - The backend uses validated request data through `req.validated`, tenant-scoped queries, JWT access tokens, rotated HTTP-only refresh cookies, and environment-specific authentication rate limits.
 - Payroll-owned records are tenant-scoped and use additive Sequelize migrations. Payroll generation snapshots employee/salary/payment data, records source-linked earnings and deductions, prevents duplicate bonus/loan processing, and keeps locked runs immutable through normal API actions.
 - Payroll list queries use the database's underscored timestamp fields (`created_at`) so bonus and loan configuration panels do not cause the main Payroll page to fail.
+- WorkNest FairRank Phase 1 audit is documented in [performance_phase1_audit.md](performance_phase1_audit.md). Performance implementation is intentionally staged and has not yet changed the existing modules.
+- FairRank Phase 2 adds tenant-scoped performance-cycle lifecycle APIs under `/api/v1/performance/cycles`.
 - Payroll also supports effective-dated tax configuration, approved adjustments for locked runs, and standard/HBL/Meezan/UBL bank-export layouts. The UI exposes payroll configuration and the backend endpoints remain authoritative for all financial values.
 
 ### Verification Commands
