@@ -61,3 +61,4 @@ export const performanceCalibrationActionSchema = z.object({ action: z.enum(['co
 export const performanceCalibrationOverrideSchema = z.object({ newScore: z.coerce.number().min(0).max(100).optional(), newRatingBand: z.string().min(2).max(100), justification: z.string().min(10).max(3000) });
 export const performanceCalibrationSettingsSchema = z.object({ blindReviewEnabled: z.boolean() });
 export const performanceCalibrationRevealQuerySchema = z.object({ revealIdentity: z.coerce.boolean().optional().default(false) });
+export const performanceExplanationQuerySchema = z.object({ cycleId: z.coerce.number().int().positive() });

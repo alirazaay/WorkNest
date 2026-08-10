@@ -308,3 +308,10 @@ Calibration responses include review scores, evidence coverage, score snapshots,
 - `GET /api/v1/performance/cycles/:cycleId/calibration?revealIdentity=false`
 
 When `blindReviewEnabled` is true, calibration payloads hide names, employee codes, IDs, and other unnecessary identity details while retaining designation, department, criterion scores, evidence coverage, and equivalence context. Only an administrator requesting `revealIdentity=true` receives identity fields. Blind mode is a presentation/access response policy and does not alter stored appraisal records.
+
+## FairRank Phase 15: explainable appraisal
+
+- `GET /api/v1/performance/employees/:employeeId/appraisal-explanation?cycleId=:cycleId`
+- `POST /api/v1/performance/cycles/:cycleId/generate-explanations`
+
+Reports are generated from immutable score snapshots and preserve criterion breakdowns, evidence coverage, equivalence conclusions, performance signatures, and separate promotion-readiness conclusions. Existing explanations are not overwritten, and employees can access only their own explanation.
