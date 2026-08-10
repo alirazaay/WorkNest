@@ -230,3 +230,12 @@ Goals are tenant-scoped and stored in `performance_goals`. Managers are restrict
 - `GET /api/v1/performance/employees/:employeeId/evidence`
 
 Evidence is stored in `performance_evidence`, is linked to the authenticated tenant, cycle, employee, optional goal, and optional criterion, and supports pending/verified/rejected review. Uploads accept the existing configured PDF/JPEG/PNG file types and size limit. Raw filesystem storage keys are never returned to clients; responses expose attachment availability and safe file metadata only. Employees can submit and view only their own evidence, managers are limited to their department, and administrators can manage tenant evidence.
+
+## FairRank Phase 6: appraisal reviews
+
+- `GET /api/v1/performance/reviews`
+- `POST /api/v1/performance/reviews`
+- `GET /api/v1/performance/reviews/:id`
+- `POST /api/v1/performance/reviews/:id/submit`
+
+Reviews support `self`, `manager`, `peer`, `calibration`, and `final` types. Employees can create self reviews, managers can create authorized manager reviews for their department, and administrators can manage tenant reviews. Criterion scores are validated from 0 to 100, duplicate criteria are rejected, verified evidence counts are derived by the backend, and submitted reviews cannot be resubmitted. Final score calculation and rating-band assignment are intentionally deferred to later FairRank phases.

@@ -94,6 +94,7 @@ Run the API smoke checks with `backend/scripts/smoke-test.ps1` after the backend
 - FairRank Phase 3 adds tenant-scoped criteria and role-specific template APIs with draft weight assembly, 100% activation validation, and frozen active configuration.
 - FairRank Phase 4 adds tenant-scoped employee goals/KPIs with measurable targets, progress validation, cycle freezing, manager department scoping, employee self-access, and audit logging. Endpoints are available under `/api/v1/performance/goals` and `/api/v1/performance/employees/:employeeId/goals`.
 - FairRank Phase 5 adds tenant-scoped performance evidence with optional PDF/image attachments, goal/criterion references, verification status, employee self-access, manager department scoping, secure attachment metadata responses, and audit logging.
+- FairRank Phase 6 adds role-scoped appraisal reviews and criterion scores. Review creation derives verified evidence counts on the server, prevents duplicate review types per employee/cycle, and submission freezes the review with an audit record. Score calculation and rating bands remain separate later phases.
 - Payroll also supports effective-dated tax configuration, approved adjustments for locked runs, and standard/HBL/Meezan/UBL bank-export layouts. The UI exposes payroll configuration and the backend endpoints remain authoritative for all financial values.
 
 ### Verification Commands

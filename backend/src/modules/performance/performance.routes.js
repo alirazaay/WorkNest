@@ -6,8 +6,8 @@ import { env } from '../../config/env.js';
 import { authenticate } from '../../middleware/authenticate.js';
 import { authorize } from '../../middleware/authorize.js';
 import { validate } from '../../middleware/validate.js';
-import { criteriaList, criterionCreate, criterionUpdate, cycleCreate, cycleGet, cyclesList, cycleUpdate, employeeEvidenceList, employeeGoalsList, evidenceCreate, evidenceList, evidenceVerify, goalCreate, goalGet, goalsList, goalUpdate, templateCreate, templateCriterionAdd, templateCriterionRemove, templateCriterionUpdate, templateGet, templatesList, templateUpdate } from './performance.controller.js';
-import { performanceCriterionCreateSchema, performanceCriterionUpdateSchema, performanceCycleCreateSchema, performanceCycleQuerySchema, performanceCycleUpdateSchema, performanceEvidenceCreateSchema, performanceEvidenceQuerySchema, performanceEvidenceVerifySchema, performanceGoalCreateSchema, performanceGoalQuerySchema, performanceGoalUpdateSchema, performanceTemplateCreateSchema, performanceTemplateUpdateSchema, templateCriterionSchema, templateCriterionUpdateSchema } from './performance.schemas.js';
+import { criteriaList, criterionCreate, criterionUpdate, cycleCreate, cycleGet, cyclesList, cycleUpdate, employeeEvidenceList, employeeGoalsList, evidenceCreate, evidenceList, evidenceVerify, goalCreate, goalGet, goalsList, goalUpdate, reviewCreate, reviewGet, reviewsList, reviewSubmit, templateCreate, templateCriterionAdd, templateCriterionRemove, templateCriterionUpdate, templateGet, templatesList, templateUpdate } from './performance.controller.js';
+import { performanceCriterionCreateSchema, performanceCriterionUpdateSchema, performanceCycleCreateSchema, performanceCycleQuerySchema, performanceCycleUpdateSchema, performanceEvidenceCreateSchema, performanceEvidenceQuerySchema, performanceEvidenceVerifySchema, performanceGoalCreateSchema, performanceGoalQuerySchema, performanceGoalUpdateSchema, performanceReviewCreateSchema, performanceReviewQuerySchema, performanceTemplateCreateSchema, performanceTemplateUpdateSchema, templateCriterionSchema, templateCriterionUpdateSchema } from './performance.schemas.js';
 
 const router = Router();
 const evidenceUploadRoot = path.resolve(env.FILE_STORAGE_ROOT, 'performance-evidence');
@@ -37,4 +37,8 @@ router.get('/evidence', authorize('admin', 'manager', 'employee'), validate(perf
 router.get('/employees/:employeeId/evidence', authorize('admin', 'manager', 'employee'), validate(performanceEvidenceQuerySchema, 'query'), employeeEvidenceList);
 router.post('/evidence', authorize('admin', 'manager', 'employee'), evidenceUpload.single('file'), validate(performanceEvidenceCreateSchema, 'body'), evidenceCreate);
 router.patch('/evidence/:id/verify', authorize('admin', 'manager'), validate(performanceEvidenceVerifySchema), evidenceVerify);
+router.get('/reviews', authorize('admin', 'manager', 'employee'), validate(performanceReviewQuerySchema, 'query'), reviewsList);
+router.post('/reviews', authorize('admin', 'manager', 'employee'), validate(performanceReviewCreateSchema), reviewCreate);
+router.get('/reviews/:id', authorize('admin', 'manager', 'employee'), reviewGet);
+router.post('/reviews/:id/submit', authorize('admin', 'manager', 'employee'), reviewSubmit);
 export default router;
