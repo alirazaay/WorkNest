@@ -355,3 +355,7 @@ FairRank routes explicitly authorize `admin`, `manager`, or `employee` capabilit
 ## FairRank Phase 24: API design completion
 
 Added `POST /api/v1/performance/compare` with Zod validation for `cycleId` and 2–5 unique `employeeIds`. The comparison service is tenant-scoped, manager department-scoped, requires complete calculated scores, includes deterministic signatures, and reports `Performance Equivalent` when the selected employees share a rating band and remain within the configured threshold. Existing `/performance/me` remains the canonical employee aggregate rather than introducing duplicate read routes.
+
+## FairRank Phase 25: database safety
+
+FairRank does not use `sequelize.sync({ alter: true })` or destructive sync options. Run `node scripts/verify-database-safety.js` to scan 154 backend source files for unsafe schema mutation patterns. Evidence verification and score recalculation are rejected for `completed` and `archived` cycles. Derived equivalence/fairness recalculation may replace only derived records; finalized scores, reviews, explanations, and history are not physically deleted.

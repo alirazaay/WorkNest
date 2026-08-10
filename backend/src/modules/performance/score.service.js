@@ -53,7 +53,7 @@ export async function getEmployeeScore(auth, cycleId, employeeId) {
 
 export async function calculateCycleScores(auth, cycleId) {
   const cycle = await cycleFor(auth, cycleId);
-  if (cycle.status === 'archived') throw new AppError('Archived cycles cannot be recalculated', 409, 'PERFORMANCE_CYCLE_FROZEN');
+  if (['completed', 'archived'].includes(cycle.status)) throw new AppError('Completed or archived cycles cannot be recalculated', 409, 'PERFORMANCE_CYCLE_FROZEN');
   return sequelize.transaction(async transaction => {
     const reviews = await PerformanceReview.findAll({ where: { tenantId: auth.tenantId, cycleId, status: { [Op.in]: ['submitted', 'released'] } }, include: reviewInclude, transaction });
     const grouped = new Map();

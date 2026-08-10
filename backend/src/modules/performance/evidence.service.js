@@ -78,6 +78,7 @@ export async function createEvidence(auth, input, file) {
 export async function verifyEvidence(auth, id, input) {
   const evidence = await evidenceFor(auth, id);
   if (auth.role === 'employee') throw new AppError('Employees cannot verify evidence', 403, 'EVIDENCE_VERIFICATION_DENIED');
+  if (['completed', 'archived'].includes(evidence.cycle?.status)) throw new AppError('Evidence in a completed or archived cycle is immutable', 409, 'PERFORMANCE_CYCLE_FROZEN');
   const before = evidence.toJSON();
   await evidence.update({ verificationStatus: input.verificationStatus, verifiedBy: auth.userId });
   await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: `performance_evidence_${input.verificationStatus}`, entityType: 'performance_evidence', entityId: id, beforeData: { ...before, storageKey: undefined }, afterData: { ...evidence.toJSON(), storageKey: undefined } });

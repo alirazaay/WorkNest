@@ -155,6 +155,10 @@ FairRank permissions now enforce the product role model: admins manage configura
 
 The canonical employee transparency contract remains `GET /api/v1/performance/me`, which avoids duplicating `/me/reviews` and `/me/goals`. FairRank comparison is now available through `POST /api/v1/performance/compare` for admins and managers, accepts 2–5 employee IDs plus a cycle, and returns scores, bands, signatures, equivalence status, spread, and threshold without creating an artificial rank.
 
+## FairRank Phase 25 database safety
+
+FairRank schema changes use Sequelize migrations only. `node backend/scripts/verify-database-safety.js` scans backend source for unsafe `sequelize.sync`, `alter: true`, and `force: true` usage. Completed and archived cycles reject evidence verification and score recalculation, while finalized snapshots and appraisal history remain immutable.
+
 After adding backend routes, restart the API process so its in-memory Express route registry reloads. A stale process on port `5000` can return `Route not found` even when the route exists in source code.
 
 If `npm run dev` reports `EADDRINUSE`, find and stop the listener before starting the watcher:

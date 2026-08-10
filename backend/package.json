@@ -12,6 +12,7 @@
     "db:seed:demo": "node src/database/seed-demo.js",
     "db:verify": "node scripts/verify-database.js",
     "db:verify:performance": "node scripts/verify-performance-isolation.js",
+    "db:verify:safety": "node scripts/verify-database-safety.js",
     "db:fresh": "node scripts/migrate.js fresh",
     "db:rollback:test": "node scripts/rollback-test.js",
     "db:backup": "powershell -ExecutionPolicy Bypass -File scripts/backup.ps1",
