@@ -143,6 +143,10 @@ FairRank lifecycle events now use the existing tenant-scoped notification system
 
 Sensitive FairRank mutations continue to write to the existing `audit_logs` table. Administrators can review a tenant-scoped FairRank audit timeline from the Audit log tab; it shows action, actor, entity, timestamp, request ID, and IP metadata without exposing private before/after appraisal payloads.
 
+## FairRank Phase 22 tenant isolation
+
+All 23 FairRank-owned tables now carry a direct `tenant_id`, including equivalence members and promotion-readiness criteria that were previously scoped only through parent records. The backend verification command `node backend/scripts/verify-performance-isolation.js` checks this invariant against the live MySQL schema.
+
 After adding backend routes, restart the API process so its in-memory Express route registry reloads. A stale process on port `5000` can return `Route not found` even when the route exists in source code.
 
 If `npm run dev` reports `EADDRINUSE`, find and stop the listener before starting the watcher:

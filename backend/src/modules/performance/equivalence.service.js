@@ -60,7 +60,7 @@ export async function recalculateEquivalence(auth, cycleId) {
     for (const group of groups) {
       const bandId = group.members[0].ratingBandId ?? null;
       const row = await PerformanceEquivalenceGroup.create({ tenantId: auth.tenantId, cycleId, ratingBandId: bandId, ratingBand: group.ratingBand, thresholdUsed: settings.threshold }, { transaction });
-      await PerformanceEquivalenceMember.bulkCreate(group.members.map(member => ({ groupId: row.id, employeeId: member.employeeId, finalScore: member.finalScore })), { transaction });
+      await PerformanceEquivalenceMember.bulkCreate(group.members.map(member => ({ tenantId: auth.tenantId, groupId: row.id, employeeId: member.employeeId, finalScore: member.finalScore })), { transaction });
       created.push(row);
     }
     await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'performance_equivalence_recalculated', entityType: 'performance_cycle', entityId: cycleId, afterData: { threshold: settings.threshold, groupCount: created.length, snapshotCount: snapshots.length }, transaction });

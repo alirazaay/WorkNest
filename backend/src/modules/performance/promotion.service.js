@@ -23,7 +23,7 @@ export async function createPromotionProfile(auth, input) {
   assertWeights(input.criteria);
   return sequelize.transaction(async transaction => {
     const profile = await PromotionProfile.create({ tenantId: auth.tenantId, createdBy: auth.userId, name: input.name, targetRole: input.targetRole, description: input.description ?? null }, { transaction });
-    await PromotionReadinessCriterion.bulkCreate(input.criteria.map(row => ({ profileId: profile.id, ...row })), { transaction });
+    await PromotionReadinessCriterion.bulkCreate(input.criteria.map(row => ({ tenantId: auth.tenantId, profileId: profile.id, ...row })), { transaction });
     await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'promotion_profile_created', entityType: 'promotion_profile', entityId: profile.id, afterData: { ...profile.toJSON(), criteria: input.criteria }, transaction });
     return PromotionProfile.findOne({ where: { id: profile.id, tenantId: auth.tenantId }, include: profileInclude, transaction });
   });

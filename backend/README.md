@@ -343,3 +343,7 @@ FairRank uses the existing `notifications` table and `createNotification` servic
 ## FairRank Phase 21: audit logging
 
 FairRank mutations use the existing `recordAudit` service for cycles, criteria/templates, goals, evidence, reviews, score snapshots, rating bands, equivalence settings/groups, signatures, promotion readiness, rewards, calibration, explanations, and fairness flags. Administrators can query `GET /api/v1/performance/audit?limit=50` for a tenant-scoped timeline. The endpoint returns metadata only and intentionally omits private before/after JSON payloads.
+
+## FairRank Phase 22: tenant isolation verification
+
+Migration `20260810001700-add-performance-child-tenant-scope.js` adds and backfills `tenant_id` on `performance_equivalence_members` and `promotion_readiness_criteria`, then enforces non-null foreign keys and tenant-aware indexes. Run `node scripts/verify-performance-isolation.js` to verify all 23 FairRank tables have direct tenant scope. Service queries continue deriving tenant context from authenticated `req.auth`; client-provided tenant IDs are not accepted.
