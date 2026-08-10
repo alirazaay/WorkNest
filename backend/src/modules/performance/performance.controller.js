@@ -1,5 +1,6 @@
 import { createPerformanceCycle, getPerformanceCycle, listPerformanceCycles, updatePerformanceCycle } from './performance.service.js';
 import { addTemplateCriterion, createCriterion, createTemplate, getTemplate, listCriteria, listTemplates, removeTemplateCriterion, updateCriterion, updateTemplate, updateTemplateCriterion } from './criteria.service.js';
+import { createGoal, getGoal, listGoals, updateGoal } from './goals.service.js';
 
 const send = (res, data, status = 200) => res.status(status).json({ success: true, data });
 export async function cyclesList(req, res, next) { try { send(res, await listPerformanceCycles(req.auth, req.validated.query)); } catch (error) { next(error); } }
@@ -16,3 +17,8 @@ export async function templateUpdate(req, res, next) { try { send(res, await upd
 export async function templateCriterionAdd(req, res, next) { try { send(res, await addTemplateCriterion(req.auth, Number(req.params.id), req.validated.body), 201); } catch (error) { next(error); } }
 export async function templateCriterionUpdate(req, res, next) { try { send(res, await updateTemplateCriterion(req.auth, Number(req.params.id), Number(req.params.assignmentId), req.validated.body)); } catch (error) { next(error); } }
 export async function templateCriterionRemove(req, res, next) { try { send(res, await removeTemplateCriterion(req.auth, Number(req.params.id), Number(req.params.assignmentId))); } catch (error) { next(error); } }
+export async function goalsList(req, res, next) { try { send(res, await listGoals(req.auth, req.validated.query)); } catch (error) { next(error); } }
+export async function employeeGoalsList(req, res, next) { try { send(res, await listGoals(req.auth, { ...req.validated.query, employeeId: Number(req.params.employeeId) })); } catch (error) { next(error); } }
+export async function goalGet(req, res, next) { try { send(res, await getGoal(req.auth, Number(req.params.id))); } catch (error) { next(error); } }
+export async function goalCreate(req, res, next) { try { send(res, await createGoal(req.auth, req.validated.body), 201); } catch (error) { next(error); } }
+export async function goalUpdate(req, res, next) { try { send(res, await updateGoal(req.auth, Number(req.params.id), req.validated.body)); } catch (error) { next(error); } }

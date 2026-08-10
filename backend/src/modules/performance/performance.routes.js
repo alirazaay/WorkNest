@@ -2,8 +2,8 @@ import { Router } from 'express';
 import { authenticate } from '../../middleware/authenticate.js';
 import { authorize } from '../../middleware/authorize.js';
 import { validate } from '../../middleware/validate.js';
-import { criteriaList, criterionCreate, criterionUpdate, cycleCreate, cycleGet, cyclesList, cycleUpdate, templateCreate, templateCriterionAdd, templateCriterionRemove, templateCriterionUpdate, templateGet, templatesList, templateUpdate } from './performance.controller.js';
-import { performanceCriterionCreateSchema, performanceCriterionUpdateSchema, performanceCycleCreateSchema, performanceCycleQuerySchema, performanceCycleUpdateSchema, performanceTemplateCreateSchema, performanceTemplateUpdateSchema, templateCriterionSchema, templateCriterionUpdateSchema } from './performance.schemas.js';
+import { criteriaList, criterionCreate, criterionUpdate, cycleCreate, cycleGet, cyclesList, cycleUpdate, employeeGoalsList, goalCreate, goalGet, goalsList, goalUpdate, templateCreate, templateCriterionAdd, templateCriterionRemove, templateCriterionUpdate, templateGet, templatesList, templateUpdate } from './performance.controller.js';
+import { performanceCriterionCreateSchema, performanceCriterionUpdateSchema, performanceCycleCreateSchema, performanceCycleQuerySchema, performanceCycleUpdateSchema, performanceGoalCreateSchema, performanceGoalQuerySchema, performanceGoalUpdateSchema, performanceTemplateCreateSchema, performanceTemplateUpdateSchema, templateCriterionSchema, templateCriterionUpdateSchema } from './performance.schemas.js';
 
 const router = Router();
 router.use(authenticate);
@@ -21,4 +21,9 @@ router.patch('/templates/:id', authorize('admin'), validate(performanceTemplateU
 router.post('/templates/:id/criteria', authorize('admin'), validate(templateCriterionSchema), templateCriterionAdd);
 router.patch('/templates/:id/criteria/:assignmentId', authorize('admin'), validate(templateCriterionUpdateSchema), templateCriterionUpdate);
 router.delete('/templates/:id/criteria/:assignmentId', authorize('admin'), templateCriterionRemove);
+router.get('/goals', authorize('admin', 'manager', 'employee'), validate(performanceGoalQuerySchema, 'query'), goalsList);
+router.get('/employees/:employeeId/goals', authorize('admin', 'manager', 'employee'), validate(performanceGoalQuerySchema, 'query'), employeeGoalsList);
+router.get('/goals/:id', authorize('admin', 'manager', 'employee'), goalGet);
+router.post('/goals', authorize('admin', 'manager'), validate(performanceGoalCreateSchema), goalCreate);
+router.patch('/goals/:id', authorize('admin', 'manager'), validate(performanceGoalUpdateSchema), goalUpdate);
 export default router;

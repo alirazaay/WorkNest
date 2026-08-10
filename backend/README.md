@@ -211,3 +211,13 @@ Create and restore backups with:
 npm run db:backup
 npm run db:restore -- -BackupFile ./backups/worknest-YYYYMMDD-HHMMSS.sql -ConfirmRestore
 ```
+
+## FairRank Phase 4: employee goals and KPIs
+
+- `GET /api/v1/performance/goals`
+- `GET /api/v1/performance/goals/:id`
+- `POST /api/v1/performance/goals`
+- `PATCH /api/v1/performance/goals/:id`
+- `GET /api/v1/performance/employees/:employeeId/goals`
+
+Goals are tenant-scoped and stored in `performance_goals`. Managers are restricted to employees in their department, employees can only read their own goals, and administrators can manage tenant goals. Goal progress is validated from 0 to 100, completed goals are normalized to 100% progress, and goals in completed or archived cycles are immutable. Goal creation and updates are recorded in the audit log.
