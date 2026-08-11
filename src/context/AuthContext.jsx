@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { login, logout, restoreSession } from '../services/authService.js';
+import { hasSession, login, logout, restoreSession } from '../services/authService.js';
 
 const AuthContext = createContext(null);
 
@@ -9,9 +9,9 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     let mounted = true;
-    // Only attempt restore if a refresh cookie is likely present (avoids wasted 401 on public pages).
-    const hasSession = document.cookie.includes('worknest_refresh');
-    if (!hasSession) { setLoading(false); return; }
+    // Skip the /auth/refresh call if localStorage says there's no active session.
+    // This avoids unnecessary 401s on the login/register pages.
+    if (!hasSession()) { setLoading(false); return; }
     restoreSession().then(session => { if (mounted) setUser(session); }).catch(() => {}).finally(() => { if (mounted) setLoading(false); });
     return () => { mounted = false; };
   }, []);
