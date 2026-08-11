@@ -5,6 +5,7 @@ import { cleanParams } from '../utils/cleanParams.js';
 const api = axios.create({
   baseURL: appConfig.apiBaseUrl,
   withCredentials: true,
+  timeout: 30_000,
   headers: { 'Content-Type': 'application/json' }
 });
 

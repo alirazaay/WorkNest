@@ -35,12 +35,13 @@ async function start() {
 }
 
 process.on('unhandledRejection', (reason) => {
-  logger.fatal({ reason }, 'Unhandled promise rejection');
-  process.exit(1);
+  // Log but do not exit — a single failed request promise should not kill the server.
+  // uncaughtException (synchronous errors) still exits because those indicate code bugs.
+  logger.error({ reason }, 'Unhandled promise rejection — request may have failed');
 });
 
 process.on('uncaughtException', (error) => {
-  logger.fatal({ err: error }, 'Uncaught exception');
+  logger.fatal({ err: error }, 'Uncaught exception — process will exit');
   process.exit(1);
 });
 

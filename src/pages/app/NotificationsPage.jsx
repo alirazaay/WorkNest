@@ -1,26 +1,94 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api.js';
-import Sidebar from '../../components/common/Sidebar.jsx';
-import Topbar from '../../components/common/Topbar.jsx';
+import AppShell from '../../components/common/AppShell.jsx';
 import Breadcrumbs from '../../components/common/Breadcrumbs.jsx';
 import Button from '../../components/common/Button.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
 import LoadingState from '../../components/common/LoadingState.jsx';
-import Toast from '../../components/common/Toast.jsx';
-
-const paths = { Overview: '/dashboard', People: '/employees', Attendance: '/attendance', 'Time off': '/leaves', Payroll: '/payroll', Departments: '/departments', Settings: '/settings', Notifications: '/notifications', FairRank: '/performance' };
 
 export default function NotificationsPage({ user, onExit }) {
   const navigate = useNavigate();
-  const role = user?.user?.role || 'employee';
-  const [items, setItems] = useState([]); const [unread, setUnread] = useState(0); const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const [message, setMessage] = useState(''); const [mobileOpen, setMobileOpen] = useState(false);
-  async function load() { setLoading(true); setError(''); try { const response = await api.get('/notifications'); setItems(response.data.data?.items || []); setUnread(response.data.data?.unreadCount || 0); } catch (requestError) { setError(requestError.response?.data?.error?.message || 'Could not load notifications.'); } finally { setLoading(false); } }
-  useEffect(() => { load(); }, []);
-  async function markRead(id) { try { await api.patch(`/notifications/${id}/read`); setItems(current => current.map(item => item.id === id ? { ...item, isRead: true } : item)); setUnread(current => Math.max(0, current - 1)); } catch (requestError) { setError(requestError.response?.data?.error?.message || 'Could not update notification.'); } }
-  async function markAllRead() { try { await api.patch('/notifications/read-all'); setItems(current => current.map(item => ({ ...item, isRead: true }))); setUnread(0); setMessage('All notifications marked as read'); } catch (requestError) { setError(requestError.response?.data?.error?.message || 'Could not update notifications.'); } }
-  const go = label => { setMobileOpen(false); navigate(paths[label] || '/dashboard'); };
-  return <div className="app"><Sidebar active="Notifications" role={role} open={mobileOpen} onClose={() => setMobileOpen(false)} onNavigate={go} onLogout={onExit} /><div className="app-content"><Topbar user={user} onMenu={() => setMobileOpen(true)} onNotifications={() => setMessage('You are viewing notifications')} onSettings={() => navigate('/settings')} onLogout={onExit} /><main className="dashboard-main"><Breadcrumbs items={[{ label: 'Workspace' }, { label: 'Notifications' }]} /><div className="page-heading"><div><div className="eyebrow">Workspace</div><h1>Notifications</h1><p>{unread ? `${unread} unread notification${unread === 1 ? '' : 's'}` : 'You are all caught up.'}</p></div>{unread > 0 && <Button variant="secondary" size="sm" onClick={markAllRead}>Mark all as read</Button>}</div>{error && <ErrorState message={error} onRetry={load} />}{loading && !error && <LoadingState label="Loading notificationsâ€¦" />}{!loading && !error && <div className="notification-list">{items.map(item => <article className={`notification-card ${item.isRead ? 'read' : 'unread'}`} key={item.id} onClick={() => { if (!item.isRead) markRead(item.id); if (item.entityType?.startsWith('performance')) navigate('/performance'); }}><div className="notification-icon">{item.type?.startsWith('leave') ? 'âŒ' : 'â€¢'}</div><div className="notification-copy"><strong>{item.title}</strong><p>{item.message}</p><time>{new Date(item.createdAt).toLocaleString()}</time></div>{!item.isRead && <span className="unread-dot" aria-label="Unread" />}</article>)}{!items.length && <div className="notification-empty">No notifications yet.</div>}</div>}</main></div><Toast message={message} onClose={() => setMessage('')} /></div>;
+
+  const [items, setItems] = useState([]);
+  const [unread, setUnread] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await api.get('/notifications');
+      setItems(res.data.data?.items || []);
+      setUnread(res.data.data?.unreadCount || 0);
+    } catch (err) {
+      setError(err.response?.data?.error?.message || 'Could not load notifications.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function markRead(id) {
+    try {
+      await api.patch(`/notifications/${id}/read`);
+      setItems((curr) => curr.map((item) => item.id === id ? { ...item, isRead: true } : item));
+      setUnread((curr) => Math.max(0, curr - 1));
+    } catch (err) {
+      setError(err.response?.data?.error?.message || 'Could not update notification.');
+    }
+  }
+
+  async function markAllRead(notify) {
+    try {
+      await api.patch('/notifications/read-all');
+      setItems((curr) => curr.map((item) => ({ ...item, isRead: true })));
+      setUnread(0);
+      notify?.('All notifications marked as read');
+    } catch (err) {
+      setError(err.response?.data?.error?.message || 'Could not update notifications.');
+    }
+  }
+
+  return (
+    <AppShell user={user} active="Notifications" onExit={onExit}>
+      {({ notify }) => (
+        <>
+          <Breadcrumbs items={[{ label: 'Workspace' }, { label: 'Notifications' }]} />
+          <div className="page-heading">
+            <div>
+              <div className="eyebrow">Workspace</div>
+              <h1>Notifications</h1>
+              <p>{unread ? `${unread} unread notification${unread === 1 ? '' : 's'}` : 'You are all caught up.'}</p>
+            </div>
+            {unread > 0 && <Button variant="secondary" size="sm" onClick={() => markAllRead(notify)}>Mark all as read</Button>}
+          </div>
+          {error && <ErrorState message={error} onRetry={load} />}
+          {loading && !error && <LoadingState label="Loading notifications…" />}
+          {!loading && !error && (
+            <div className="notification-list">
+              {items.map((item) => (
+                <article
+                  className={`notification-card ${item.isRead ? 'read' : 'unread'}`}
+                  key={item.id}
+                  onClick={() => { if (!item.isRead) markRead(item.id); if (item.entityType?.startsWith('performance')) navigate('/performance'); }}
+                >
+                  <div className="notification-icon">{item.type?.startsWith('leave') ? '📋' : '•'}</div>
+                  <div className="notification-copy">
+                    <strong>{item.title}</strong>
+                    <p>{item.message}</p>
+                    <time>{new Date(item.createdAt).toLocaleString()}</time>
+                  </div>
+                  {!item.isRead && <span className="unread-dot" aria-label="Unread" />}
+                </article>
+              ))}
+              {!items.length && <div className="notification-empty">No notifications yet.</div>}
+            </div>
+          )}
+        </>
+      )}
+    </AppShell>
+  );
 }
-
-

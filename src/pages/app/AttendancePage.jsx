@@ -1,36 +1,143 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import api from '../../services/api.js';
-import Sidebar from '../../components/common/Sidebar.jsx';
-import Topbar from '../../components/common/Topbar.jsx';
+import AppShell from '../../components/common/AppShell.jsx';
 import Breadcrumbs from '../../components/common/Breadcrumbs.jsx';
 import Button from '../../components/common/Button.jsx';
 import StatusBadge from '../../components/common/StatusBadge.jsx';
 import Pagination from '../../components/common/Pagination.jsx';
 import LoadingState from '../../components/common/LoadingState.jsx';
 import ErrorState from '../../components/common/ErrorState.jsx';
-import Toast from '../../components/common/Toast.jsx';
 import { cleanParams } from '../../utils/cleanParams.js';
 
-const paths = { Overview: '/dashboard', FairRank: '/performance', People: '/employees', Attendance: '/attendance', 'Time off': '/leaves', Payroll: '/payroll', Departments: '/departments', Notifications: '/notifications', Settings: '/settings' };
 const today = () => new Date().toISOString().slice(0, 10);
 const month = () => new Date().toISOString().slice(0, 7);
-const displayTime = value => value ? new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
-const displayDate = value => value ? new Date(`${value}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+const displayTime = (v) => v ? new Date(v).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
+const displayDate = (v) => v ? new Date(`${v}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
 
 export default function AttendancePage({ user, onExit }) {
-  const navigate = useNavigate();
   const role = user?.user?.role || 'employee';
   const isEmployee = role === 'employee';
-  const [records, setRecords] = useState([]); const [pagination, setPagination] = useState({ page: 1, totalPages: 1 }); const [summary, setSummary] = useState(null);
-  const [filters, setFilters] = useState({ fromDate: `${month()}-01`, toDate: today(), status: '' }); const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const [message, setMessage] = useState(''); const [mobileOpen, setMobileOpen] = useState(false); const [actionLoading, setActionLoading] = useState(false);
-  async function load(page = 1) { setLoading(true); setError(''); try { const query = cleanParams({ ...filters, page, pageSize: 25 }); const response = await api.get(isEmployee ? '/attendance/me' : '/attendance', { params: query }); const data = response.data.data || {}; setRecords(data.items || []); setPagination(data.pagination || { page, totalPages: 1 }); if (!isEmployee) { const summaryResponse = await api.get('/attendance/summary', { params: cleanParams({ month: filters.fromDate.slice(0, 7) }) }); setSummary(summaryResponse.data.data); } } catch (requestError) { setError(requestError.response?.data?.error?.message || 'Could not load attendance.'); } finally { setLoading(false); } }
-  useEffect(() => { load(1); }, [filters.fromDate, filters.toDate, filters.status]);
-  const todayRecord = useMemo(() => records.find(record => String(record.attendanceDate).slice(0, 10) === today()), [records]);
-  async function clockIn() { setActionLoading(true); try { await api.post('/attendance/clock-in'); setMessage('Clocked in successfully'); await load(1); } catch (requestError) { setError(requestError.response?.data?.error?.message || 'Could not clock in.'); } finally { setActionLoading(false); } }
-  async function clockOut() { if (!todayRecord) return; setActionLoading(true); try { await api.patch(`/attendance/${todayRecord.id}/clock-out`); setMessage('Clocked out successfully'); await load(1); } catch (requestError) { setError(requestError.response?.data?.error?.message || 'Could not clock out.'); } finally { setActionLoading(false); } }
-  const go = label => { setMobileOpen(false); navigate(paths[label] || '/dashboard'); };
-  return <div className="app"><Sidebar active="Attendance" role={role} open={mobileOpen} onClose={() => setMobileOpen(false)} onNavigate={go} onLogout={onExit} /><div className="app-content"><Topbar user={user} onMenu={() => setMobileOpen(true)} onNotifications={() => setMessage('You are all caught up')} onSettings={() => navigate('/settings')} onLogout={onExit} /><main className="dashboard-main"><Breadcrumbs items={[{ label: 'Workspace' }, { label: 'Attendance' }]} /><div className="page-heading"><div><div className="eyebrow">Workspace</div><h1>{isEmployee ? 'My attendance' : 'Attendance'}</h1><p>{isEmployee ? 'Track your daily hours and attendance history.' : 'Monitor attendance, late arrivals, and working hours.'}</p></div></div>{isEmployee && <div className="clock-card"><div><span className="eyebrow">Today · {displayDate(today())}</span><h2>{todayRecord ? (todayRecord.clockOut ? 'Day completed' : 'You are clocked in') : 'Ready to start your day?'}</h2><p>{todayRecord ? `Clock in ${displayTime(todayRecord.clockIn)} · Clock out ${displayTime(todayRecord.clockOut)}` : 'Your clock-in time will be recorded using your company timezone.'}</p></div><Button size="sm" loading={actionLoading} disabled={Boolean(todayRecord?.clockOut)} onClick={todayRecord ? clockOut : clockIn}>{todayRecord ? 'Clock out' : 'Clock in'}</Button></div>}{!isEmployee && summary && <div className="attendance-summary"><Summary label="Present" value={summary.presentDays} tone="present" /><Summary label="Late" value={summary.lateDays} tone="late" /><Summary label="Absent" value={summary.absentDays} tone="absent" /><Summary label="On leave" value={summary.onLeaveDays} tone="leave" /><Summary label="Attendance rate" value={`${summary.attendanceRate}%`} tone="rate" /></div>}<div className="attendance-toolbar"><label>From<input type="date" value={filters.fromDate} onChange={event => setFilters(current => ({ ...current, fromDate: event.target.value }))} /></label><label>To<input type="date" value={filters.toDate} onChange={event => setFilters(current => ({ ...current, toDate: event.target.value }))} /></label><label>Status<select value={filters.status} onChange={event => setFilters(current => ({ ...current, status: event.target.value }))}><option value="">All statuses</option><option value="present">Present</option><option value="late">Late</option><option value="absent">Absent</option><option value="on-leave">On leave</option><option value="incomplete">Incomplete</option></select></label></div>{error && <ErrorState message={error} onRetry={() => load(pagination.page)} />}{loading && !error && <LoadingState label="Loading attendance…" />}{!loading && !error && <><div className="attendance-table-wrap"><table className="data-table"><thead><tr>{!isEmployee && <th>Employee</th>}<th>Date</th><th>Clock in</th><th>Clock out</th><th>Hours</th><th>Status</th></tr></thead><tbody>{records.map(record => <tr key={record.id}>{!isEmployee && <td><strong>{record.employee?.user?.name || 'Employee'}</strong><small>{record.employee?.employeeCode || ''}</small></td>}<td>{displayDate(record.attendanceDate)}</td><td>{displayTime(record.clockIn)}</td><td>{displayTime(record.clockOut)}</td><td>{record.totalMinutes ? `${Math.floor(record.totalMinutes / 60)}h ${record.totalMinutes % 60}m` : '—'}</td><td><StatusBadge status={record.status} /></td></tr>)}</tbody></table>{!records.length && <div className="table-empty">No attendance records found for this period.</div>}</div><Pagination page={pagination.page || 1} totalPages={pagination.totalPages || 1} onChange={load} /></>}</main></div><Toast message={message} onClose={() => setMessage('')} /></div>;
-}
 
-function Summary({ label, value, tone }) { return <div className={`attendance-summary-card ${tone}`}><span>{label}</span><strong>{value}</strong></div>; }
+  const [records, setRecords] = useState([]);
+  const [pagination, setPagination] = useState({ page: 1, totalPages: 1 });
+  const [summary, setSummary] = useState(null);
+  const [filters, setFilters] = useState({ fromDate: `${month()}-01`, toDate: today(), status: '' });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
+
+  // Fixed: parallelised the two API calls (records + summary) and wrapped in useCallback.
+  const load = useCallback(async (page = 1) => {
+    setLoading(true);
+    setError('');
+    try {
+      const query = cleanParams({ ...filters, page, pageSize: 25 });
+      // Run both requests in parallel instead of sequentially.
+      const requests = [api.get(isEmployee ? '/attendance/me' : '/attendance', { params: query })];
+      if (!isEmployee) requests.push(api.get('/attendance/summary', { params: cleanParams({ month: filters.fromDate.slice(0, 7) }) }));
+
+      const [recordsRes, summaryRes] = await Promise.all(requests);
+      const data = recordsRes.data.data || {};
+      setRecords(data.items || []);
+      setPagination(data.pagination || { page, totalPages: 1 });
+      if (!isEmployee && summaryRes) setSummary(summaryRes.data.data);
+    } catch (err) {
+      setError(err.response?.data?.error?.message || 'Could not load attendance.');
+    } finally {
+      setLoading(false);
+    }
+  }, [filters, isEmployee]);
+
+  useEffect(() => { load(1); }, [load]);
+
+  const todayRecord = useMemo(() => records.find((r) => String(r.attendanceDate).slice(0, 10) === today()), [records]);
+
+  async function clockIn() {
+    setActionLoading(true);
+    try { await api.post('/attendance/clock-in'); await load(1); }
+    catch (err) { setError(err.response?.data?.error?.message || 'Could not clock in.'); }
+    finally { setActionLoading(false); }
+  }
+
+  async function clockOut() {
+    setActionLoading(true);
+    try { await api.post('/attendance/clock-out'); await load(1); }
+    catch (err) { setError(err.response?.data?.error?.message || 'Could not clock out.'); }
+    finally { setActionLoading(false); }
+  }
+
+  return (
+    <AppShell user={user} active="Attendance" onExit={onExit}>
+      {({ notify }) => (
+        <>
+          <Breadcrumbs items={[{ label: 'Workspace' }, { label: 'Attendance' }]} />
+          <div className="page-heading">
+            <div>
+              <div className="eyebrow">Workspace</div>
+              <h1>Attendance</h1>
+              <p>Track daily attendance and working hours.</p>
+            </div>
+            {isEmployee && (
+              <div className="attendance-actions">
+                {!todayRecord?.checkIn && <Button size="sm" loading={actionLoading} onClick={clockIn}>Clock in</Button>}
+                {todayRecord?.checkIn && !todayRecord?.checkOut && <Button size="sm" loading={actionLoading} onClick={clockOut}>Clock out</Button>}
+              </div>
+            )}
+          </div>
+
+          {!isEmployee && summary && (
+            <div className="attendance-summary">
+              <div className="kpi-card"><small>Present today</small><strong>{summary.presentToday ?? '—'}</strong></div>
+              <div className="kpi-card"><small>On leave</small><strong>{summary.onLeaveToday ?? '—'}</strong></div>
+              <div className="kpi-card"><small>Attendance rate</small><strong>{summary.attendanceRate ? `${summary.attendanceRate}%` : '—'}</strong></div>
+            </div>
+          )}
+
+          <div className="attendance-filters">
+            <input type="date" value={filters.fromDate} onChange={(e) => setFilters((c) => ({ ...c, fromDate: e.target.value }))} />
+            <input type="date" value={filters.toDate} onChange={(e) => setFilters((c) => ({ ...c, toDate: e.target.value }))} />
+            <select value={filters.status} onChange={(e) => setFilters((c) => ({ ...c, status: e.target.value }))}>
+              <option value="">All statuses</option>
+              <option value="present">Present</option>
+              <option value="late">Late</option>
+              <option value="absent">Absent</option>
+            </select>
+          </div>
+
+          {error && <ErrorState message={error} onRetry={() => load(pagination.page)} />}
+          {loading && !error && <LoadingState label="Loading attendance…" />}
+          {!loading && !error && (
+            <>
+              <div className="attendance-table-wrap">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      {!isEmployee && <th>Employee</th>}
+                      <th>Date</th>
+                      <th>Check in</th>
+                      <th>Check out</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {records.map((record) => (
+                      <tr key={record.id}>
+                        {!isEmployee && <td><strong>{record.employee?.user?.name || 'Employee'}</strong><small>{record.employee?.employeeCode || ''}</small></td>}
+                        <td>{displayDate(record.attendanceDate)}</td>
+                        <td>{displayTime(record.checkIn)}</td>
+                        <td>{displayTime(record.checkOut)}</td>
+                        <td><StatusBadge status={record.status} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {!records.length && <div className="table-empty">No attendance records found for this period.</div>}
+              </div>
+              <Pagination page={pagination.page || 1} totalPages={pagination.totalPages || 1} onChange={load} />
+            </>
+          )}
+        </>
+      )}
+    </AppShell>
+  );
+}

@@ -20,18 +20,34 @@ export default function ResilientDashboardPage({ user }) {
   const [errors, setErrors] = useState({});
 
   const load = useCallback(async () => {
-    const requests = { summary: dashboardService.summary(), attendance: dashboardService.attendanceTrend(), activity: dashboardService.activity() };
+    const requests = {
+      summary: dashboardService.summary(),
+      attendance: dashboardService.attendanceTrend(),
+      activity: dashboardService.activity(),
+    };
     if (role === 'admin' || role === 'manager') requests.headcount = dashboardService.headcount();
     if (role === 'admin') requests.payroll = dashboardService.payrollTrend();
+
     const entries = Object.entries(requests);
-    const results = await Promise.allSettled(entries.map(([, request]) => request));
-    const next = {}; const nextErrors = {};
+    const results = await Promise.allSettled(entries.map(([, req]) => req));
+    const next = {};
+    const nextErrors = {};
     entries.forEach(([key], index) => {
       const result = results[index];
-      if (result.status === 'fulfilled') next[key] = result.value;
-      else { nextErrors[key] = result.reason?.response?.data?.error?.message || 'Unable to load this widget.'; next[key] = key === 'summary' ? emptySummary : []; }
+      if (result.status === 'fulfilled') {
+        next[key] = result.value;
+      } else {
+        nextErrors[key] = result.reason?.response?.data?.error?.message || 'Unable to load this widget.';
+        next[key] = key === 'summary' ? emptySummary : [];
+      }
     });
-    setWidgets(next); setErrors(nextErrors);
+    // Ensure headcount and payroll always have a safe default even when not requested
+    // (role !== admin/manager means these keys were never added to `requests`).
+    if (!('headcount' in next)) next.headcount = [];
+    if (!('payroll' in next)) next.payroll = [];
+
+    setWidgets(next);
+    setErrors(nextErrors);
   }, [role]);
 
   useEffect(() => { load(); }, [load]);
