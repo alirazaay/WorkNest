@@ -1,4 +1,8 @@
 .performance-page .dashboard-main { min-width: 0; }
+.access-denied-page { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: var(--wash, #f7f8fc); }
+.access-denied-state { display: grid; place-items: center; gap: 12px; max-width: 480px; padding: 40px; text-align: center; background: #fff; border: 1px solid #e3e5ed; border-radius: 16px; box-shadow: 0 8px 24px rgba(39, 43, 72, .04); color: #bd3f4c; }
+.access-denied-state h1, .access-denied-state p { margin: 0; }
+.access-denied-state p { color: #727a92; }
 .performance-heading { align-items: flex-end; }
 .performance-tabs { display: flex; gap: 8px; overflow-x: auto; margin: 24px 0; padding-bottom: 4px; }
 .performance-tabs button { border: 1px solid var(--border, #e4e6ef); background: #fff; color: #68708a; border-radius: 999px; padding: 9px 15px; white-space: nowrap; cursor: pointer; }

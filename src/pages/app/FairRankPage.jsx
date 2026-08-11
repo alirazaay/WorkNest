@@ -35,7 +35,7 @@ export default function FairRankPage({ user, onExit }) {
   const role = user?.user?.role || user?.role || 'employee';
   const canManage = ['admin', 'manager'].includes(role);
   const canAdmin = role === 'admin';
-  const [tab, setTab] = useState('overview');
+  const [tab, setTab] = useState(() => role === 'employee' ? 'my' : 'overview');
   const [data, setData] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -54,6 +54,7 @@ export default function FairRankPage({ user, onExit }) {
           api.get('/performance/cycles'), api.get('/performance/rating-bands'), api.get('/performance/equivalence-settings'),
           api.get('/performance/signature-rules'), api.get('/performance/promotion-profiles')
         ]);
+        if (results.every(result => result.status === 'rejected')) throw results[0].reason;
         setData({ overview: results.map(result => result.status === 'fulfilled' ? responseData(result.value) : null) });
       } else if (tab === 'calibration' || tab === 'fairrank') {
         const cycles = responseData(await api.get('/performance/cycles'));
@@ -61,7 +62,7 @@ export default function FairRankPage({ user, onExit }) {
         if (!cycle) setData({ items: [] });
         else setData({ items: responseData(await api.get(`/performance/cycles/${cycle.id}/${tab === 'calibration' ? 'calibration' : 'equivalence-groups'}`)) });
       } else setData({ items: responseData(await api.get(endpoints[tab])) });
-    } catch (err) { setError(err.response?.data?.message || `Unable to load ${tab}. Please try again.`); }
+    } catch (err) { setError(err.response?.data?.error?.message || err.response?.data?.message || `Unable to load ${tab}. Please try again.`); }
     finally { setLoading(false); }
   };
   useEffect(() => { load(); }, [tab]);
@@ -71,7 +72,7 @@ export default function FairRankPage({ user, onExit }) {
     event.preventDefault(); setSaving(true);
     const form = new FormData(event.currentTarget);
     try { await api.post('/performance/cycles', Object.fromEntries(form.entries())); setModal(false); await load(); }
-    catch (err) { setError(err.response?.data?.message || 'Unable to create the performance cycle.'); }
+    catch (err) { setError(err.response?.data?.error?.message || err.response?.data?.message || 'Unable to create the performance cycle.'); }
     finally { setSaving(false); }
   };
   const go = label => { const path = { Overview: '/dashboard', People: '/employees', Attendance: '/attendance', 'Time off': '/leaves', Payroll: '/payroll', Departments: '/departments', Notifications: '/notifications', Settings: '/settings', FairRank: '/performance' }[label]; if (path) navigate(path); };

@@ -373,3 +373,5 @@ FairRank now has explicit regression coverage for weight totals, server-side sco
 Authoritative scores, weighting, rating bands, equivalence, promotion readiness, signatures, and fairness flags are deterministic server-side calculations. No AI provider, random generator, or client-provided result participates in those decisions. The regression guard in `test/performance-ai-boundary.test.js` prevents accidental AI/random dependencies from entering the performance modules. Optional future AI may draft editable evidence summaries, appraisal comments, strengths, or development suggestions only; it must never change scores, ratings, recommendations, or finalized history.
 
 The FairRank `POST /api/v1/performance/compare` route requires the `performanceCompare` controller import in `performance.routes.js`; a missing import prevents the API from starting.
+
+The frontend FairRank entry point is `/performance`; existing tenant-scoped performance APIs are unchanged by the navigation fix.

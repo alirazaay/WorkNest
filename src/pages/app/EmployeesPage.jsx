@@ -13,7 +13,7 @@ import ErrorState from '../../components/common/ErrorState.jsx';
 import LoadingState from '../../components/common/LoadingState.jsx';
 import { cleanParams } from '../../utils/cleanParams.js';
 
-const paths = { Overview: '/dashboard', People: '/employees', Attendance: '/attendance', 'Time off': '/leaves', Payroll: '/payroll', Departments: '/departments', Notifications: '/notifications', Settings: '/settings' };
+const paths = { Overview: '/dashboard', FairRank: '/performance', People: '/employees', Attendance: '/attendance', 'Time off': '/leaves', Payroll: '/payroll', Departments: '/departments', Notifications: '/notifications', Settings: '/settings' };
 
 export default function EmployeesPage({ user, onExit }) {
   const navigate = useNavigate(); const role = user?.user?.role || 'admin'; const canManage = role === 'admin';

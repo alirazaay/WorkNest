@@ -173,6 +173,8 @@ FairRank uses deterministic backend algorithms for authoritative scores, weighti
 
 The FairRank comparison route explicitly imports its `performanceCompare` controller handler. Restart the backend after route changes so Express reloads the route registry.
 
+FairRank navigation uses the `/performance` route from every workspace sidebar context. Admins and managers can manage performance data; employees open the employee-only released-performance view. Unauthorized direct access now shows a clear access-denied state.
+
 After adding backend routes, restart the API process so its in-memory Express route registry reloads. A stale process on port `5000` can return `Route not found` even when the route exists in source code.
 
 If `npm run dev` reports `EADDRINUSE`, find and stop the listener before starting the watcher:

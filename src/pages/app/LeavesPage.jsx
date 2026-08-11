@@ -13,7 +13,7 @@ import ErrorState from '../../components/common/ErrorState.jsx';
 import Toast from '../../components/common/Toast.jsx';
 import { cleanParams } from '../../utils/cleanParams.js';
 
-const paths = { Overview: '/dashboard', People: '/employees', Attendance: '/attendance', 'Time off': '/leaves', Payroll: '/payroll', Departments: '/departments', Notifications: '/notifications', Settings: '/settings' };
+const paths = { Overview: '/dashboard', FairRank: '/performance', People: '/employees', Attendance: '/attendance', 'Time off': '/leaves', Payroll: '/payroll', Departments: '/departments', Notifications: '/notifications', Settings: '/settings' };
 const isoToday = () => new Date().toISOString().slice(0, 10);
 
 export default function LeavesPage({ user, onExit }) {
