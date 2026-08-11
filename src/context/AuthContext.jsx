@@ -9,6 +9,9 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     let mounted = true;
+    // Only attempt restore if a refresh cookie is likely present (avoids wasted 401 on public pages).
+    const hasSession = document.cookie.includes('worknest_refresh');
+    if (!hasSession) { setLoading(false); return; }
     restoreSession().then(session => { if (mounted) setUser(session); }).catch(() => {}).finally(() => { if (mounted) setLoading(false); });
     return () => { mounted = false; };
   }, []);

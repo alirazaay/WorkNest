@@ -26,7 +26,11 @@ export function createApp() {
   app.use(express.urlencoded({ extended: false, limit: '1mb' }));
   app.use(cookieParser());
   app.use(pinoHttp({ logger }));
-  app.use(apiRateLimit);
+  // Skip the global rate limit for /auth routes — they have their own dedicated authRateLimit below.
+  app.use((req, res, next) => {
+    if (req.path.startsWith(`${env.API_PREFIX}/auth`)) return next();
+    return apiRateLimit(req, res, next);
+  });
   app.use(tenantContext);
 
   app.get('/', (req, res) => {
