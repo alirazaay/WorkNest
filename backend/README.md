@@ -136,6 +136,10 @@ Bank exports support `standard`, `hbl`, `meezan`, and `ubl` layouts through `?fo
 
 Payroll is generated once per tenant/month/year. Salary structures are effective-dated and changed by closing the previous row before creating a new row. Payroll items snapshot employee, salary, and bank information; line items retain their source type and source ID. Approved bonuses and loan installments are marked processed/deducted transactionally to prevent duplicate inclusion. Bank exports are restricted to approved or locked runs. Locked payroll remains immutable through normal payroll actions; corrections should use a future adjustment workflow.
 
+Payroll generation is a tenant-wide calculation and may take longer than ordinary API requests for larger workspaces. The frontend gives `/payroll/generate` a two-minute request window, while the backend logs start, completion, duration, employee count, and failure details without logging credentials or financial payloads. If the request times out, refresh the payroll list before retrying so an already-committed run is not generated twice.
+
+Performance audit logs use the explicit Sequelize mapping `createdAt -> created_at`; this matches the `audit_logs` schema and prevents `Unknown column 'AuditLog.createdAt'` errors on `GET /api/v1/performance/audit`.
+
 The subsystem migrations are `20260808000200-add-payroll-subsystem.js` and `20260808000300-add-tax-and-payroll-adjustments.js`. Apply them with `npm run db:migrate`; do not use `sequelize.sync({ alter: true })`. Financial values are stored in MySQL DECIMAL columns. The generation service uses integer-cents arithmetic for its calculations and the server remains authoritative for all calculated totals.
 
 ## Phase 7 dashboard endpoints

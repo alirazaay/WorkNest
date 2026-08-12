@@ -275,6 +275,14 @@ Do not use the local Compose secrets, development JWT values, demo data, or loca
 
 ## Troubleshooting
 
+### Performance audit returns `Unknown column 'AuditLog.createdAt'`
+
+Restart the backend after updating to the current model code. Audit timestamps are explicitly mapped to the existing `audit_logs.created_at` column; no destructive schema change is required.
+
+### Payroll generation times out
+
+Payroll calculates every active employee and can take longer on larger workspaces. The UI uses a two-minute timeout for generation. Refresh the payroll list before retrying, because a run may already have committed successfully. Backend logs include the duration and completion/failure status without sensitive payroll payloads.
+
 ### API cannot connect to MySQL
 
 Check that MySQL is running and that `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` in `backend/.env` match the database. Then run:

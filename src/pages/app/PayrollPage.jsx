@@ -54,11 +54,15 @@ export default function PayrollPage({ user, onExit }) {
     const form = new FormData(event.currentTarget);
     setActionLoading(true);
     try {
-      await api.post('/payroll/generate', { month: Number(form.get('month')), year: Number(form.get('year')) });
+      // Payroll is a tenant-wide financial calculation and can exceed the
+      // normal 30-second API timeout for larger workspaces.
+      await api.post('/payroll/generate', { month: Number(form.get('month')), year: Number(form.get('year')) }, { timeout: 120_000 });
       setModal(null);
       await load(1);
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Could not generate payroll.');
+      setError(err.code === 'ECONNABORTED'
+        ? 'Payroll generation is taking longer than expected. Check the payroll list again in a moment.'
+        : err.response?.data?.error?.message || 'Could not generate payroll.');
     } finally {
       setActionLoading(false);
     }

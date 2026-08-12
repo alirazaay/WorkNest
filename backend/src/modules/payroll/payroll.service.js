@@ -7,6 +7,7 @@ import { sendPayrollGeneratedEmail } from '../../services/email.service.js';
 import { createNotification } from '../../services/notification.service.js';
 import { recordAudit } from '../../services/audit.service.js';
 import { cents, moneyFromCents } from './money.js';
+import { logger } from '../../config/logger.js';
 
 function periodFor(month, year) { const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate(); return { start: `${year}-${String(month).padStart(2, '0')}-01`, end: `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}` }; }
 function roundMoney(value) { return moneyFromCents(Math.round(Number(value) * 100)); }
@@ -55,6 +56,8 @@ const runInclude = [{ model: PayrollItem, as: 'items', include: [activeEmployeeI
 
 export async function generatePayroll(auth, { month, year }) {
   const period = periodFor(month, year); let runId; const emails = [];
+  const startedAt = Date.now();
+  logger.info({ tenantId: auth.tenantId, month, year }, 'Payroll generation started');
   try {
     await sequelize.transaction(async (transaction) => {
       const existing = await PayrollRun.findOne({ where: { tenantId: auth.tenantId, month, year }, transaction, lock: transaction.LOCK.UPDATE });
@@ -72,12 +75,20 @@ export async function generatePayroll(auth, { month, year }) {
         for (const installment of calculation.loanInstallments) await installment.update({ payrollItemId: item.id, status: 'deducted', deductedAt: new Date() }, { transaction });
         await createNotification({ tenantId: auth.tenantId, userId: employee.userId, type: 'payroll_generated', title: 'Payslip available', message: `Your payslip for ${month}/${year} is available.`, entityType: 'payroll_item', entityId: item.id, transaction });
         if (employee.user?.email) emails.push(employee.user.email);
-        totalGross += values.grossSalary; totalDeductions += values.totalDeductions; totalNet += values.netSalary;
+        // Sequelize DECIMAL values are strings. Convert before accumulating;
+        // otherwise `+` concatenates strings and corrupts run totals.
+        totalGross += Number(values.grossSalary);
+        totalDeductions += Number(values.totalDeductions);
+        totalNet += Number(values.netSalary);
       }
       run.totalGross = roundMoney(totalGross); run.totalDeductions = roundMoney(totalDeductions); run.totalNet = roundMoney(totalNet); run.status = 'generated'; await run.save({ fields: ['totalGross', 'totalDeductions', 'totalNet', 'status'], transaction }); runId = run.id;
     });
-  } catch (error) { throw error; }
+  } catch (error) {
+    logger.error({ err: error, tenantId: auth.tenantId, month, year, durationMs: Date.now() - startedAt }, 'Payroll generation failed');
+    throw error;
+  }
   await Promise.all(emails.map((email) => sendPayrollGeneratedEmail({ email, month, year })));
+  logger.info({ tenantId: auth.tenantId, month, year, runId, employeeCount: emails.length, durationMs: Date.now() - startedAt }, 'Payroll generation completed');
   return getPayrollRun(auth, runId);
 }
 
