@@ -174,6 +174,8 @@ The TNA migration is `20260812000300-create-training-needs.js`. TNA APIs are:
 
 Historical TNA uses only deterministic rating-continuity signals. It does not infer unsupported skill weaknesses from annual ratings or undocumented action codes.
 
+The FairRank frontend now includes authorized-manager/admin tabs for `Continuity` and `TNA`. Continuity provides employee selection, yearly rating cards, missing-year markers, summary metrics, and an explicit Analyze TNA action. TNA provides priority/status/signal filters and real backend records.
+
 ## Phase 7 dashboard endpoints
 
 - `GET /api/v1/dashboard/summary`

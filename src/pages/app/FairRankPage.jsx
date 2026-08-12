@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, BarChart3, CheckCircle2, CircleAlert, FileText, Plus, RefreshCw, Target, Users } from 'lucide-react';
+import { ArrowRight, BarChart3, CheckCircle2, CircleAlert, ClipboardList, FileText, LineChart, Plus, RefreshCw, Target, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AppShell from '../../components/common/AppShell.jsx';
 import Breadcrumbs from '../../components/common/Breadcrumbs.jsx';
@@ -13,7 +13,7 @@ const tabs = [
   ['overview', 'Overview', ['admin', 'manager']], ['my', 'My Performance', ['employee']], ['cycles', 'Cycles', ['admin', 'manager']],
   ['criteria', 'Criteria', ['admin', 'manager']], ['goals', 'Goals', ['admin', 'manager', 'employee']],
   ['evidence', 'Evidence', ['admin', 'manager', 'employee']], ['reviews', 'Reviews', ['admin', 'manager', 'employee']],
-  ['calibration', 'Calibration', ['admin', 'manager']], ['fairrank', 'FairRank', ['admin', 'manager']],
+  ['calibration', 'Calibration', ['admin', 'manager']], ['fairrank', 'FairRank', ['admin', 'manager']], ['continuity', 'Continuity', ['admin', 'manager']], ['tna', 'TNA', ['admin', 'manager']],
   ['readiness', 'Readiness', ['admin', 'manager']], ['rewards', 'Rewards', ['admin', 'manager']], ['comparison', 'Compare', ['admin', 'manager']], ['audit', 'Audit log', ['admin']],
 ];
 const endpoints = { cycles: '/performance/cycles', criteria: '/performance/templates', goals: '/performance/goals', evidence: '/performance/evidence', reviews: '/performance/reviews', readiness: '/performance/promotion-profiles', rewards: '/performance/rewards', audit: '/performance/audit' };
@@ -63,6 +63,10 @@ export default function FairRankPage({ user, onExit }) {
         ]);
         if (results.every((r) => r.status === 'rejected')) throw results[0].reason;
         setData({ overview: results.map((r) => r.status === 'fulfilled' ? responseData(r.value) : null) });
+      } else if (tab === 'continuity') {
+        const empData = responseData(await api.get('/employees', { params: { page: 1, pageSize: 100 } })); const employees = empData?.items || empData || []; const history = employees[0] ? responseData(await api.get(`/performance/employees/${employees[0].id}/history`)) : null; setData({ employees, history });
+      } else if (tab === 'tna') {
+        setData({ items: responseData(await api.get('/performance/training-needs')) });
       } else if (tab === 'calibration' || tab === 'fairrank') {
         const cycles = responseData(await api.get('/performance/cycles'));
         const cycle = cycles.find((c) => ['active', 'in_progress'].includes(c.status)) || cycles[0];
@@ -112,7 +116,7 @@ export default function FairRankPage({ user, onExit }) {
       </nav>
       {loading ? <LoadingState label="Loading performance data..." /> : error ? <ErrorState message={error} onRetry={load} /> : (
         <section className="performance-content">
-          <PageContent tab={tab} data={data} canManage={canManage} activeCycle={activeCycle} onRetry={load} />
+          <PageContent tab={tab} data={data} canManage={canManage} activeCycle={activeCycle} onRetry={load} setData={setData} />
         </section>
       )}
       {modal && (
@@ -136,10 +140,12 @@ export default function FairRankPage({ user, onExit }) {
   );
 }
 
-function PageContent({ tab, data, canManage, activeCycle, onRetry }) {
+function PageContent({ tab, data, canManage, activeCycle, onRetry, setData }) {
   if (tab === 'my') return <MyPerformance data={data} />;
   if (tab === 'audit') return <AuditList items={data.items || []} />;
   if (tab === 'comparison') return <Comparison employees={data.employees || []} cycles={data.cycles || []} />;
+  if (tab === 'continuity') return <ContinuityWorkspace data={data} onRetry={onRetry} setData={setData} />;
+  if (tab === 'tna') return <TnaWorkspace items={data.items || []} onRetry={onRetry} />;
   if (tab === 'overview') {
     const values = data.overview || [];
     return <>
@@ -172,6 +178,31 @@ function PageContent({ tab, data, canManage, activeCycle, onRetry }) {
       {items.length ? <div className="performance-list">{items.map((item) => <ListCard item={item} key={item.id || item.code || item.name} />)}</div> : <EmptyState text={`No ${tab} records are available yet.`} />}
     </article>
   );
+}
+
+function ContinuityWorkspace({ data, onRetry, setData }) {
+  const employees = data.employees || []; const history = data.history; const [employeeId, setEmployeeId] = useState(employees[0]?.id || ''); const [loadingEmployee, setLoadingEmployee] = useState(false); const [analyzing, setAnalyzing] = useState(false); const [message, setMessage] = useState('');
+  useEffect(() => { if (!employeeId && employees[0]?.id) setEmployeeId(employees[0].id); }, [employeeId, employees]);
+  async function selectEmployee(event) { const id = event.target.value; setEmployeeId(id); if (!id) return; setLoadingEmployee(true); setMessage(''); try { const res = await api.get(`/performance/employees/${id}/history`); setData((current) => ({ ...current, history: responseData(res) })); } catch (err) { setMessage(err.response?.data?.error?.message || 'Unable to load employee history.'); } finally { setLoadingEmployee(false); } }
+  async function analyze() { if (!employeeId) return; setAnalyzing(true); setMessage(''); try { await api.post(`/performance/employees/${employeeId}/analyze-tna`, {}); setMessage('Development signals analyzed successfully.'); } catch (err) { setMessage(err.response?.data?.error?.message || 'Unable to analyze development needs.'); } finally { setAnalyzing(false); } }
+  return <div className="continuity-workspace">
+    <article className="performance-card">
+      <div className="performance-card-heading"><div><h2>Performance continuity</h2><p>Review historical ratings without fabricating missing years or detailed criterion scores.</p></div><button className="icon-button" onClick={onRetry} aria-label="Refresh continuity"><RefreshCw size={17} /></button></div>
+      <label className="comparison-cycle">Employee<select value={employeeId} onChange={selectEmployee}><option value="">Select an employee</option>{employees.map((employee) => <option value={employee.id} key={employee.id}>{employee.user?.name || employee.employeeCode} ({employee.employeeCode})</option>)}</select></label>
+      {message && <p className="performance-inline-message">{message}</p>}
+      {loadingEmployee ? <LoadingState label="Loading employee history..." /> : history ? <>
+        <div className="performance-kpis continuity-kpis"><SummaryCard label="Years reviewed" value={history.summary?.yearsReviewed ?? 0} icon={LineChart} /><SummaryCard label="Average rating" value={history.summary?.averageHistoricalRating == null ? '—' : `${history.summary.averageHistoricalRating}/5`} icon={BarChart3} tone="blue" /><SummaryCard label="Latest rating" value={history.summary?.latestRating == null ? '—' : `${history.summary.latestRating}/5`} icon={ClipboardList} tone="mint" /></div>
+        <div className="continuity-timeline">{(history.timeline || []).map((row) => <div className={`continuity-year ${row.status === 'no_review_data' ? 'missing' : ''}`} key={row.year}><strong>{row.year}</strong><span>{row.originalRating == null ? 'No Review Data' : `${row.originalRating}/5`}</span><StatusBadge status={row.trend === 'insufficient_history' ? 'neutral' : row.trend} /><small>{row.changeFromPreviousYear == null ? 'Baseline / insufficient history' : `${row.changeFromPreviousYear > 0 ? '+' : ''}${row.changeFromPreviousYear} from previous year`}</small></div>)}</div>
+        <div className="continuity-summary"><span>Best: {history.summary?.bestRating ?? '—'}/5</span><span>Worst: {history.summary?.worstRating ?? '—'}/5</span><span>Volatility: {history.summary?.ratingVolatility ?? '—'}</span><span>Missing years: {history.summary?.missingReviewYears?.length ? history.summary.missingReviewYears.join(', ') : 'None'}</span></div>
+        <Button onClick={analyze} disabled={analyzing || !employeeId}>{analyzing ? 'Analyzing...' : 'Analyze TNA'} <ArrowRight size={16} /></Button>
+      </> : <EmptyState text={employees.length ? 'Select an employee to view historical continuity.' : 'No employees are available.'} />}
+    </article>
+  </div>;
+}
+
+function TnaWorkspace({ items, onRetry }) {
+  const [priority, setPriority] = useState(''); const [status, setStatus] = useState(''); const [signal, setSignal] = useState(''); const filtered = items.filter((item) => (!priority || item.priority === priority) && (!status || item.status === status) && (!signal || item.signalCode === signal));
+  return <article className="performance-card"><div className="performance-card-heading"><div><h2>Training Needs Analysis</h2><p>Deterministic development signals from historical performance continuity.</p></div><button className="icon-button" onClick={onRetry} aria-label="Refresh training needs"><RefreshCw size={17} /></button></div><div className="tna-filters"><select value={priority} onChange={(e) => setPriority(e.target.value)}><option value="">All priorities</option><option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select><select value={status} onChange={(e) => setStatus(e.target.value)}><option value="">All statuses</option><option value="identified">Identified</option><option value="reviewed">Reviewed</option><option value="planned">Planned</option><option value="in_progress">In progress</option><option value="completed">Completed</option></select><select value={signal} onChange={(e) => setSignal(e.target.value)}><option value="">All signals</option>{[...new Set(items.map((item) => item.signalCode).filter(Boolean))].map((value) => <option value={value} key={value}>{titleCase(value)}</option>)}</select></div>{filtered.length ? <div className="performance-list">{filtered.map((item) => <article className="performance-list-card tna-card" key={item.id}><div><strong>{item.employee?.user?.name || item.employee?.employeeCode || 'Employee'}</strong><small>{titleCase(item.signalCode || 'MANUAL')} · {item.reason}</small><small>Recommended: {item.recommendedTraining || 'Review with manager'}</small></div><div><StatusBadge status={item.priority} /><StatusBadge status={item.status} /></div></article>)}</div> : <EmptyState text="No training needs match the selected filters." />}</article>;
 }
 
 function EmptyState({ text }) { return <div className="performance-empty"><CircleAlert size={22} /><p>{text}</p></div>; }

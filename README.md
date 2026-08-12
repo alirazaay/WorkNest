@@ -300,6 +300,8 @@ The continuity API exposes employee history, trend timelines, cycle summaries, a
 
 The continuity/TNA backend also provides deterministic development signals and training-need records. Signals are limited to sustained low performance, rating decline, significant decline, and missing review data; the system does not invent unsupported skill diagnoses.
 
+The Performance page exposes Continuity and TNA tabs for authorized managers and administrators, using the live continuity and training-needs APIs with loading, empty, error, and retry states.
+
 ### API cannot connect to MySQL
 
 Check that MySQL is running and that `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` in `backend/.env` match the database. Then run:
