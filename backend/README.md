@@ -142,6 +142,19 @@ Performance audit logs use the explicit Sequelize mapping `createdAt -> created_
 
 The subsystem migrations are `20260808000200-add-payroll-subsystem.js` and `20260808000300-add-tax-and-payroll-adjustments.js`. Apply them with `npm run db:migrate`; do not use `sequelize.sync({ alter: true })`. Financial values are stored in MySQL DECIMAL columns. The generation service uses integer-cents arithmetic for its calculations and the server remains authoritative for all calculated totals.
 
+## Historical continuity importer
+
+The development-only continuity importer is separate from the FairRank fixture importer. It reads `data/historical-hr/tbl_Employee.csv`, `tbl_Action.csv`, and `tbl_Perf.csv`; when that directory is absent, it falls back to the currently supplied files under `data/kaggle/`. Run migrations first, then:
+
+```powershell
+$env:ALLOW_CONTINUITY_DATA_SEED="true"
+npm run db:seed:continuity-data
+```
+
+The importer refuses `NODE_ENV=production`, resets only the `worknest-historical-test` tenant, and uses the development credentials printed by the command. It creates tenant-scoped employee history events and historical performance records, preserves source ratings on the 1–5 scale, and stores normalized scores as `rating * 20`. Action codes remain raw because the supplied data has no code dictionary. No detailed FairRank criterion scores are fabricated.
+
+The foundation migration is `20260812000100-create-historical-continuity-foundation.js`. It adds nullable employee manager/source metadata fields plus `employee_history_events` and `historical_performance_records`. The generated report is written to the ignored `data/kaggle/last-continuity-import-report.json` path.
+
 ## Phase 7 dashboard endpoints
 
 - `GET /api/v1/dashboard/summary`

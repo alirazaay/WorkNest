@@ -49,6 +49,8 @@ import { PayrollRun } from './PayrollRun.js';
 import { PayrollItem } from './PayrollItem.js';
 import { PayrollItemLine } from './PayrollItemLine.js';
 import { AuditLog } from './AuditLog.js';
+import { EmployeeHistoryEvent } from './EmployeeHistoryEvent.js';
+import { HistoricalPerformanceRecord } from './HistoricalPerformanceRecord.js';
 
 Tenant.hasOne(TenantSetting, { foreignKey: 'tenantId', as: 'settings' });
 Tenant.hasMany(User, { foreignKey: 'tenantId', as: 'users' });
@@ -95,6 +97,13 @@ Department.hasMany(Employee, { foreignKey: 'departmentId', as: 'employees' });
 Employee.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
 Employee.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 Employee.belongsTo(Department, { foreignKey: 'departmentId', as: 'department' });
+Employee.belongsTo(Employee, { foreignKey: 'managerEmployeeId', as: 'manager' });
+Employee.hasMany(Employee, { foreignKey: 'managerEmployeeId', as: 'directReports' });
+Employee.hasMany(EmployeeHistoryEvent, { foreignKey: 'employeeId', as: 'historyEvents' });
+Employee.hasMany(HistoricalPerformanceRecord, { foreignKey: 'employeeId', as: 'historicalPerformance' });
+EmployeeHistoryEvent.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
+HistoricalPerformanceRecord.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
+HistoricalPerformanceRecord.belongsTo(PerformanceCycle, { foreignKey: 'cycleId', as: 'cycle' });
 Employee.hasMany(EmployeeSalaryStructure, { foreignKey: 'employeeId', as: 'salaryStructures' });
 Employee.hasMany(EmployeeDocument, { foreignKey: 'employeeId', as: 'documents' });
 EmployeeSalaryStructure.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
@@ -215,4 +224,4 @@ PayrollItemLine.belongsTo(PayrollItem, { foreignKey: 'payrollItemId', as: 'item'
 AuditLog.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
 AuditLog.belongsTo(User, { foreignKey: 'actorUserId', as: 'actor' });
 
-export { Tenant, TenantSetting, User, UserSession, Invitation, PasswordResetToken, Department, Employee, EmployeeSalaryStructure, SalaryComponent, EmployeeSalaryComponent, Bonus, EmployeeDeduction, EmployeeLoan, LoanInstallment, EmployeeBankAccount, EmployeeTaxConfiguration, PayrollAdjustment, PerformanceCycle, PerformanceCriterion, PerformanceTemplate, PerformanceTemplateCriterion, PerformanceGoal, PerformanceEvidence, PerformanceReview, PerformanceReviewScore, PerformanceScoreSnapshot, PerformanceRatingBand, PerformanceEquivalenceSetting, PerformanceEquivalenceGroup, PerformanceEquivalenceMember, PerformanceSignatureRule, PerformanceSignature, PromotionProfile, PromotionReadinessCriterion, EmployeePromotionAssessment, PerformanceReward, PerformanceCalibrationDecision, PerformanceCalibrationSetting, PerformanceAppraisalExplanation, PerformanceFairnessFlag, EmployeeDocument, AttendanceRecord, LeaveType, LeaveBalance, LeaveRequest, Notification, PayrollRun, PayrollItem, PayrollItemLine, AuditLog };
+export { Tenant, TenantSetting, User, UserSession, Invitation, PasswordResetToken, Department, Employee, EmployeeSalaryStructure, SalaryComponent, EmployeeSalaryComponent, Bonus, EmployeeDeduction, EmployeeLoan, LoanInstallment, EmployeeBankAccount, EmployeeTaxConfiguration, PayrollAdjustment, PerformanceCycle, PerformanceCriterion, PerformanceTemplate, PerformanceTemplateCriterion, PerformanceGoal, PerformanceEvidence, PerformanceReview, PerformanceReviewScore, PerformanceScoreSnapshot, PerformanceRatingBand, PerformanceEquivalenceSetting, PerformanceEquivalenceGroup, PerformanceEquivalenceMember, PerformanceSignatureRule, PerformanceSignature, PromotionProfile, PromotionReadinessCriterion, EmployeePromotionAssessment, PerformanceReward, PerformanceCalibrationDecision, PerformanceCalibrationSetting, PerformanceAppraisalExplanation, PerformanceFairnessFlag, EmployeeDocument, AttendanceRecord, LeaveType, LeaveBalance, LeaveRequest, Notification, PayrollRun, PayrollItem, PayrollItemLine, AuditLog, EmployeeHistoryEvent, HistoricalPerformanceRecord };

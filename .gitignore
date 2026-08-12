@@ -11,3 +11,4 @@ backend/.env.*
 !backend/.env.docker.example
 backend/uploads/
 backend/data/kaggle/last-import-report.json
+backend/data/kaggle/last-continuity-import-report.json

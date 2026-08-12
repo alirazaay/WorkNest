@@ -21,6 +21,7 @@ This repository contains a React/Vite frontend and a Node.js/Express API backed 
 - Attendance clock-in/out, status tracking, late detection, and reporting.
 - Leave types, balances, requests, approvals, rejection, and cancellation.
 - Payroll salary history, components, bonuses, deductions, loans, bank accounts, generation, approval, locking, payslips, PDF output, and bank CSV export.
+- Historical HR continuity foundation with source-preserving employee actions and annual performance records for deterministic Training Needs Analysis.
 - FairRank performance cycles, goals, evidence, reviews, deterministic scoring, rating bands, equivalence groups, signatures, promotion readiness, rewards, calibration, transparency, fairness flags, notifications, and audit logging.
 - Super Admin tenant management and aggregate platform statistics.
 
@@ -282,6 +283,18 @@ Restart the backend after updating to the current model code. Audit timestamps a
 ### Payroll generation times out
 
 Payroll calculates every active employee and can take longer on larger workspaces. The UI uses a two-minute timeout for generation. Refresh the payroll list before retrying, because a run may already have committed successfully. Backend logs include the duration and completion/failure status without sensitive payroll payloads.
+
+### Import historical continuity data
+
+After applying migrations, use the separate development-only importer:
+
+```powershell
+cd backend
+$env:ALLOW_CONTINUITY_DATA_SEED="true"
+npm run db:seed:continuity-data
+```
+
+It creates only the `worknest-historical-test` tenant, supports `CONTINUITY_DATA_DIR` for an alternate source directory, preserves 1–5 ratings and raw action codes, and does not modify the existing FairRank test tenant.
 
 ### API cannot connect to MySQL
 
