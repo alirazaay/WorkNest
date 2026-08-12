@@ -296,6 +296,8 @@ npm run db:seed:continuity-data
 
 It creates only the `worknest-historical-test` tenant, supports `CONTINUITY_DATA_DIR` for an alternate source directory, preserves 1–5 ratings and raw action codes, and does not modify the existing FairRank test tenant.
 
+The continuity API exposes employee history, trend timelines, cycle summaries, and explicit cycle links under `/api/v1/performance`. Timeline statuses include `reviewed` and `no_review_data`; missing years are not inferred.
+
 ### API cannot connect to MySQL
 
 Check that MySQL is running and that `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` in `backend/.env` match the database. Then run:

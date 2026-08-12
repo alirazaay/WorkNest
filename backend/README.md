@@ -155,6 +155,15 @@ The importer refuses `NODE_ENV=production`, resets only the `worknest-historical
 
 The foundation migration is `20260812000100-create-historical-continuity-foundation.js`. It adds nullable employee manager/source metadata fields plus `employee_history_events` and `historical_performance_records`. The generated report is written to the ignored `data/kaggle/last-continuity-import-report.json` path.
 
+Continuity APIs are tenant-scoped and enforce employee self-access and manager department scope:
+
+- `GET /api/v1/performance/employees/:employeeId/history`
+- `GET /api/v1/performance/employees/:employeeId/continuity`
+- `GET /api/v1/performance/cycles/:cycleId/continuity-summary`
+- `GET /api/v1/performance/cycle-links`
+
+`20260812000200-create-performance-cycle-links.js` stores explicit year-over-year links. Missing years are returned as `no_review_data`; they are never filled with inferred ratings. A missing year also breaks adjacent improvement/decline continuity.
+
 ## Phase 7 dashboard endpoints
 
 - `GET /api/v1/dashboard/summary`

@@ -64,6 +64,7 @@ export const performanceCalibrationRevealQuerySchema = z.object({ revealIdentity
 export const performanceExplanationQuerySchema = z.object({ cycleId: z.coerce.number().int().positive() });
 export const performanceTransparencyQuerySchema = z.object({ cycleId: z.coerce.number().int().positive().optional() });
 export const performanceAuditQuerySchema = z.object({ limit: z.coerce.number().int().positive().max(100).optional() });
+export const performanceContinuityQuerySchema = z.object({ fromYear: z.coerce.number().int().min(2000).max(2200).optional(), toYear: z.coerce.number().int().min(2000).max(2200).optional() }).superRefine((value, ctx) => { if (value.fromYear && value.toYear && value.fromYear > value.toYear) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['toYear'], message: 'toYear must be greater than or equal to fromYear' }); });
 export const performanceCompareSchema = z.object({ cycleId: z.coerce.number().int().positive(), employeeIds: z.array(z.coerce.number().int().positive()).min(2).max(5) }).superRefine((value, ctx) => { if (new Set(value.employeeIds).size !== value.employeeIds.length) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['employeeIds'], message: 'Employee IDs must be unique' }); });
 export const performanceFairnessQuerySchema = z.object({ status: z.enum(['open', 'acknowledged', 'resolved']).optional(), severity: z.enum(['info', 'warning', 'error']).optional() });
 export const performanceFairnessResolveSchema = z.object({ status: z.enum(['acknowledged', 'resolved']), resolutionNote: z.string().min(5).max(2000) });

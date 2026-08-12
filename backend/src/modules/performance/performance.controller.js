@@ -15,6 +15,7 @@ import { generateFairnessFlags, listFairnessFlags, resolveFairnessFlag } from '.
 import { getEmployeeTransparency } from './transparency.service.js';
 import { listPerformanceAuditLogs } from './audit.service.js';
 import { compareEmployees } from './comparison.service.js';
+import { getCycleContinuitySummary, getEmployeeContinuity, getEmployeeHistory, listCycleLinks } from './continuity.service.js';
 
 const send = (res, data, status = 200) => res.status(status).json({ success: true, data });
 export async function cyclesList(req, res, next) { try { send(res, await listPerformanceCycles(req.auth, req.validated.query)); } catch (error) { next(error); } }
@@ -80,4 +81,8 @@ export async function fairnessFlagResolve(req, res, next) { try { send(res, awai
 export async function employeeTransparencyGet(req, res, next) { try { send(res, await getEmployeeTransparency(req.auth, req.validated.query.cycleId)); } catch (error) { next(error); } }
 export async function performanceAuditList(req, res, next) { try { send(res, await listPerformanceAuditLogs(req.auth, req.validated.query)); } catch (error) { next(error); } }
 export async function performanceCompare(req, res, next) { try { send(res, await compareEmployees(req.auth, req.validated.body)); } catch (error) { next(error); } }
+export async function employeeHistoryGet(req, res, next) { try { send(res, await getEmployeeHistory(req.auth, Number(req.params.employeeId), req.validated.query)); } catch (error) { next(error); } }
+export async function employeeContinuityGet(req, res, next) { try { send(res, await getEmployeeContinuity(req.auth, Number(req.params.employeeId), req.validated.query)); } catch (error) { next(error); } }
+export async function cycleContinuitySummaryGet(req, res, next) { try { send(res, await getCycleContinuitySummary(req.auth, Number(req.params.cycleId))); } catch (error) { next(error); } }
+export async function cycleLinksList(req, res, next) { try { send(res, await listCycleLinks(req.auth)); } catch (error) { next(error); } }
 import { unlink } from 'node:fs/promises';
