@@ -164,6 +164,16 @@ Continuity APIs are tenant-scoped and enforce employee self-access and manager d
 
 `20260812000200-create-performance-cycle-links.js` stores explicit year-over-year links. Missing years are returned as `no_review_data`; they are never filled with inferred ratings. A missing year also breaks adjacent improvement/decline continuity.
 
+The TNA migration is `20260812000300-create-training-needs.js`. TNA APIs are:
+
+- `GET /api/v1/performance/training-needs`
+- `POST /api/v1/performance/training-needs`
+- `PATCH /api/v1/performance/training-needs/:id`
+- `GET /api/v1/performance/employees/:employeeId/development-signals`
+- `POST /api/v1/performance/employees/:employeeId/analyze-tna`
+
+Historical TNA uses only deterministic rating-continuity signals. It does not infer unsupported skill weaknesses from annual ratings or undocumented action codes.
+
 ## Phase 7 dashboard endpoints
 
 - `GET /api/v1/dashboard/summary`

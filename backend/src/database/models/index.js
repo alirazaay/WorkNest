@@ -52,6 +52,7 @@ import { AuditLog } from './AuditLog.js';
 import { EmployeeHistoryEvent } from './EmployeeHistoryEvent.js';
 import { HistoricalPerformanceRecord } from './HistoricalPerformanceRecord.js';
 import { PerformanceCycleLink } from './PerformanceCycleLink.js';
+import { TrainingNeed } from './TrainingNeed.js';
 
 Tenant.hasOne(TenantSetting, { foreignKey: 'tenantId', as: 'settings' });
 Tenant.hasMany(User, { foreignKey: 'tenantId', as: 'users' });
@@ -105,6 +106,13 @@ Employee.hasMany(HistoricalPerformanceRecord, { foreignKey: 'employeeId', as: 'h
 EmployeeHistoryEvent.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
 HistoricalPerformanceRecord.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
 HistoricalPerformanceRecord.belongsTo(PerformanceCycle, { foreignKey: 'cycleId', as: 'cycle' });
+Tenant.hasMany(TrainingNeed, { foreignKey: 'tenantId', as: 'trainingNeeds' });
+Employee.hasMany(TrainingNeed, { foreignKey: 'employeeId', as: 'trainingNeeds' });
+TrainingNeed.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
+TrainingNeed.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
+TrainingNeed.belongsTo(PerformanceCycle, { foreignKey: 'cycleId', as: 'cycle' });
+TrainingNeed.belongsTo(PerformanceCycle, { foreignKey: 'sourceCycleId', as: 'sourceCycle' });
+TrainingNeed.belongsTo(User, { foreignKey: 'createdBy', as: 'creator' });
 PerformanceCycle.hasMany(PerformanceCycleLink, { foreignKey: 'previousCycleId', as: 'nextCycleLinks' });
 PerformanceCycle.hasMany(PerformanceCycleLink, { foreignKey: 'currentCycleId', as: 'previousCycleLinks' });
 PerformanceCycleLink.belongsTo(PerformanceCycle, { foreignKey: 'previousCycleId', as: 'previousCycle' });
@@ -229,4 +237,4 @@ PayrollItemLine.belongsTo(PayrollItem, { foreignKey: 'payrollItemId', as: 'item'
 AuditLog.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
 AuditLog.belongsTo(User, { foreignKey: 'actorUserId', as: 'actor' });
 
-export { Tenant, TenantSetting, User, UserSession, Invitation, PasswordResetToken, Department, Employee, EmployeeSalaryStructure, SalaryComponent, EmployeeSalaryComponent, Bonus, EmployeeDeduction, EmployeeLoan, LoanInstallment, EmployeeBankAccount, EmployeeTaxConfiguration, PayrollAdjustment, PerformanceCycle, PerformanceCriterion, PerformanceTemplate, PerformanceTemplateCriterion, PerformanceGoal, PerformanceEvidence, PerformanceReview, PerformanceReviewScore, PerformanceScoreSnapshot, PerformanceRatingBand, PerformanceEquivalenceSetting, PerformanceEquivalenceGroup, PerformanceEquivalenceMember, PerformanceSignatureRule, PerformanceSignature, PromotionProfile, PromotionReadinessCriterion, EmployeePromotionAssessment, PerformanceReward, PerformanceCalibrationDecision, PerformanceCalibrationSetting, PerformanceAppraisalExplanation, PerformanceFairnessFlag, EmployeeDocument, AttendanceRecord, LeaveType, LeaveBalance, LeaveRequest, Notification, PayrollRun, PayrollItem, PayrollItemLine, AuditLog, EmployeeHistoryEvent, HistoricalPerformanceRecord, PerformanceCycleLink };
+export { Tenant, TenantSetting, User, UserSession, Invitation, PasswordResetToken, Department, Employee, EmployeeSalaryStructure, SalaryComponent, EmployeeSalaryComponent, Bonus, EmployeeDeduction, EmployeeLoan, LoanInstallment, EmployeeBankAccount, EmployeeTaxConfiguration, PayrollAdjustment, PerformanceCycle, PerformanceCriterion, PerformanceTemplate, PerformanceTemplateCriterion, PerformanceGoal, PerformanceEvidence, PerformanceReview, PerformanceReviewScore, PerformanceScoreSnapshot, PerformanceRatingBand, PerformanceEquivalenceSetting, PerformanceEquivalenceGroup, PerformanceEquivalenceMember, PerformanceSignatureRule, PerformanceSignature, PromotionProfile, PromotionReadinessCriterion, EmployeePromotionAssessment, PerformanceReward, PerformanceCalibrationDecision, PerformanceCalibrationSetting, PerformanceAppraisalExplanation, PerformanceFairnessFlag, EmployeeDocument, AttendanceRecord, LeaveType, LeaveBalance, LeaveRequest, Notification, PayrollRun, PayrollItem, PayrollItemLine, AuditLog, EmployeeHistoryEvent, HistoricalPerformanceRecord, PerformanceCycleLink, TrainingNeed };

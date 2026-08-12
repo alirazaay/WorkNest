@@ -298,6 +298,8 @@ It creates only the `worknest-historical-test` tenant, supports `CONTINUITY_DATA
 
 The continuity API exposes employee history, trend timelines, cycle summaries, and explicit cycle links under `/api/v1/performance`. Timeline statuses include `reviewed` and `no_review_data`; missing years are not inferred.
 
+The continuity/TNA backend also provides deterministic development signals and training-need records. Signals are limited to sustained low performance, rating decline, significant decline, and missing review data; the system does not invent unsupported skill diagnoses.
+
 ### API cannot connect to MySQL
 
 Check that MySQL is running and that `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` in `backend/.env` match the database. Then run:

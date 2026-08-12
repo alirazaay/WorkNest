@@ -16,6 +16,7 @@ import { getEmployeeTransparency } from './transparency.service.js';
 import { listPerformanceAuditLogs } from './audit.service.js';
 import { compareEmployees } from './comparison.service.js';
 import { getCycleContinuitySummary, getEmployeeContinuity, getEmployeeHistory, listCycleLinks } from './continuity.service.js';
+import { analyzeEmployeeTna, createTrainingNeed, getEmployeeTna, listTrainingNeeds, updateTrainingNeed } from './tna.service.js';
 
 const send = (res, data, status = 200) => res.status(status).json({ success: true, data });
 export async function cyclesList(req, res, next) { try { send(res, await listPerformanceCycles(req.auth, req.validated.query)); } catch (error) { next(error); } }
@@ -85,4 +86,9 @@ export async function employeeHistoryGet(req, res, next) { try { send(res, await
 export async function employeeContinuityGet(req, res, next) { try { send(res, await getEmployeeContinuity(req.auth, Number(req.params.employeeId), req.validated.query)); } catch (error) { next(error); } }
 export async function cycleContinuitySummaryGet(req, res, next) { try { send(res, await getCycleContinuitySummary(req.auth, Number(req.params.cycleId))); } catch (error) { next(error); } }
 export async function cycleLinksList(req, res, next) { try { send(res, await listCycleLinks(req.auth)); } catch (error) { next(error); } }
+export async function trainingNeedsList(req, res, next) { try { send(res, await listTrainingNeeds(req.auth, req.validated.query)); } catch (error) { next(error); } }
+export async function trainingNeedCreate(req, res, next) { try { send(res, await createTrainingNeed(req.auth, req.validated.body), 201); } catch (error) { next(error); } }
+export async function trainingNeedUpdate(req, res, next) { try { send(res, await updateTrainingNeed(req.auth, Number(req.params.id), req.validated.body)); } catch (error) { next(error); } }
+export async function employeeTnaAnalyze(req, res, next) { try { send(res, await analyzeEmployeeTna(req.auth, Number(req.params.employeeId), req.validated.body)); } catch (error) { next(error); } }
+export async function employeeDevelopmentSignalsGet(req, res, next) { try { send(res, await getEmployeeTna(req.auth, Number(req.params.employeeId), req.validated.query)); } catch (error) { next(error); } }
 import { unlink } from 'node:fs/promises';
