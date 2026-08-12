@@ -1,7 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { Op } from 'sequelize';
 import { sequelize } from '../../src/config/database.js';
-import { Employee, Department, PerformanceCriterion, PerformanceCycle, PerformanceEquivalenceSetting, PerformanceEvidence, PerformanceRatingBand, PerformanceReview, PerformanceReviewScore, PerformanceSignatureRule, PerformanceTemplate, PerformanceTemplateCriterion, PromotionProfile, PromotionReadinessCriterion, Tenant, TenantSetting, User } from '../../src/database/models/index.js';
+import { Department, Employee, PerformanceCriterion, PerformanceCycle, PerformanceEquivalenceSetting, PerformanceEvidence, PerformanceGoal, PerformanceRatingBand, PerformanceReview, PerformanceReviewScore, PerformanceSignatureRule, PerformanceTemplate, PerformanceTemplateCriterion, PromotionProfile, PromotionReadinessCriterion, Tenant, TenantSetting, User } from '../../src/database/models/index.js';
 import { calculateCycleScores } from '../../src/modules/performance/score.service.js';
 import { updatePerformanceCycle } from '../../src/modules/performance/performance.service.js';
 import { recalculateEquivalence } from '../../src/modules/performance/equivalence.service.js';
@@ -16,6 +16,33 @@ const authFor = (tenantId, userId) => ({ tenantId, userId, role: 'admin' });
 const csvRows = text => { const lines = text.trim().split(/\r?\n/); const headers = lines.shift().split(','); return lines.map(line => { const values = line.split(','); return Object.fromEntries(headers.map((header, index) => [header, values[index] ?? ''])); }); };
 const log = (label, value) => console.log(`${label}: ${value}`);
 
+async function resetDedicatedTenant(slug) {
+  await sequelize.transaction(async transaction => {
+    const previous = await Tenant.findOne({ where: { slug }, transaction });
+    if (!previous) return;
+    const [tableRows] = await sequelize.query(`SELECT DISTINCT c.TABLE_NAME AS tableName
+      FROM information_schema.columns c
+      WHERE c.TABLE_SCHEMA = DATABASE() AND c.COLUMN_NAME = 'tenant_id' AND c.TABLE_NAME <> 'tenants'`, { transaction });
+    let pending = tableRows.map(row => row.tableName);
+    for (let round = 0; pending.length && round < tableRows.length + 2; round += 1) {
+      const next = []; let progress = false;
+      for (const tableName of pending) {
+        try {
+          const [result] = await sequelize.query(`DELETE FROM \`${tableName.replace(/`/g, '``')}\` WHERE tenant_id = :tenantId`, { replacements: { tenantId: previous.id }, transaction });
+          if (Number(result.affectedRows || 0) > 0) progress = true;
+        } catch (error) {
+          if (error?.original?.code === 'ER_ROW_IS_REFERENCED_2' || error?.parent?.code === 'ER_ROW_IS_REFERENCED_2') next.push(tableName);
+          else throw error;
+        }
+      }
+      if (!progress && next.length === pending.length) throw new Error(`Unable to reset dedicated test tenant because dependent rows remain in: ${next.join(', ')}`);
+      pending = next;
+    }
+    if (pending.length) throw new Error(`Unable to reset dedicated test tenant tables: ${pending.join(', ')}`);
+    await Tenant.destroy({ where: { id: previous.id }, transaction });
+  });
+}
+
 async function importData() {
   if (process.env.NODE_ENV === 'production') throw new Error('Test-data importer is disabled in production');
   if (process.env.ALLOW_TEST_DATA_SEED !== 'true') throw new Error('Set ALLOW_TEST_DATA_SEED=true before running the test-data importer');
@@ -25,8 +52,7 @@ async function importData() {
   const ids = new Set(); const duplicateRows = [];
   const clean = valid.filter(row => { const id = String(row['Employee ID']).trim(); if (ids.has(id)) { duplicateRows.push({ employeeId: id }); return false; } ids.add(id); return true; });
   await sequelize.authenticate();
-  const previous = await Tenant.findOne({ where: { slug: TEST_TENANT.slug } });
-  if (previous) await previous.destroy();
+  await resetDedicatedTenant(TEST_TENANT.slug);
   const tenant = await Tenant.create(TEST_TENANT);
   const admin = await User.create({ tenantId: tenant.id, name: 'WorkNest Test Admin', email: 'admin@test.worknest.local', passwordHash: await passwordHash(), role: 'admin', status: 'active', emailVerifiedAt: new Date() });
   await TenantSetting.create({ tenantId: tenant.id });
