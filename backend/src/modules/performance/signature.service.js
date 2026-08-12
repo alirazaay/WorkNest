@@ -6,11 +6,19 @@ import { recordAudit } from '../../services/audit.service.js';
 import { assertEmployeeRelease } from './access.js';
 
 const normalize = value => String(value || '').trim().toLowerCase();
+function categoriesFor(rule) {
+  const value = rule?.categories;
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : []; } catch { return []; }
+  }
+  return [];
+}
 
 export function selectPerformanceSignature(lines, rules) {
   if (!lines?.length || !rules?.length) return null;
   const ranked = rules.map(rule => {
-    const categories = (rule.categories || []).map(normalize);
+    const categories = categoriesFor(rule).map(normalize);
     const matching = lines.filter(line => categories.includes(normalize(line.category)));
     const score = matching.reduce((sum, line) => sum + Number(line.weightedScore || 0), 0);
     return { rule, matching, score };
@@ -71,7 +79,7 @@ export async function generateCycleSignatures(auth, cycleId) {
       if (existing) { skipped.push({ employeeId: snapshot.employeeId, signatureId: existing.id }); continue; }
       const selected = selectPerformanceSignature(snapshot.calculationDetails?.lines || [], rules);
       if (!selected) { unmatched.push(snapshot.employeeId); continue; }
-      const signature = await PerformanceSignature.create({ tenantId: auth.tenantId, cycleId, employeeId: snapshot.employeeId, signatureRuleId: selected.ruleId, signatureName: selected.signatureName, strongestFactors: selected.strongestFactors, signatureScore: selected.signatureScore, calculationDetails: { version: 1, sourceSnapshotId: snapshot.id, matchedCategories: selected.matchedCategories, ruleCategories: selected.rule.categories }, generatedBy: auth.userId, generatedAt: new Date() }, { transaction });
+      const signature = await PerformanceSignature.create({ tenantId: auth.tenantId, cycleId, employeeId: snapshot.employeeId, signatureRuleId: selected.ruleId, signatureName: selected.signatureName, strongestFactors: selected.strongestFactors, signatureScore: selected.signatureScore, calculationDetails: { version: 1, sourceSnapshotId: snapshot.id, matchedCategories: selected.matchedCategories, ruleCategories: categoriesFor(selected.rule) }, generatedBy: auth.userId, generatedAt: new Date() }, { transaction });
       await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'performance_signature_generated', entityType: 'performance_signature', entityId: signature.id, afterData: { cycleId, employeeId: snapshot.employeeId, signatureName: selected.signatureName, sourceSnapshotId: snapshot.id }, transaction });
       created.push(signature);
     }
