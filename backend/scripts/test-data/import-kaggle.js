@@ -78,4 +78,4 @@ async function importData() {
   log('Test tenant created', tenant.slug); log('Departments', Object.keys(departments).length); log('Employees imported', employees.length); log('Goals created', goals.length); log('Evidence records', evidenceRows.length); log('Reviews submitted', reviewRows.length); log('Scores calculated', employees.length * 2); log('Rejected rows', rejected.length); log('Test admin', admin.email); log('Test password', TEST_PASSWORD);
 }
 
-importData().catch(error => { console.error(`Test-data import failed: ${error.message}`); process.exitCode = 1; }).finally(() => sequelize.close());
+importData().catch(error => { console.error(`Test-data import failed: ${error.message}`); if (error.errors) console.error(error.errors.map(item => ({ message: item.message, path: item.path, value: item.value }))); process.exitCode = 1; }).finally(() => sequelize.close());

@@ -4,6 +4,7 @@ import { calculateWeightedScore } from '../src/modules/performance/score.service
 import { CRITERIA } from '../scripts/test-data/constants.js';
 import { edgeCriterionScores, edgeRows } from '../scripts/test-data/fairrank-fixtures.js';
 import { mapCriterionScores, peerToScore, trainingToScore, validateRow } from '../scripts/test-data/mappings.js';
+import { emailFor } from '../scripts/test-data/generators.js';
 
 test('Kaggle mappings normalize source scales without using reference performance score', () => {
   const row = { 'Task Completion (%)': '80', 'KPI Score': '90', 'Attendance (%)': '95', 'Peer Rating': '4', 'Training Hours': '15', 'Manager Feedback': '3.5', 'Performance Score': '100' };
@@ -24,4 +25,9 @@ test('invalid source rows are rejected with row-level reasons', () => {
 test('edge fixtures are calculated by the real weighted-score function', () => {
   const scores = edgeRows().map(row => calculateWeightedScore(CRITERIA.map(criterion => ({ criterionId: criterion.name, rawScore: edgeCriterionScores(row.__edge)[criterion.name], criterion }))));
   scores.forEach((score, index) => assert.ok(Math.abs(score.finalScore - [94.7, 94.5, 94.3, 91][index]) <= 0.01));
+});
+
+test('generated development emails remain unique for numeric and edge employee IDs', () => {
+  const emails = ['376063', 'EDGE-A', 'EDGE-B', 'EDGE-C', 'EDGE-D'].map(emailFor);
+  assert.equal(new Set(emails).size, emails.length);
 });
