@@ -153,6 +153,8 @@ PerformanceGoal.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
 PerformanceGoal.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
 PerformanceGoal.belongsTo(Employee, { foreignKey: 'managerId', as: 'manager' });
 PerformanceGoal.belongsTo(User, { foreignKey: 'createdBy', as: 'creator' });
+PerformanceGoal.belongsTo(PerformanceGoal, { foreignKey: 'previousGoalId', as: 'previousGoal' });
+PerformanceGoal.hasMany(PerformanceGoal, { foreignKey: 'previousGoalId', as: 'carryForwardGoals' });
 PerformanceEvidence.belongsTo(PerformanceCycle, { foreignKey: 'cycleId', as: 'cycle' });
 PerformanceEvidence.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
 PerformanceEvidence.belongsTo(PerformanceGoal, { foreignKey: 'goalId', as: 'goal' });

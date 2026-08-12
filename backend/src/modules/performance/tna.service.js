@@ -54,6 +54,12 @@ export async function getEmployeeTna(auth, employeeId, input = {}) {
   return { employee: result.continuity.employee, summary: result.continuity.summary, signals: result.signals, continuityGap: result.gap };
 }
 
+export async function getMyEmployeeTna(auth, input = {}) {
+  const employee = await Employee.findOne({ where: { tenantId: auth.tenantId, userId: auth.userId } });
+  if (!employee) throw new AppError('Employee record not found', 404, 'EMPLOYEE_NOT_FOUND');
+  return getEmployeeTna(auth, employee.id, input);
+}
+
 export async function analyzeEmployeeTna(auth, employeeId, input = {}) {
   const result = await buildEmployeeTna(auth, employeeId, input); const { employee, continuity, signals, gap, currentCycle } = result;
   await sequelize.transaction(async transaction => { for (const signal of signals) { const values = { tenantId: auth.tenantId, employeeId, cycleId: currentCycle?.id || null, sourceCycleId: signal.code === 'MISSING_REVIEW_DATA' ? null : Number(signal.sourceReferenceId) || null, signalCode: signal.code, skillArea: signal.code === 'MISSING_REVIEW_DATA' ? 'Data quality / review workflow' : 'Performance continuity', priority: priorityFor(signal.code, signal.magnitude), reason: signal.reason, recommendedTraining: recommendationFor(signal.code), sourceType: SIGNAL_SOURCE, sourceReferenceId: `${employeeId}:${signal.year}`, continuityGapScore: gap.score, riskLevel: gap.riskLevel, createdBy: auth.userId }; const existing = await TrainingNeed.findOne({ where: { tenantId: auth.tenantId, employeeId, sourceType: SIGNAL_SOURCE, sourceReferenceId: values.sourceReferenceId }, transaction, lock: transaction.LOCK.UPDATE }); if (existing) await existing.update({ ...values, status: existing.status }, { transaction }); else await TrainingNeed.create(values, { transaction }); } });

@@ -302,6 +302,8 @@ The continuity/TNA backend also provides deterministic development signals and t
 
 The Performance page exposes Continuity and TNA tabs for authorized managers and administrators, using the live continuity and training-needs APIs with loading, empty, error, and retry states.
 
+Goal continuity is explicit: managers can carry incomplete goals into an active future cycle, creating a `previousGoalId` link. Completed goals remain historical. Employees can view their own continuity and development signals through the self-service Performance APIs.
+
 ### API cannot connect to MySQL
 
 Check that MySQL is running and that `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` in `backend/.env` match the database. Then run:

@@ -176,6 +176,8 @@ Historical TNA uses only deterministic rating-continuity signals. It does not in
 
 The FairRank frontend now includes authorized-manager/admin tabs for `Continuity` and `TNA`. Continuity provides employee selection, yearly rating cards, missing-year markers, summary metrics, and an explicit Analyze TNA action. TNA provides priority/status/signal filters and real backend records.
 
+Goal continuity is supported by `20260812000400-add-goal-continuity.js`. `POST /api/v1/performance/goals/:id/carry-forward` creates a new goal with `previousGoalId` and `continuityStatus=carried_forward`, while preserving the original goal. Completed or archived-cycle goals cannot be carried forward. Employees can read their own history and development signals through `/api/v1/performance/me/continuity` and `/api/v1/performance/me/development-signals`.
+
 ## Phase 7 dashboard endpoints
 
 - `GET /api/v1/dashboard/summary`

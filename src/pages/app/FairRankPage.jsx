@@ -13,7 +13,7 @@ const tabs = [
   ['overview', 'Overview', ['admin', 'manager']], ['my', 'My Performance', ['employee']], ['cycles', 'Cycles', ['admin', 'manager']],
   ['criteria', 'Criteria', ['admin', 'manager']], ['goals', 'Goals', ['admin', 'manager', 'employee']],
   ['evidence', 'Evidence', ['admin', 'manager', 'employee']], ['reviews', 'Reviews', ['admin', 'manager', 'employee']],
-  ['calibration', 'Calibration', ['admin', 'manager']], ['fairrank', 'FairRank', ['admin', 'manager']], ['continuity', 'Continuity', ['admin', 'manager']], ['tna', 'TNA', ['admin', 'manager']],
+  ['calibration', 'Calibration', ['admin', 'manager']], ['fairrank', 'FairRank', ['admin', 'manager']], ['continuity', 'Continuity', ['admin', 'manager', 'employee']], ['tna', 'TNA', ['admin', 'manager', 'employee']],
   ['readiness', 'Readiness', ['admin', 'manager']], ['rewards', 'Rewards', ['admin', 'manager']], ['comparison', 'Compare', ['admin', 'manager']], ['audit', 'Audit log', ['admin']],
 ];
 const endpoints = { cycles: '/performance/cycles', criteria: '/performance/templates', goals: '/performance/goals', evidence: '/performance/evidence', reviews: '/performance/reviews', readiness: '/performance/promotion-profiles', rewards: '/performance/rewards', audit: '/performance/audit' };
@@ -64,14 +64,18 @@ export default function FairRankPage({ user, onExit }) {
         if (results.every((r) => r.status === 'rejected')) throw results[0].reason;
         setData({ overview: results.map((r) => r.status === 'fulfilled' ? responseData(r.value) : null) });
       } else if (tab === 'continuity') {
-        const empData = responseData(await api.get('/employees', { params: { page: 1, pageSize: 100 } })); const employees = empData?.items || empData || []; const history = employees[0] ? responseData(await api.get(`/performance/employees/${employees[0].id}/history`)) : null; setData({ employees, history });
+        if (role === 'employee') setData({ employees: [], history: responseData(await api.get('/performance/me/continuity')) });
+        else { const empData = responseData(await api.get('/employees', { params: { page: 1, pageSize: 100 } })); const employees = empData?.items || empData || []; const history = employees[0] ? responseData(await api.get(`/performance/employees/${employees[0].id}/history`)) : null; setData({ employees, history }); }
       } else if (tab === 'tna') {
-        setData({ items: responseData(await api.get('/performance/training-needs')) });
+        if (role === 'employee') { const result = responseData(await api.get('/performance/me/development-signals')); setData({ items: (result.signals || []).map((item) => ({ ...item, signalCode: item.code, employee: result.employee, status: 'identified', priority: item.code === 'MISSING_REVIEW_DATA' ? 'low' : 'high', recommendedTraining: 'Review this development signal with your manager.' })) }); }
+        else setData({ items: responseData(await api.get('/performance/training-needs')) });
       } else if (tab === 'calibration' || tab === 'fairrank') {
         const cycles = responseData(await api.get('/performance/cycles'));
         const cycle = cycles.find((c) => ['active', 'in_progress'].includes(c.status)) || cycles[0];
         if (!cycle) setData({ items: [] });
         else setData({ items: responseData(await api.get(`/performance/cycles/${cycle.id}/${tab === 'calibration' ? 'calibration' : 'equivalence-groups'}`)) });
+      } else if (tab === 'goals') {
+        const [goalsRes, cyclesRes] = await Promise.all([api.get(endpoints[tab]), api.get('/performance/cycles')]); setData({ items: responseData(goalsRes), cycles: responseData(cyclesRes) });
       } else {
         setData({ items: responseData(await api.get(endpoints[tab])) });
       }
@@ -80,7 +84,7 @@ export default function FairRankPage({ user, onExit }) {
     } finally {
       setLoading(false);
     }
-  }, [tab]);
+  }, [role, tab]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -144,8 +148,9 @@ function PageContent({ tab, data, canManage, activeCycle, onRetry, setData }) {
   if (tab === 'my') return <MyPerformance data={data} />;
   if (tab === 'audit') return <AuditList items={data.items || []} />;
   if (tab === 'comparison') return <Comparison employees={data.employees || []} cycles={data.cycles || []} />;
-  if (tab === 'continuity') return <ContinuityWorkspace data={data} onRetry={onRetry} setData={setData} />;
+  if (tab === 'continuity') return <ContinuityWorkspace data={data} onRetry={onRetry} setData={setData} canManage={canManage} />;
   if (tab === 'tna') return <TnaWorkspace items={data.items || []} onRetry={onRetry} />;
+  if (tab === 'goals') return <GoalsWorkspace items={data.items || []} cycles={data.cycles || []} onRetry={onRetry} canManage={canManage} />;
   if (tab === 'overview') {
     const values = data.overview || [];
     return <>
@@ -180,7 +185,7 @@ function PageContent({ tab, data, canManage, activeCycle, onRetry, setData }) {
   );
 }
 
-function ContinuityWorkspace({ data, onRetry, setData }) {
+function ContinuityWorkspace({ data, onRetry, setData, canManage }) {
   const employees = data.employees || []; const history = data.history; const [employeeId, setEmployeeId] = useState(employees[0]?.id || ''); const [loadingEmployee, setLoadingEmployee] = useState(false); const [analyzing, setAnalyzing] = useState(false); const [message, setMessage] = useState('');
   useEffect(() => { if (!employeeId && employees[0]?.id) setEmployeeId(employees[0].id); }, [employeeId, employees]);
   async function selectEmployee(event) { const id = event.target.value; setEmployeeId(id); if (!id) return; setLoadingEmployee(true); setMessage(''); try { const res = await api.get(`/performance/employees/${id}/history`); setData((current) => ({ ...current, history: responseData(res) })); } catch (err) { setMessage(err.response?.data?.error?.message || 'Unable to load employee history.'); } finally { setLoadingEmployee(false); } }
@@ -188,13 +193,13 @@ function ContinuityWorkspace({ data, onRetry, setData }) {
   return <div className="continuity-workspace">
     <article className="performance-card">
       <div className="performance-card-heading"><div><h2>Performance continuity</h2><p>Review historical ratings without fabricating missing years or detailed criterion scores.</p></div><button className="icon-button" onClick={onRetry} aria-label="Refresh continuity"><RefreshCw size={17} /></button></div>
-      <label className="comparison-cycle">Employee<select value={employeeId} onChange={selectEmployee}><option value="">Select an employee</option>{employees.map((employee) => <option value={employee.id} key={employee.id}>{employee.user?.name || employee.employeeCode} ({employee.employeeCode})</option>)}</select></label>
+      {canManage ? <label className="comparison-cycle">Employee<select value={employeeId} onChange={selectEmployee}><option value="">Select an employee</option>{employees.map((employee) => <option value={employee.id} key={employee.id}>{employee.user?.name || employee.employeeCode} ({employee.employeeCode})</option>)}</select></label> : <p className="performance-inline-message">Showing your permitted historical performance information.</p>}
       {message && <p className="performance-inline-message">{message}</p>}
       {loadingEmployee ? <LoadingState label="Loading employee history..." /> : history ? <>
         <div className="performance-kpis continuity-kpis"><SummaryCard label="Years reviewed" value={history.summary?.yearsReviewed ?? 0} icon={LineChart} /><SummaryCard label="Average rating" value={history.summary?.averageHistoricalRating == null ? '—' : `${history.summary.averageHistoricalRating}/5`} icon={BarChart3} tone="blue" /><SummaryCard label="Latest rating" value={history.summary?.latestRating == null ? '—' : `${history.summary.latestRating}/5`} icon={ClipboardList} tone="mint" /></div>
         <div className="continuity-timeline">{(history.timeline || []).map((row) => <div className={`continuity-year ${row.status === 'no_review_data' ? 'missing' : ''}`} key={row.year}><strong>{row.year}</strong><span>{row.originalRating == null ? 'No Review Data' : `${row.originalRating}/5`}</span><StatusBadge status={row.trend === 'insufficient_history' ? 'neutral' : row.trend} /><small>{row.changeFromPreviousYear == null ? 'Baseline / insufficient history' : `${row.changeFromPreviousYear > 0 ? '+' : ''}${row.changeFromPreviousYear} from previous year`}</small></div>)}</div>
         <div className="continuity-summary"><span>Best: {history.summary?.bestRating ?? '—'}/5</span><span>Worst: {history.summary?.worstRating ?? '—'}/5</span><span>Volatility: {history.summary?.ratingVolatility ?? '—'}</span><span>Missing years: {history.summary?.missingReviewYears?.length ? history.summary.missingReviewYears.join(', ') : 'None'}</span></div>
-        <Button onClick={analyze} disabled={analyzing || !employeeId}>{analyzing ? 'Analyzing...' : 'Analyze TNA'} <ArrowRight size={16} /></Button>
+        {canManage && <Button onClick={analyze} disabled={analyzing || !employeeId}>{analyzing ? 'Analyzing...' : 'Analyze TNA'} <ArrowRight size={16} /></Button>}
       </> : <EmptyState text={employees.length ? 'Select an employee to view historical continuity.' : 'No employees are available.'} />}
     </article>
   </div>;
@@ -203,6 +208,12 @@ function ContinuityWorkspace({ data, onRetry, setData }) {
 function TnaWorkspace({ items, onRetry }) {
   const [priority, setPriority] = useState(''); const [status, setStatus] = useState(''); const [signal, setSignal] = useState(''); const filtered = items.filter((item) => (!priority || item.priority === priority) && (!status || item.status === status) && (!signal || item.signalCode === signal));
   return <article className="performance-card"><div className="performance-card-heading"><div><h2>Training Needs Analysis</h2><p>Deterministic development signals from historical performance continuity.</p></div><button className="icon-button" onClick={onRetry} aria-label="Refresh training needs"><RefreshCw size={17} /></button></div><div className="tna-filters"><select value={priority} onChange={(e) => setPriority(e.target.value)}><option value="">All priorities</option><option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select><select value={status} onChange={(e) => setStatus(e.target.value)}><option value="">All statuses</option><option value="identified">Identified</option><option value="reviewed">Reviewed</option><option value="planned">Planned</option><option value="in_progress">In progress</option><option value="completed">Completed</option></select><select value={signal} onChange={(e) => setSignal(e.target.value)}><option value="">All signals</option>{[...new Set(items.map((item) => item.signalCode).filter(Boolean))].map((value) => <option value={value} key={value}>{titleCase(value)}</option>)}</select></div>{filtered.length ? <div className="performance-list">{filtered.map((item) => <article className="performance-list-card tna-card" key={item.id}><div><strong>{item.employee?.user?.name || item.employee?.employeeCode || 'Employee'}</strong><small>{titleCase(item.signalCode || 'MANUAL')} · {item.reason}</small><small>Recommended: {item.recommendedTraining || 'Review with manager'}</small></div><div><StatusBadge status={item.priority} /><StatusBadge status={item.status} /></div></article>)}</div> : <EmptyState text="No training needs match the selected filters." />}</article>;
+}
+
+function GoalsWorkspace({ items, cycles, onRetry, canManage }) {
+  const [targetCycles, setTargetCycles] = useState({}); const [message, setMessage] = useState(''); const incomplete = items.filter((item) => !['completed', 'cancelled'].includes(item.status) && Number(item.progressPercentage || 0) < 100);
+  async function carryForward(goal) { const targetCycleId = targetCycles[goal.id]; if (!targetCycleId) return; setMessage(''); try { await api.post(`/performance/goals/${goal.id}/carry-forward`, { targetCycleId: Number(targetCycleId) }); setMessage('Goal carried forward successfully.'); onRetry(); } catch (err) { setMessage(err.response?.data?.error?.message || 'Unable to carry forward this goal.'); } }
+  return <article className="performance-card"><div className="performance-card-heading"><div><h2>Goals and continuity</h2><p>Completed goals remain historical. Only incomplete goals can be explicitly carried forward.</p></div><button className="icon-button" onClick={onRetry} aria-label="Refresh goals"><RefreshCw size={17} /></button></div>{message && <p className="performance-inline-message">{message}</p>}{items.length ? <div className="performance-list">{items.map((goal) => <article className="performance-list-card goal-continuity-card" key={goal.id}><div><strong>{goal.title}</strong><small>{goal.cycle?.name || 'Performance cycle'} · {titleCase(goal.status)} · {Number(goal.progressPercentage || 0)}% complete</small><small>Continuity: {titleCase(goal.continuityStatus || 'not_applicable')}</small></div>{canManage && incomplete.some((item) => item.id === goal.id) && <div className="goal-carry-forward"><select value={targetCycles[goal.id] || ''} onChange={(event) => setTargetCycles((current) => ({ ...current, [goal.id]: event.target.value }))}><option value="">Carry to cycle...</option>{cycles.filter((cycle) => cycle.id !== goal.cycleId && !['completed', 'archived'].includes(cycle.status)).map((cycle) => <option value={cycle.id} key={cycle.id}>{cycle.name}</option>)}</select><button className="table-link" disabled={!targetCycles[goal.id]} onClick={() => carryForward(goal)}>Carry forward</button></div>}</article>)}</div> : <EmptyState text="No performance goals are available." />}</article>;
 }
 
 function EmptyState({ text }) { return <div className="performance-empty"><CircleAlert size={22} /><p>{text}</p></div>; }

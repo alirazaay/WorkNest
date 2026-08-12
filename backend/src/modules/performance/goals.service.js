@@ -76,3 +76,17 @@ export async function updateGoal(auth, id, input) {
   await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'performance_goal_updated', entityType: 'performance_goal', entityId: id, beforeData: before, afterData: goal.toJSON() });
   return goalFor(auth, id);
 }
+
+export async function carryForwardGoal(auth, id, input) {
+  const source = await goalFor(auth, id);
+  if (source.status === 'completed' || source.progressPercentage >= 100) throw new AppError('Completed goals cannot be carried forward', 409, 'GOAL_ALREADY_COMPLETED');
+  const targetCycle = await PerformanceCycle.findOne({ where: { id: input.targetCycleId, tenantId: auth.tenantId } });
+  if (!targetCycle) throw new AppError('Target performance cycle not found', 404, 'PERFORMANCE_CYCLE_NOT_FOUND');
+  if (['completed', 'archived'].includes(targetCycle.status)) throw new AppError('Goals cannot be carried into a completed or archived cycle', 409, 'PERFORMANCE_CYCLE_FROZEN');
+  const existing = await PerformanceGoal.findOne({ where: { tenantId: auth.tenantId, previousGoalId: source.id, cycleId: targetCycle.id } });
+  if (existing) return goalFor(auth, existing.id);
+  const carried = await PerformanceGoal.create({ tenantId: auth.tenantId, cycleId: targetCycle.id, employeeId: source.employeeId, title: input.title || source.title, description: input.description ?? source.description, goalType: source.goalType, targetValue: source.targetValue, unit: source.unit, weight: source.weight, dueDate: input.dueDate ?? null, status: 'not_started', progressPercentage: 0, managerId: source.managerId, previousGoalId: source.id, continuityStatus: 'carried_forward', createdBy: auth.userId });
+  await source.update({ continuityStatus: 'carried_forward' });
+  await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'performance_goal_carried_forward', entityType: 'performance_goal', entityId: carried.id, afterData: { previousGoalId: source.id, targetCycleId: targetCycle.id } });
+  return goalFor(auth, carried.id);
+}

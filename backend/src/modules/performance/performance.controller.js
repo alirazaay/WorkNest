@@ -1,6 +1,6 @@
 import { createPerformanceCycle, getPerformanceCycle, listPerformanceCycles, updatePerformanceCycle } from './performance.service.js';
 import { addTemplateCriterion, createCriterion, createTemplate, getTemplate, listCriteria, listTemplates, removeTemplateCriterion, updateCriterion, updateTemplate, updateTemplateCriterion } from './criteria.service.js';
-import { createGoal, getGoal, listGoals, updateGoal } from './goals.service.js';
+import { carryForwardGoal, createGoal, getGoal, listGoals, updateGoal } from './goals.service.js';
 import { createEvidence, listEvidence, verifyEvidence } from './evidence.service.js';
 import { createReview, getReview, listReviews, submitReview } from './reviews.service.js';
 import { calculateCycleScores, getEmployeeScore } from './score.service.js';
@@ -15,8 +15,8 @@ import { generateFairnessFlags, listFairnessFlags, resolveFairnessFlag } from '.
 import { getEmployeeTransparency } from './transparency.service.js';
 import { listPerformanceAuditLogs } from './audit.service.js';
 import { compareEmployees } from './comparison.service.js';
-import { getCycleContinuitySummary, getEmployeeContinuity, getEmployeeHistory, listCycleLinks } from './continuity.service.js';
-import { analyzeEmployeeTna, createTrainingNeed, getEmployeeTna, listTrainingNeeds, updateTrainingNeed } from './tna.service.js';
+import { getCycleContinuitySummary, getEmployeeContinuity, getEmployeeHistory, getMyEmployeeContinuity, listCycleLinks } from './continuity.service.js';
+import { analyzeEmployeeTna, createTrainingNeed, getEmployeeTna, getMyEmployeeTna, listTrainingNeeds, updateTrainingNeed } from './tna.service.js';
 
 const send = (res, data, status = 200) => res.status(status).json({ success: true, data });
 export async function cyclesList(req, res, next) { try { send(res, await listPerformanceCycles(req.auth, req.validated.query)); } catch (error) { next(error); } }
@@ -38,6 +38,7 @@ export async function employeeGoalsList(req, res, next) { try { send(res, await 
 export async function goalGet(req, res, next) { try { send(res, await getGoal(req.auth, Number(req.params.id))); } catch (error) { next(error); } }
 export async function goalCreate(req, res, next) { try { send(res, await createGoal(req.auth, req.validated.body), 201); } catch (error) { next(error); } }
 export async function goalUpdate(req, res, next) { try { send(res, await updateGoal(req.auth, Number(req.params.id), req.validated.body)); } catch (error) { next(error); } }
+export async function goalCarryForward(req, res, next) { try { send(res, await carryForwardGoal(req.auth, Number(req.params.id), req.validated.body), 201); } catch (error) { next(error); } }
 export async function evidenceList(req, res, next) { try { send(res, await listEvidence(req.auth, req.validated.query)); } catch (error) { next(error); } }
 export async function employeeEvidenceList(req, res, next) { try { send(res, await listEvidence(req.auth, { ...req.validated.query, employeeId: Number(req.params.employeeId) })); } catch (error) { next(error); } }
 export async function evidenceCreate(req, res, next) { try { send(res, await createEvidence(req.auth, req.validated.body, req.file), 201); } catch (error) { if (req.file?.path) await unlink(req.file.path).catch(() => {}); next(error); } }
@@ -91,4 +92,6 @@ export async function trainingNeedCreate(req, res, next) { try { send(res, await
 export async function trainingNeedUpdate(req, res, next) { try { send(res, await updateTrainingNeed(req.auth, Number(req.params.id), req.validated.body)); } catch (error) { next(error); } }
 export async function employeeTnaAnalyze(req, res, next) { try { send(res, await analyzeEmployeeTna(req.auth, Number(req.params.employeeId), req.validated.body)); } catch (error) { next(error); } }
 export async function employeeDevelopmentSignalsGet(req, res, next) { try { send(res, await getEmployeeTna(req.auth, Number(req.params.employeeId), req.validated.query)); } catch (error) { next(error); } }
+export async function myContinuityGet(req, res, next) { try { send(res, await getMyEmployeeContinuity(req.auth, req.validated.query)); } catch (error) { next(error); } }
+export async function myDevelopmentSignalsGet(req, res, next) { try { send(res, await getMyEmployeeTna(req.auth, req.validated.query)); } catch (error) { next(error); } }
 import { unlink } from 'node:fs/promises';

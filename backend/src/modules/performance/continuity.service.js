@@ -41,6 +41,12 @@ export async function getEmployeeHistory(auth, employeeId, query = {}) {
   return { ...continuity, actions: events.map(event => event.toJSON()) };
 }
 
+export async function getMyEmployeeContinuity(auth, query = {}) {
+  const employee = await Employee.findOne({ where: { tenantId: auth.tenantId, userId: auth.userId } });
+  if (!employee) throw new AppError('Employee record not found', 404, 'EMPLOYEE_NOT_FOUND');
+  return getEmployeeHistory(auth, employee.id, query);
+}
+
 export async function getCycleContinuitySummary(auth, cycleId) {
   const cycle = await PerformanceCycle.findOne({ where: { id: cycleId, tenantId: auth.tenantId } }); if (!cycle) throw new AppError('Performance cycle not found', 404, 'PERFORMANCE_CYCLE_NOT_FOUND');
   const link = await PerformanceCycleLink.findOne({ where: { tenantId: auth.tenantId, currentCycleId: cycleId }, include: [{ model: PerformanceCycle, as: 'previousCycle', attributes: ['id', 'name', 'year', 'status'] }] });

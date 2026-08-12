@@ -62,6 +62,10 @@
 .tna-filters select { border: 1px solid #dfe2eb; border-radius: 9px; padding: 10px 12px; font: inherit; color: #4e5872; background: #fff; }
 .tna-card { align-items: flex-start; }
 .tna-card > div:last-child { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.goal-continuity-card { align-items: flex-start; }
+.goal-carry-forward { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.goal-carry-forward select { border: 1px solid #dfe2eb; border-radius: 8px; padding: 8px 10px; font: inherit; color: #4e5872; background: #fff; }
+.goal-carry-forward button:disabled { opacity: .45; cursor: not-allowed; }
 @media (max-width: 560px) { .comparison-picker { grid-template-columns: 1fr; } }
 .performance-modal { max-height: calc(100vh - 32px); overflow-y: auto; }
 .performance-modal label { display: grid; gap: 7px; margin: 14px 0; color: #4e5872; }
