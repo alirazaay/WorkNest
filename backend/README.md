@@ -374,4 +374,8 @@ Authoritative scores, weighting, rating bands, equivalence, promotion readiness,
 
 The FairRank `POST /api/v1/performance/compare` route requires the `performanceCompare` controller import in `performance.routes.js`; a missing import prevents the API from starting.
 
+## Development Kaggle importer
+
+Use `npm run db:seed:test-data` only with `ALLOW_TEST_DATA_SEED=true` and `NODE_ENV` set to a non-production value. The importer reads `data/kaggle/Employee_Performance_Dataset.csv`, resets only the `worknest-test-corporation` tenant, creates tenant-scoped source records, and invokes the existing score, equivalence, signature, and promotion services. It never trusts CSV tenant IDs and never writes authoritative final performance results directly. See the generated ignored report at `data/kaggle/last-import-report.json` after a successful run.
+
 The frontend FairRank entry point is `/performance`; existing tenant-scoped performance APIs are unchanged by the navigation fix.

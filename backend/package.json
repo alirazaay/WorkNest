@@ -10,6 +10,7 @@
     "db:migrate:undo": "node scripts/migrate.js down",
     "db:seed": "node src/database/seed-demo.js",
     "db:seed:demo": "node src/database/seed-demo.js",
+    "db:seed:test-data": "node scripts/test-data/import-kaggle.js",
     "db:verify": "node scripts/verify-database.js",
     "db:verify:performance": "node scripts/verify-performance-isolation.js",
     "db:verify:safety": "node scripts/verify-database-safety.js",
