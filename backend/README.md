@@ -441,3 +441,7 @@ npm run db:verify:payroll
 The verifier checks payroll-owned tables, tenant scoping, unique payroll-period and payroll-item constraints, duplicate records, run-total reconciliation, and valid lifecycle statuses. Payroll generation and approval/locking are transactional; locked corrections use audited adjustment records. It reports database evidence and does not modify data.
 
 FairRank equivalence-group details are displayed by the frontend using the existing tenant-scoped `/api/v1/performance/cycles/:cycleId/equivalence-groups` response; no new backend endpoint is required.
+
+## FairRank workflow
+
+The backend workflow is: create/configure cycle → activate → collect goals/evidence/reviews → submit reviews → `POST /api/v1/performance/cycles/:cycleId/calculate` → optional calibration → generate explanations/signatures/fairness flags → `POST /api/v1/performance/cycles/:cycleId/recalculate-equivalence` → complete/archive the cycle for employee release. All protected queries require the authenticated tenant; manager reads are department-scoped and employee reads are self-scoped/release-gated.

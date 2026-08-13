@@ -30,11 +30,13 @@ export async function getEquivalenceSettings(auth) {
 
 export async function updateEquivalenceSettings(auth, input) {
   if (Number(input.threshold) < 0 || Number(input.threshold) > 10) throw new AppError('Equivalence threshold must be between 0 and 10 points', 422, 'INVALID_EQUIVALENCE_THRESHOLD');
-  const before = await getEquivalenceSettings(auth);
-  const [settings] = await PerformanceEquivalenceSetting.findOrCreate({ where: { tenantId: auth.tenantId }, defaults: { tenantId: auth.tenantId, ...input, updatedBy: auth.userId } });
-  await settings.update({ ...input, updatedBy: auth.userId });
-  await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'performance_equivalence_settings_updated', entityType: 'performance_equivalence_setting', entityId: settings.id, beforeData: before, afterData: settings.toJSON() });
-  return settings;
+  return sequelize.transaction(async (transaction) => {
+    const before = await getEquivalenceSettings(auth);
+    const [settings] = await PerformanceEquivalenceSetting.findOrCreate({ where: { tenantId: auth.tenantId }, defaults: { tenantId: auth.tenantId, ...input, updatedBy: auth.userId }, transaction });
+    await settings.update({ ...input, updatedBy: auth.userId }, { transaction });
+    await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'performance_equivalence_settings_updated', entityType: 'performance_equivalence_setting', entityId: settings.id, beforeData: before, afterData: settings.toJSON(), transaction });
+    return settings;
+  });
 }
 
 const groupInclude = [{ model: PerformanceEquivalenceMember, as: 'members', include: [{ model: Employee, as: 'employee', attributes: ['id', 'employeeCode', 'departmentId'], include: [{ model: User, as: 'user', attributes: ['id', 'name'] }] }] }, { model: PerformanceCycle, as: 'cycle', attributes: ['id', 'name', 'year', 'status'] }];

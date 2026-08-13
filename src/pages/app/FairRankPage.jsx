@@ -72,8 +72,8 @@ export default function FairRankPage({ user, onExit }) {
       } else if (tab === 'calibration' || tab === 'fairrank') {
         const cycles = responseData(await api.get('/performance/cycles'));
         const cycle = cycles.find((c) => ['active', 'in_progress'].includes(c.status)) || cycles[0];
-        if (!cycle) setData({ items: [] });
-        else setData({ items: responseData(await api.get(`/performance/cycles/${cycle.id}/${tab === 'calibration' ? 'calibration' : 'equivalence-groups'}`)) });
+        if (!cycle) setData({ items: [], cycles: [] });
+        else setData({ items: responseData(await api.get(`/performance/cycles/${cycle.id}/${tab === 'calibration' ? 'calibration' : 'equivalence-groups'}`)), cycles, cycle });
       } else if (tab === 'goals') {
         const [goalsRes, cyclesRes] = await Promise.all([api.get(endpoints[tab]), api.get('/performance/cycles')]); setData({ items: responseData(goalsRes), cycles: responseData(cyclesRes) });
       } else {
@@ -120,7 +120,7 @@ export default function FairRankPage({ user, onExit }) {
       </nav>
       {loading ? <LoadingState label="Loading performance data..." /> : error ? <ErrorState message={error} onRetry={load} /> : (
         <section className="performance-content">
-          <PageContent tab={tab} data={data} canManage={canManage} activeCycle={activeCycle} onRetry={load} setData={setData} />
+          <PageContent tab={tab} data={data} canManage={canManage} canAdmin={canAdmin} activeCycle={activeCycle} onRetry={load} setData={setData} />
         </section>
       )}
       {modal && (
@@ -144,11 +144,11 @@ export default function FairRankPage({ user, onExit }) {
   );
 }
 
-function PageContent({ tab, data, canManage, activeCycle, onRetry, setData }) {
+function PageContent({ tab, data, canManage, canAdmin, activeCycle, onRetry, setData }) {
   if (tab === 'my') return <MyPerformance data={data} />;
   if (tab === 'audit') return <AuditList items={data.items || []} />;
   if (tab === 'comparison') return <Comparison employees={data.employees || []} cycles={data.cycles || []} />;
-  if (tab === 'fairrank') return <FairRankGroups items={data.items || []} />;
+  if (tab === 'fairrank') return <FairRankGroups items={data.items || []} cycles={data.cycles || []} cycle={data.cycle} canAdmin={canAdmin} onRetry={onRetry} />;
   if (tab === 'continuity') return <ContinuityWorkspace data={data} onRetry={onRetry} setData={setData} canManage={canManage} />;
   if (tab === 'tna') return <TnaWorkspace items={data.items || []} onRetry={onRetry} />;
   if (tab === 'goals') return <GoalsWorkspace items={data.items || []} cycles={data.cycles || []} onRetry={onRetry} canManage={canManage} />;
@@ -186,14 +186,59 @@ function PageContent({ tab, data, canManage, activeCycle, onRetry, setData }) {
   );
 }
 
-function FairRankGroups({ items }) {
+function FairRankGroups({ items, cycles, cycle, canAdmin, onRetry }) {
   const [selectedGroup, setSelectedGroup] = useState(null);
+  const [selectedCycleId, setSelectedCycleId] = useState(cycle?.id || '');
+  const [groupItems, setGroupItems] = useState(items);
+  const [action, setAction] = useState('');
+  const [message, setMessage] = useState('');
+  useEffect(() => { setSelectedCycleId(cycle?.id || ''); setGroupItems(items); }, [cycle?.id, items]);
+  async function selectCycle(event) {
+    const id = event.target.value;
+    setSelectedCycleId(id); setMessage('');
+    if (!id) { setGroupItems([]); return; }
+    setAction('load');
+    try { setGroupItems(responseData(await api.get(`/performance/cycles/${id}/equivalence-groups`))); }
+    catch (err) { setMessage(err.response?.data?.error?.message || 'Unable to load equivalence groups for this cycle.'); }
+    finally { setAction(''); }
+  }
+  async function runAction(name) {
+    if (!selectedCycleId) return;
+    setAction(name); setMessage('');
+    try {
+      const actions = {
+        calculate: `/performance/cycles/${selectedCycleId}/calculate`,
+        equivalence: `/performance/cycles/${selectedCycleId}/recalculate-equivalence`,
+        signatures: `/performance/cycles/${selectedCycleId}/generate-signatures`,
+        explanations: `/performance/cycles/${selectedCycleId}/generate-explanations`,
+        fairness: `/performance/cycles/${selectedCycleId}/generate-fairness-flags`,
+      };
+      await api.post(actions[name], {});
+      setMessage('FairRank data refreshed successfully.');
+      setGroupItems(responseData(await api.get(`/performance/cycles/${selectedCycleId}/equivalence-groups`)));
+      await onRetry();
+    } catch (err) {
+      setMessage(err.response?.data?.error?.message || err.response?.data?.message || 'Unable to complete this FairRank action.');
+    } finally { setAction(''); }
+  }
   return <>
     <article className="performance-card">
       <div className="performance-card-heading">
         <div><h2>Performance equivalents</h2><p>{items.length ? `${items.length} equivalent group${items.length === 1 ? '' : 's'} found.` : 'Groups are created from calculated scores, rating bands, and the configured threshold.'}</p></div>
       </div>
-      {items.length ? <div className="performance-list">{items.map((group) => {
+      <div className="fairrank-toolbar">
+        <label>Cycle<select value={selectedCycleId} onChange={selectCycle}><option value="">Select a cycle</option>{cycles.map((item) => <option value={item.id} key={item.id}>{item.name} ({item.status})</option>)}</select></label>
+        {canAdmin && <div className="fairrank-actions">
+          <button type="button" onClick={() => runAction('calculate')} disabled={!selectedCycleId || action}>Calculate scores</button>
+          <button type="button" onClick={() => runAction('equivalence')} disabled={!selectedCycleId || action}>Recalculate groups</button>
+          <button type="button" onClick={() => runAction('signatures')} disabled={!selectedCycleId || action}>Generate signatures</button>
+          <button type="button" onClick={() => runAction('explanations')} disabled={!selectedCycleId || action}>Generate explanations</button>
+          <button type="button" onClick={() => runAction('fairness')} disabled={!selectedCycleId || action}>Check fairness</button>
+        </div>}
+      </div>
+      {action && <p className="performance-inline-message">Running FairRank action…</p>}
+      {message && <p className="performance-inline-message">{message}</p>}
+      {groupItems.length ? <div className="performance-list">{groupItems.map((group) => {
         const members = group.members || [];
         const scores = members.map((member) => Number(member.finalScore)).filter(Number.isFinite);
         const spread = scores.length ? (Math.max(...scores) - Math.min(...scores)).toFixed(2) : '—';

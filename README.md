@@ -435,3 +435,16 @@ npm run db:verify:payroll
 The verifier checks payroll tables, tenant keys, unique period/item constraints, duplicate records, parent-run total reconciliation, and supported statuses. Payroll uses integer cents for calculations, DECIMAL columns for persistence, transactional review/approval/locking, and audited locked-payroll adjustments.
 
 The FairRank equivalence-group view now exposes a functional Info action for each group. It opens the tenant-scoped group members, score spread, rating band, and threshold from the existing equivalence API.
+
+## Using FairRank
+
+1. Sign in as an administrator or manager and open **FairRank** from the sidebar.
+2. Create a cycle as an administrator, configure criteria and a template whose weights total exactly 100%, then activate the cycle.
+3. Add goals and evidence, create the permitted self/manager reviews, and submit them.
+4. As administrator, use **Calculate scores** after reviews are submitted. Scores are calculated by the backend; clients cannot provide final scores.
+5. Use **Calibration** for HR review, then generate explanations, signatures, and fairness flags where applicable.
+6. Open **FairRank**, choose a cycle, and use **Recalculate groups**. Select **Info** on a group to inspect its members, rating band, threshold, and score spread.
+7. Use **Compare** for 2–5 employees. Use **Readiness**, **Rewards**, **Continuity**, and **TNA** for their separate decisions and development context.
+8. Complete the cycle only after review and calibration. Employees see released results only when the cycle is `completed` or `archived`.
+
+Managers are restricted to their department. Employees can access only their own permitted data. FairRank equivalence is a grouping aid, not forced ranking, and promotion readiness is intentionally separate from performance scoring.
