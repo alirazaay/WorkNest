@@ -146,6 +146,8 @@ The employee directory explicitly selects its legacy-compatible columns, so `GET
 npm run db:migrate
 ```
 
+Latest live verification passed: migrations are up to date; database verification checked 19 tables, 10 indexes, and 9 foreign keys; performance tenant isolation passed for 27/27 tables; database safety passed across 164 backend files.
+
 The subsystem migrations are `20260808000200-add-payroll-subsystem.js` and `20260808000300-add-tax-and-payroll-adjustments.js`. Apply them with `npm run db:migrate`; do not use `sequelize.sync({ alter: true })`. Financial values are stored in MySQL DECIMAL columns. The generation service uses integer-cents arithmetic for its calculations and the server remains authoritative for all calculated totals.
 
 ## Historical continuity importer

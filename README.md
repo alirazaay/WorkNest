@@ -304,6 +304,8 @@ The Performance page exposes Continuity and TNA tabs for authorized managers and
 
 The full quality-audit findings and remaining production-readiness actions are recorded in [audit_report.md](audit_report.md).
 
+Latest live verification passed: migrations are up to date; database verification checked 19 tables, 10 indexes, and 9 foreign keys; performance tenant isolation passed for 27/27 tables; database safety passed across 164 backend files.
+
 Goal continuity is explicit: managers can carry incomplete goals into an active future cycle, creating a `previousGoalId` link. Completed goals remain historical. Employees can view their own continuity and development signals through the self-service Performance APIs.
 
 ### API cannot connect to MySQL
