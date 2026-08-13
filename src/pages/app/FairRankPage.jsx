@@ -41,6 +41,7 @@ export default function FairRankPage({ user, onExit }) {
   const [error, setError] = useState('');
   const [modal, setModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
 
   const visibleTabs = tabs.filter(([, , roles]) => roles.includes(role));
 
@@ -92,13 +93,17 @@ export default function FairRankPage({ user, onExit }) {
 
   const createCycle = async (event) => {
     event.preventDefault();
+    setFormError('');
+    const form = new FormData(event.currentTarget);
+    const name = String(form.get('name') || '').trim();
+    if (name.length < 3) { setFormError('Cycle name must be at least 3 characters.'); return; }
     setSaving(true);
     try {
-      await api.post('/performance/cycles', Object.fromEntries(new FormData(event.currentTarget)));
+      await api.post('/performance/cycles', { ...Object.fromEntries(form), name });
       setModal(false);
       await load();
     } catch (err) {
-      setError(err.response?.data?.error?.message || err.response?.data?.message || 'Unable to create the performance cycle.');
+      setFormError(err.response?.data?.error?.message || err.response?.data?.message || 'Unable to create the performance cycle.');
     } finally {
       setSaving(false);
     }
@@ -113,7 +118,7 @@ export default function FairRankPage({ user, onExit }) {
           <h1>FairRank</h1>
           <p>Run evidence-based, explainable performance reviews across your workspace.</p>
         </div>
-        {canAdmin && <Button onClick={() => setModal(true)}><Plus size={16} /> New cycle</Button>}
+        {canAdmin && <Button onClick={() => { setFormError(''); setModal(true); }}><Plus size={16} /> New cycle</Button>}
       </div>
       <nav className="performance-tabs" aria-label="Performance sections">
         {visibleTabs.map(([key, label]) => <button key={key} className={tab === key ? 'active' : ''} onClick={() => setTab(key)}>{label}</button>)}
@@ -129,13 +134,14 @@ export default function FairRankPage({ user, onExit }) {
             <button type="button" className="modal-close" onClick={() => setModal(false)}>×</button>
             <h2>Create performance cycle</h2>
             <p>Define the review period for your organization.</p>
-            <label>Cycle name<input name="name" required placeholder="2026 Annual Review" /></label>
+            <label>Cycle name<input name="name" required minLength="3" maxLength="180" placeholder="2026 Annual Review" /></label>
             <label>Year<input name="year" required type="number" min="2000" max="2100" defaultValue={new Date().getFullYear()} /></label>
             <label>Cycle type<select name="cycleType" defaultValue="annual"><option value="annual">Annual</option><option value="quarterly">Quarterly</option><option value="probation">Probation</option></select></label>
             <div className="performance-form-grid">
               <label>Start date<input name="startDate" required type="date" /></label>
               <label>End date<input name="endDate" required type="date" /></label>
             </div>
+            {formError && <p className="performance-form-error" role="alert">{formError}</p>}
             <Button type="submit" disabled={saving}>{saving ? 'Creating...' : 'Create cycle'} <ArrowRight size={16} /></Button>
           </form>
         </div>

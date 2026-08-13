@@ -448,3 +448,5 @@ The FairRank equivalence-group view now exposes a functional Info action for eac
 8. Complete the cycle only after review and calibration. Employees see released results only when the cycle is `completed` or `archived`.
 
 Managers are restricted to their department. Employees can access only their own permitted data. FairRank equivalence is a grouping aid, not forced ranking, and promotion readiness is intentionally separate from performance scoring.
+
+Cycle names must contain at least three characters. The create-cycle dialog displays validation and API errors inline.
