@@ -47,7 +47,12 @@ async function calculationFor(employee, salary, month, year, period, unpaidLeave
   const unpaidCents = Math.round(base / 30 * unpaidLeaveDays); deductionCents += unpaidCents;
   if (taxCents > 0) lines.push({ lineType: 'deduction', componentCode: 'TAX', label: 'Tax deduction', amount: moneyFromCents(taxCents), sourceType: 'salary_structure', sourceId: salary?.id || null });
   if (unpaidCents > 0) lines.push({ lineType: 'deduction', componentCode: 'UNPAID_LEAVE', label: `Unpaid leave (${unpaidLeaveDays} day(s))`, amount: moneyFromCents(unpaidCents), sourceType: 'leave' });
-  deductionCents += taxCents + cents(salary?.otherDeductions || 0);
+  if (taxCents > 0) deductionCents += taxCents;
+  if (otherCents > 0) {
+    const salaryOtherCents = cents(salary?.otherDeductions || 0);
+    if (salaryOtherCents > 0) lines.push({ lineType: 'deduction', componentCode: 'OTHER_DEDUCTION', label: 'Other deduction', amount: moneyFromCents(salaryOtherCents), sourceType: 'salary_structure', sourceId: salary?.id || null });
+    deductionCents += salaryOtherCents;
+  }
   return { values: { baseSalary: moneyFromCents(base), allowancesTotal: moneyFromCents(allowanceCents), grossSalary: moneyFromCents(earningCents), taxDeduction: moneyFromCents(taxCents), otherDeductions: moneyFromCents(otherCents), unpaidLeaveDeduction: moneyFromCents(unpaidCents), totalDeductions: moneyFromCents(deductionCents), netSalary: moneyFromCents(earningCents - deductionCents), unpaidLeaveDays }, lines, bonuses, deductions, loanInstallments };
 }
 function periodWhere(start, end) { return { effectiveFrom: { [Op.lte]: end }, [Op.or]: [{ effectiveTo: null }, { effectiveTo: { [Op.gte]: start } }] }; }
@@ -87,7 +92,9 @@ export async function generatePayroll(auth, { month, year }) {
     logger.error({ err: error, tenantId: auth.tenantId, month, year, durationMs: Date.now() - startedAt }, 'Payroll generation failed');
     throw error;
   }
-  await Promise.all(emails.map((email) => sendPayrollGeneratedEmail({ email, month, year })));
+  const emailResults = await Promise.allSettled(emails.map((email) => sendPayrollGeneratedEmail({ email, month, year })));
+  const failedEmails = emailResults.filter((result) => result.status === 'rejected').length;
+  if (failedEmails) logger.warn({ tenantId: auth.tenantId, month, year, failedEmails }, 'Payroll generated but some notification emails failed');
   logger.info({ tenantId: auth.tenantId, month, year, runId, employeeCount: emails.length, durationMs: Date.now() - startedAt }, 'Payroll generation completed');
   return getPayrollRun(auth, runId);
 }
@@ -100,9 +107,44 @@ export async function listPayrollRuns(auth, query) {
 
 export async function getPayrollRun(auth, id) { const run = await PayrollRun.findOne({ where: { id, tenantId: auth.tenantId }, include: runInclude }); if (!run) throw new AppError('Payroll run not found', 404, 'PAYROLL_NOT_FOUND'); return run; }
 
-export async function payrollReview(auth, id) { const run = await getPayrollRun(auth, id); const warnings = []; for (const item of run.items) { if (Number(item.netSalary) <= 0) warnings.push({ level: 'ERROR', employeeId: item.employeeId, message: 'Net salary is zero or negative' }); if (!item.bankSnapshot) warnings.push({ level: 'WARNING', employeeId: item.employeeId, message: 'Primary bank account is missing' }); } const summary = { employees: run.items.length, totalGross: run.totalGross, totalBonuses: run.items.reduce((sum, item) => sum + item.lines.filter((line) => line.sourceType === 'bonus').reduce((n, line) => n + Number(line.amount), 0), 0).toFixed(2), totalTax: run.items.reduce((sum, item) => sum + Number(item.taxDeduction || 0), 0).toFixed(2), totalDeductions: run.totalDeductions, totalNet: run.totalNet, warnings }; await run.update({ reviewSummary: summary, ...(run.status === 'generated' ? { status: 'under_review' } : {}) }); return { run, review: summary }; }
-export async function approvePayroll(auth, id) { const run = await PayrollRun.findOne({ where: { id, tenantId: auth.tenantId } }); if (!run) throw new AppError('Payroll run not found', 404, 'PAYROLL_NOT_FOUND'); if (run.status !== 'generated' && run.status !== 'under_review') throw new AppError('Only generated payroll can be approved', 409, 'INVALID_PAYROLL_STATUS'); run.status = 'approved'; run.approvedBy = auth.userId; run.approvedAt = new Date(); await run.save({ fields: ['status', 'approvedBy', 'approvedAt'] }); await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'payroll_approved', entityType: 'payroll_run', entityId: id }); return getPayrollRun(auth, id); }
-export async function lockPayroll(auth, id) { const run = await PayrollRun.findOne({ where: { id, tenantId: auth.tenantId } }); if (!run) throw new AppError('Payroll run not found', 404, 'PAYROLL_NOT_FOUND'); if (run.status !== 'approved') throw new AppError('Only approved payroll can be locked', 409, 'INVALID_PAYROLL_STATUS'); run.status = 'locked'; run.lockedAt = new Date(); run.lockedBy = auth.userId; await run.save({ fields: ['status', 'lockedAt', 'lockedBy'] }); await PayrollItem.update({ status: 'locked' }, { where: { payrollRunId: id, tenantId: auth.tenantId } }); await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'payroll_locked', entityType: 'payroll_run', entityId: id }); return getPayrollRun(auth, id); }
+export async function payrollReview(auth, id) {
+  return sequelize.transaction(async (transaction) => {
+    const run = await PayrollRun.findOne({ where: { id, tenantId: auth.tenantId }, include: runInclude, transaction, lock: transaction.LOCK.UPDATE });
+    if (!run) throw new AppError('Payroll run not found', 404, 'PAYROLL_NOT_FOUND');
+    const warnings = [];
+    for (const item of run.items) {
+      if (Number(item.netSalary) <= 0) warnings.push({ level: 'ERROR', employeeId: item.employeeId, message: 'Net salary is zero or negative' });
+      if (!item.bankSnapshot) warnings.push({ level: 'WARNING', employeeId: item.employeeId, message: 'Primary bank account is missing' });
+    }
+    const summary = { employees: run.items.length, totalGross: run.totalGross, totalBonuses: run.items.reduce((sum, item) => sum + item.lines.filter((line) => line.sourceType === 'bonus').reduce((n, line) => n + Number(line.amount), 0), 0).toFixed(2), totalTax: run.items.reduce((sum, item) => sum + Number(item.taxDeduction || 0), 0).toFixed(2), totalDeductions: run.totalDeductions, totalNet: run.totalNet, warnings };
+    await run.update({ reviewSummary: summary, ...(run.status === 'generated' ? { status: 'under_review' } : {}) }, { transaction });
+    await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'payroll_reviewed', entityType: 'payroll_run', entityId: id, afterData: summary, transaction });
+    return { run, review: summary };
+  });
+}
+export async function approvePayroll(auth, id) {
+  await sequelize.transaction(async (transaction) => {
+    const run = await PayrollRun.findOne({ where: { id, tenantId: auth.tenantId }, transaction, lock: transaction.LOCK.UPDATE });
+    if (!run) throw new AppError('Payroll run not found', 404, 'PAYROLL_NOT_FOUND');
+    if (run.status !== 'generated' && run.status !== 'under_review') throw new AppError('Only generated payroll can be approved', 409, 'INVALID_PAYROLL_STATUS');
+    run.status = 'approved'; run.approvedBy = auth.userId; run.approvedAt = new Date();
+    await run.save({ fields: ['status', 'approvedBy', 'approvedAt'], transaction });
+    await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'payroll_approved', entityType: 'payroll_run', entityId: id, transaction });
+  });
+  return getPayrollRun(auth, id);
+}
+export async function lockPayroll(auth, id) {
+  await sequelize.transaction(async (transaction) => {
+    const run = await PayrollRun.findOne({ where: { id, tenantId: auth.tenantId }, transaction, lock: transaction.LOCK.UPDATE });
+    if (!run) throw new AppError('Payroll run not found', 404, 'PAYROLL_NOT_FOUND');
+    if (run.status !== 'approved') throw new AppError('Only approved payroll can be locked', 409, 'INVALID_PAYROLL_STATUS');
+    run.status = 'locked'; run.lockedAt = new Date(); run.lockedBy = auth.userId;
+    await run.save({ fields: ['status', 'lockedAt', 'lockedBy'], transaction });
+    await PayrollItem.update({ status: 'locked' }, { where: { payrollRunId: id, tenantId: auth.tenantId, status: { [Op.ne]: 'locked' } }, transaction });
+    await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'payroll_locked', entityType: 'payroll_run', entityId: id, transaction });
+  });
+  return getPayrollRun(auth, id);
+}
 
 export async function getPayrollItem(auth, id) { const employee = auth.role === 'employee' || auth.role === 'manager' ? await employeeForUser(auth) : null; const item = await PayrollItem.findOne({ where: { id, tenantId: auth.tenantId, ...(employee ? { employeeId: employee.id } : {}) }, include: [{ model: PayrollRun, as: 'run' }, activeEmployeeInclude(), { model: PayrollItemLine, as: 'lines' }] }); if (!item) throw new AppError('Payslip not found', 404, 'PAYSLIP_NOT_FOUND'); return item; }
 export async function getPayrollItemByPeriod(auth, employeeId, month, year) { const own = auth.role === 'employee' || auth.role === 'manager' ? await employeeForUser(auth) : null; const targetId = own ? own.id : employeeId; const item = await PayrollItem.findOne({ where: { tenantId: auth.tenantId, employeeId: targetId }, include: [{ model: PayrollRun, as: 'run', where: { month, year } }, activeEmployeeInclude(), { model: PayrollItemLine, as: 'lines' }] }); if (!item) throw new AppError('Payslip not found', 404, 'PAYSLIP_NOT_FOUND'); return item; }

@@ -427,3 +427,15 @@ The FairRank `POST /api/v1/performance/compare` route requires the `performanceC
 Use `npm run db:seed:test-data` only with `ALLOW_TEST_DATA_SEED=true` and `NODE_ENV` set to a non-production value. The importer reads `data/kaggle/Employee_Performance_Dataset.csv`, resets only the `worknest-test-corporation` tenant, creates tenant-scoped source records, and invokes the existing score, equivalence, signature, and promotion services. It never trusts CSV tenant IDs and never writes authoritative final performance results directly. See the generated ignored report at `data/kaggle/last-import-report.json` after a successful run.
 
 The frontend FairRank entry point is `/performance`; existing tenant-scoped performance APIs are unchanged by the navigation fix.
+
+## Payroll integrity verification
+
+Run this after migrations against the configured development or staging MySQL database:
+
+```powershell
+node scripts/verify-payroll-integrity.js
+# or
+npm run db:verify:payroll
+```
+
+The verifier checks payroll-owned tables, tenant scoping, unique payroll-period and payroll-item constraints, duplicate records, run-total reconciliation, and valid lifecycle statuses. Payroll generation and approval/locking are transactional; locked corrections use audited adjustment records. It reports database evidence and does not modify data.

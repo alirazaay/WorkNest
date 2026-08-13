@@ -3,6 +3,7 @@ import { sequelize } from '../../config/database.js';
 import { AppError } from '../../middleware/error.js';
 import { recordAudit } from '../../services/audit.service.js';
 import { Employee, EmployeeBankAccount, EmployeeDeduction, EmployeeLoan, EmployeeSalaryComponent, EmployeeSalaryStructure, Bonus, LoanInstallment, SalaryComponent, EmployeeTaxConfiguration, PayrollAdjustment, PayrollRun, PayrollItem, PayrollItemLine } from '../../database/models/index.js';
+import { cents, moneyFromCents } from './money.js';
 
 const periodWhere = (start, end) => ({ effectiveFrom: { [Op.lte]: end }, [Op.or]: [{ effectiveTo: null }, { effectiveTo: { [Op.gte]: start } }] });
 const employeeWhere = (auth, employeeId) => ({ id: employeeId, tenantId: auth.tenantId });
@@ -27,7 +28,16 @@ export async function assignComponent(auth, employeeId, componentId, input) { aw
 
 export async function listBonuses(auth, query = {}) { return Bonus.findAll({ where: { tenantId: auth.tenantId, ...(query.employeeId ? { employeeId: query.employeeId } : {}), ...(query.status ? { status: query.status } : {}) }, include: [{ model: Employee, as: 'employee', attributes: ['id', 'employeeCode'] }], order: [['payroll_year', 'DESC'], ['payroll_month', 'DESC'], ['created_at', 'DESC']] }); }
 export async function createBonus(auth, input) { await findEmployee(auth, input.employeeId); const bonus = await Bonus.create({ tenantId: auth.tenantId, createdBy: auth.userId, ...input, amount: money(input.amount) }); await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'bonus_created', entityType: 'bonus', entityId: bonus.id, afterData: bonus.toJSON() }); return bonus; }
-export async function setBonusStatus(auth, id, status) { const bonus = await Bonus.findOne({ where: { id, tenantId: auth.tenantId } }); if (!bonus) throw new AppError('Bonus not found', 404, 'BONUS_NOT_FOUND'); if (!['draft', 'pending', 'approved', 'rejected'].includes(bonus.status)) throw new AppError('Processed bonuses cannot be changed', 409, 'BONUS_IMMUTABLE'); await bonus.update({ status, ...(status === 'approved' ? { approvedBy: auth.userId, approvedAt: new Date() } : {}) }); await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: `bonus_${status}`, entityType: 'bonus', entityId: id, afterData: bonus.toJSON() }); return bonus; }
+export async function setBonusStatus(auth, id, status) {
+  return sequelize.transaction(async (transaction) => {
+    const bonus = await Bonus.findOne({ where: { id, tenantId: auth.tenantId }, transaction, lock: transaction.LOCK.UPDATE });
+    if (!bonus) throw new AppError('Bonus not found', 404, 'BONUS_NOT_FOUND');
+    if (!['draft', 'pending', 'approved', 'rejected'].includes(bonus.status)) throw new AppError('Processed bonuses cannot be changed', 409, 'BONUS_IMMUTABLE');
+    await bonus.update({ status, ...(status === 'approved' ? { approvedBy: auth.userId, approvedAt: new Date() } : {}) }, { transaction });
+    await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: `bonus_${status}`, entityType: 'bonus', entityId: id, afterData: bonus.toJSON(), transaction });
+    return bonus;
+  });
+}
 
 export async function listDeductions(auth, query = {}) { return EmployeeDeduction.findAll({ where: { tenantId: auth.tenantId, ...(query.employeeId ? { employeeId: query.employeeId } : {}), ...(query.status ? { status: query.status } : {}) }, order: [['effectiveFrom', 'DESC']] }); }
 export async function createDeduction(auth, input) { await findEmployee(auth, input.employeeId); const deduction = await EmployeeDeduction.create({ tenantId: auth.tenantId, createdBy: auth.userId, ...input, amount: money(input.amount) }); await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'deduction_created', entityType: 'employee_deduction', entityId: deduction.id, afterData: deduction.toJSON() }); return deduction; }
@@ -45,5 +55,44 @@ export async function updateBankAccount(auth, id, input) { const account = await
 
 export async function listTaxConfigurations(auth, employeeId) { await findEmployee(auth, employeeId); return EmployeeTaxConfiguration.findAll({ where: { tenantId: auth.tenantId, employeeId }, order: [['effectiveFrom', 'DESC']] }); }
 export async function createTaxConfiguration(auth, employeeId, input) { await findEmployee(auth, employeeId); const tax = await EmployeeTaxConfiguration.create({ tenantId: auth.tenantId, employeeId, createdBy: auth.userId, ...input, amount: money(input.amount || 0) }); await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'tax_configuration_created', entityType: 'employee_tax_configuration', entityId: tax.id, afterData: tax.toJSON() }); return tax; }
-export async function createAdjustment(auth, input) { const run = await PayrollRun.findOne({ where: { id: input.payrollRunId, tenantId: auth.tenantId, status: 'locked' } }); if (!run) throw new AppError('Adjustments are only available for locked payroll runs', 409, 'ADJUSTMENT_RUN_REQUIRED'); await findEmployee(auth, input.employeeId); const adjustment = await PayrollAdjustment.create({ tenantId: auth.tenantId, ...input, createdBy: auth.userId, amount: money(input.amount) }); await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'payroll_adjustment_created', entityType: 'payroll_adjustment', entityId: adjustment.id, afterData: adjustment.toJSON() }); return adjustment; }
-export async function approveAdjustment(auth, id) { const adjustment = await PayrollAdjustment.findOne({ where: { id, tenantId: auth.tenantId, status: 'pending' } }); if (!adjustment) throw new AppError('Pending adjustment not found', 404, 'ADJUSTMENT_NOT_FOUND'); await sequelize.transaction(async (transaction) => { const item = await PayrollItem.findOne({ where: { id: adjustment.payrollRunId, tenantId: auth.tenantId }, transaction }); const payrollItem = await PayrollItem.findOne({ where: { payrollRunId: adjustment.payrollRunId, employeeId: adjustment.employeeId, tenantId: auth.tenantId }, transaction }); if (!payrollItem) throw new AppError('Payroll item not found', 404, 'PAYROLL_ITEM_NOT_FOUND'); const amount = Number(adjustment.amount); const line = await PayrollItemLine.create({ tenantId: auth.tenantId, payrollItemId: payrollItem.id, lineType: adjustment.lineType, componentCode: 'ADJUSTMENT', sourceType: 'payroll_adjustment', sourceId: adjustment.id, label: adjustment.reason, amount }, { transaction }); if (adjustment.lineType === 'earning') { payrollItem.grossSalary = Number(payrollItem.grossSalary) + amount; payrollItem.netSalary = Number(payrollItem.netSalary) + amount; } else { payrollItem.totalDeductions = Number(payrollItem.totalDeductions) + amount; payrollItem.netSalary = Number(payrollItem.netSalary) - amount; } await payrollItem.save({ transaction }); await adjustment.update({ status: 'approved', approvedBy: auth.userId, approvedAt: new Date() }, { transaction }); }); return adjustment; }
+export async function createAdjustment(auth, input) {
+  return sequelize.transaction(async (transaction) => {
+    const run = await PayrollRun.findOne({ where: { id: input.payrollRunId, tenantId: auth.tenantId, status: 'locked' }, transaction, lock: transaction.LOCK.UPDATE });
+    if (!run) throw new AppError('Adjustments are only available for locked payroll runs', 409, 'ADJUSTMENT_RUN_REQUIRED');
+    await findEmployee(auth, input.employeeId);
+    const adjustment = await PayrollAdjustment.create({ tenantId: auth.tenantId, ...input, createdBy: auth.userId, amount: money(input.amount) }, { transaction });
+    await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'payroll_adjustment_created', entityType: 'payroll_adjustment', entityId: adjustment.id, afterData: adjustment.toJSON(), transaction });
+    return adjustment;
+  });
+}
+export async function approveAdjustment(auth, id) {
+  return sequelize.transaction(async (transaction) => {
+    const adjustment = await PayrollAdjustment.findOne({ where: { id, tenantId: auth.tenantId, status: 'pending' }, transaction, lock: transaction.LOCK.UPDATE });
+    if (!adjustment) throw new AppError('Pending adjustment not found', 404, 'ADJUSTMENT_NOT_FOUND');
+    const run = await PayrollRun.findOne({ where: { id: adjustment.payrollRunId, tenantId: auth.tenantId, status: 'locked' }, transaction, lock: transaction.LOCK.UPDATE });
+    if (!run) throw new AppError('Adjustments are only available for locked payroll runs', 409, 'ADJUSTMENT_RUN_REQUIRED');
+    const payrollItem = await PayrollItem.findOne({ where: { payrollRunId: run.id, employeeId: adjustment.employeeId, tenantId: auth.tenantId, status: 'locked' }, transaction, lock: transaction.LOCK.UPDATE });
+    if (!payrollItem) throw new AppError('Payroll item not found', 404, 'PAYROLL_ITEM_NOT_FOUND');
+    const amountCents = cents(adjustment.amount);
+    await PayrollItemLine.create({ tenantId: auth.tenantId, payrollItemId: payrollItem.id, lineType: adjustment.lineType, componentCode: 'ADJUSTMENT', sourceType: 'payroll_adjustment', sourceId: adjustment.id, label: adjustment.reason, amount: moneyFromCents(amountCents) }, { transaction });
+    const grossCents = cents(payrollItem.grossSalary || 0);
+    const deductionCents = cents(payrollItem.totalDeductions || 0);
+    const netCents = cents(payrollItem.netSalary || 0);
+    if (adjustment.lineType === 'earning') {
+      payrollItem.grossSalary = moneyFromCents(grossCents + amountCents);
+      payrollItem.netSalary = moneyFromCents(netCents + amountCents);
+      run.totalGross = moneyFromCents(cents(run.totalGross || 0) + amountCents);
+      run.totalNet = moneyFromCents(cents(run.totalNet || 0) + amountCents);
+    } else {
+      payrollItem.totalDeductions = moneyFromCents(deductionCents + amountCents);
+      payrollItem.netSalary = moneyFromCents(netCents - amountCents);
+      run.totalDeductions = moneyFromCents(cents(run.totalDeductions || 0) + amountCents);
+      run.totalNet = moneyFromCents(cents(run.totalNet || 0) - amountCents);
+    }
+    await payrollItem.save({ transaction });
+    await run.save({ fields: ['totalGross', 'totalDeductions', 'totalNet'], transaction });
+    await adjustment.update({ status: 'approved', approvedBy: auth.userId, approvedAt: new Date() }, { transaction });
+    await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'payroll_adjustment_approved', entityType: 'payroll_adjustment', entityId: adjustment.id, afterData: adjustment.toJSON(), transaction });
+    return adjustment;
+  });
+}

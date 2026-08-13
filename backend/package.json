@@ -15,6 +15,7 @@
     "db:verify": "node scripts/verify-database.js",
     "db:verify:performance": "node scripts/verify-performance-isolation.js",
     "db:verify:safety": "node scripts/verify-database-safety.js",
+    "db:verify:payroll": "node scripts/verify-payroll-integrity.js",
     "db:fresh": "node scripts/migrate.js fresh",
     "db:rollback:test": "node scripts/rollback-test.js",
     "db:backup": "powershell -ExecutionPolicy Bypass -File scripts/backup.ps1",

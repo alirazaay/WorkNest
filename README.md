@@ -421,3 +421,15 @@ npm run db:seed:test-data
 The importer refuses production mode, resets only `worknest-test-corporation`, uses bcrypt-hashed development credentials, validates/reports rejected rows, and writes the ignored `backend/data/kaggle/last-import-report.json` report. The generated admin account is `admin@test.worknest.local`; the password is printed only by the local command and is `WorkNestTestOnly123!` for development use.
 
 Mappings include Task Completion to goals, KPI/attendance/peer/training/manager values to review criteria, and Work Hours Logged to supporting evidence context. Kaggle `Performance Score` and `Promotion Eligibility` remain reference-only. The importer also creates four deterministic edge employees targeting approximately 94.7, 94.5, 94.3, and 91.0 calculated scores for equivalence testing.
+
+## Payroll integrity verification
+
+Run this from `backend` against the configured development or staging MySQL database:
+
+```powershell
+node scripts/verify-payroll-integrity.js
+# or
+npm run db:verify:payroll
+```
+
+The verifier checks payroll tables, tenant keys, unique period/item constraints, duplicate records, parent-run total reconciliation, and supported statuses. Payroll uses integer cents for calculations, DECIMAL columns for persistence, transactional review/approval/locking, and audited locked-payroll adjustments.
