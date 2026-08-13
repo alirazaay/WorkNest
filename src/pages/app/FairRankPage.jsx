@@ -148,6 +148,7 @@ function PageContent({ tab, data, canManage, activeCycle, onRetry, setData }) {
   if (tab === 'my') return <MyPerformance data={data} />;
   if (tab === 'audit') return <AuditList items={data.items || []} />;
   if (tab === 'comparison') return <Comparison employees={data.employees || []} cycles={data.cycles || []} />;
+  if (tab === 'fairrank') return <FairRankGroups items={data.items || []} />;
   if (tab === 'continuity') return <ContinuityWorkspace data={data} onRetry={onRetry} setData={setData} canManage={canManage} />;
   if (tab === 'tna') return <TnaWorkspace items={data.items || []} onRetry={onRetry} />;
   if (tab === 'goals') return <GoalsWorkspace items={data.items || []} cycles={data.cycles || []} onRetry={onRetry} canManage={canManage} />;
@@ -183,6 +184,35 @@ function PageContent({ tab, data, canManage, activeCycle, onRetry, setData }) {
       {items.length ? <div className="performance-list">{items.map((item) => <ListCard item={item} key={item.id || item.code || item.name} />)}</div> : <EmptyState text={`No ${tab} records are available yet.`} />}
     </article>
   );
+}
+
+function FairRankGroups({ items }) {
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  return <>
+    <article className="performance-card">
+      <div className="performance-card-heading">
+        <div><h2>Performance equivalents</h2><p>{items.length ? `${items.length} equivalent group${items.length === 1 ? '' : 's'} found.` : 'Groups are created from calculated scores, rating bands, and the configured threshold.'}</p></div>
+      </div>
+      {items.length ? <div className="performance-list">{items.map((group) => {
+        const members = group.members || [];
+        const scores = members.map((member) => Number(member.finalScore)).filter(Number.isFinite);
+        const spread = scores.length ? (Math.max(...scores) - Math.min(...scores)).toFixed(2) : '—';
+        return <article className="performance-list-card" key={group.id}>
+          <div><strong>Equivalent group #{group.id}</strong><small>{members.length} employees · score spread {spread} points</small></div>
+          <button type="button" className="status-badge info performance-info-button" onClick={() => setSelectedGroup(group)} aria-label={`View details for equivalent group ${group.id}`}>Info</button>
+        </article>;
+      })}</div> : <EmptyState text="No performance-equivalent groups are available for the selected cycle." />}
+    </article>
+    {selectedGroup && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setSelectedGroup(null)}>
+      <section className="modal performance-info-modal" role="dialog" aria-modal="true" aria-labelledby="fairrank-group-title">
+        <button type="button" className="modal-close" onClick={() => setSelectedGroup(null)} aria-label="Close group details">×</button>
+        <h2 id="fairrank-group-title">Equivalent group #{selectedGroup.id}</h2>
+        <p>Members are grouped within the configured FairRank threshold and rating band.</p>
+        <div className="performance-info-summary"><span>Rating band: <strong>{selectedGroup.ratingBand || 'Unbanded'}</strong></span><span>Threshold: <strong>{selectedGroup.thresholdUsed ?? '—'}</strong></span></div>
+        <div className="performance-info-members">{(selectedGroup.members || []).map((member) => <div key={member.id || `${member.employeeId}-${member.finalScore}`}><span>{member.employee?.user?.name || member.employee?.employeeCode || `Employee ${member.employeeId}`}</span><strong>{Number(member.finalScore).toFixed(2)}</strong></div>)}</div>
+      </section>
+    </div>}
+  </>;
 }
 
 function ContinuityWorkspace({ data, onRetry, setData, canManage }) {

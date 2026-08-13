@@ -433,3 +433,5 @@ npm run db:verify:payroll
 ```
 
 The verifier checks payroll tables, tenant keys, unique period/item constraints, duplicate records, parent-run total reconciliation, and supported statuses. Payroll uses integer cents for calculations, DECIMAL columns for persistence, transactional review/approval/locking, and audited locked-payroll adjustments.
+
+The FairRank equivalence-group view now exposes a functional Info action for each group. It opens the tenant-scoped group members, score spread, rating band, and threshold from the existing equivalence API.

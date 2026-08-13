@@ -439,3 +439,5 @@ npm run db:verify:payroll
 ```
 
 The verifier checks payroll-owned tables, tenant scoping, unique payroll-period and payroll-item constraints, duplicate records, run-total reconciliation, and valid lifecycle statuses. Payroll generation and approval/locking are transactional; locked corrections use audited adjustment records. It reports database evidence and does not modify data.
+
+FairRank equivalence-group details are displayed by the frontend using the existing tenant-scoped `/api/v1/performance/cycles/:cycleId/equivalence-groups` response; no new backend endpoint is required.
