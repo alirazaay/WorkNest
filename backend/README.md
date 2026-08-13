@@ -168,7 +168,7 @@ Continuity APIs are tenant-scoped and enforce employee self-access and manager d
 - `GET /api/v1/performance/cycles/:cycleId/continuity-summary`
 - `GET /api/v1/performance/cycle-links`
 
-`20260812000200-create-performance-cycle-links.js` stores explicit year-over-year links. Missing years are returned as `no_review_data`; they are never filled with inferred ratings. A missing year also breaks adjacent improvement/decline continuity.
+`20260812000200-create-performance-cycle-links.js` stores explicit year-over-year links. Missing years are returned as `no_review_data`; they are never filled with inferred ratings. A missing year also breaks adjacent improvement/decline continuity. `npm run db:verify:performance` checks tenant scoping for the continuity and TNA tables as well.
 
 The TNA migration is `20260812000300-create-training-needs.js`. TNA APIs are:
 

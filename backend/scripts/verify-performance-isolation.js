@@ -8,7 +8,8 @@ const performanceTables = [
   'performance_equivalence_groups', 'performance_equivalence_members', 'performance_signature_rules',
   'performance_signatures', 'promotion_profiles', 'promotion_readiness_criteria', 'employee_promotion_assessments',
   'performance_rewards', 'performance_calibration_decisions', 'performance_calibration_settings',
-  'performance_appraisal_explanations', 'performance_fairness_flags'
+  'performance_appraisal_explanations', 'performance_fairness_flags',
+  'employee_history_events', 'historical_performance_records', 'performance_cycle_links', 'training_needs'
 ];
 
 const connection = await mysql.createConnection({ host: process.env.DB_HOST, port: Number(process.env.DB_PORT || 3306), user: process.env.DB_USER, password: process.env.DB_PASSWORD, database: process.env.DB_NAME, connectTimeout: 5000 });
