@@ -140,6 +140,12 @@ Payroll generation is a tenant-wide calculation and may take longer than ordinar
 
 Performance audit logs use the explicit Sequelize mapping `createdAt -> created_at`; this matches the `audit_logs` schema and prevents `Unknown column 'AuditLog.createdAt'` errors on `GET /api/v1/performance/audit`.
 
+The employee directory explicitly selects its legacy-compatible columns, so `GET /api/v1/employees` continues to work while continuity migrations are pending. Apply migrations before using historical manager metadata or continuity records:
+
+```powershell
+npm run db:migrate
+```
+
 The subsystem migrations are `20260808000200-add-payroll-subsystem.js` and `20260808000300-add-tax-and-payroll-adjustments.js`. Apply them with `npm run db:migrate`; do not use `sequelize.sync({ alter: true })`. Financial values are stored in MySQL DECIMAL columns. The generation service uses integer-cents arithmetic for its calculations and the server remains authoritative for all calculated totals.
 
 ## Historical continuity importer

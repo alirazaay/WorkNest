@@ -313,6 +313,17 @@ cd backend
 npm run db:verify
 ```
 
+### People page shows `Internal server error`
+
+The People directory selects only its required employee columns so it remains readable during a rolling development migration. Apply all pending schema changes from `backend` and restart the API:
+
+```powershell
+cd backend
+npm run db:migrate
+```
+
+If the API was already running before migrations, stop and restart it so the current model definitions are loaded.
+
 ### Port already in use
 
 ```powershell

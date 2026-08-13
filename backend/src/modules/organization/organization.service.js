@@ -64,6 +64,10 @@ export async function deleteDepartment(tenantId, id) {
   await department.destroy();
 }
 
+// Keep directory reads compatible while older development databases are being
+// migrated. Continuity-only columns are intentionally not needed by this
+// module and therefore are not selected here.
+const employeeAttributes = ['id', 'tenantId', 'userId', 'departmentId', 'employeeCode', 'designation', 'phone', 'cnic', 'dateOfBirth', 'gender', 'address', 'joiningDate', 'employmentType', 'employmentStatus', 'terminationDate', 'terminationReason'];
 const employeeInclude = [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatarUrl', 'role', 'status'] }, { model: Department, as: 'department', attributes: ['id', 'name'] }, { model: EmployeeSalaryStructure, as: 'salaryStructures', separate: true, order: [['effectiveFrom', 'DESC']] }];
 
 async function managerScope(auth) {
@@ -79,12 +83,12 @@ export async function listEmployees(auth, query) {
   if (query.departmentId) where.departmentId = Number(query.departmentId);
   if (query.status) where.employmentStatus = query.status;
   if (query.search) where[Op.or] = [{ employeeCode: { [Op.like]: `%${query.search}%` } }, { '$user.name$': { [Op.like]: `%${query.search}%` } }];
-  const result = await Employee.findAndCountAll({ where, include: [{ ...employeeInclude[0], required: false }, employeeInclude[1]], order: [['id', 'DESC']], limit: pageSize, offset: (page - 1) * pageSize, distinct: true });
+  const result = await Employee.findAndCountAll({ where, attributes: employeeAttributes, include: [{ ...employeeInclude[0], required: false }, employeeInclude[1]], order: [['id', 'DESC']], limit: pageSize, offset: (page - 1) * pageSize, distinct: true });
   return { items: result.rows.map(serializeEmployee), pagination: { page, pageSize, total: result.count, totalPages: Math.ceil(result.count / pageSize) } };
 }
 
 export async function getEmployee(auth, id) {
-  const scope = await managerScope(auth); const employee = await Employee.findOne({ where: { id, tenantId: auth.tenantId, ...scope }, include: employeeInclude });
+  const scope = await managerScope(auth); const employee = await Employee.findOne({ where: { id, tenantId: auth.tenantId, ...scope }, attributes: employeeAttributes, include: employeeInclude });
   if (!employee) throw new AppError('Employee not found', 404, 'EMPLOYEE_NOT_FOUND');
   return serializeEmployee(employee);
 }
