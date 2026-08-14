@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../services/api.js';
 import AppShell from '../../components/common/AppShell.jsx';
 import Breadcrumbs from '../../components/common/Breadcrumbs.jsx';
@@ -15,6 +16,7 @@ const displayTime = (v) => v ? new Date(v).toLocaleTimeString([], { hour: '2-dig
 const displayDate = (v) => v ? new Date(`${v}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
 
 export default function AttendancePage({ user, onExit }) {
+  const navigate = useNavigate();
   const role = user?.user?.role || 'employee';
   const isEmployee = role === 'employee';
 
@@ -77,12 +79,15 @@ export default function AttendancePage({ user, onExit }) {
               <h1>Attendance</h1>
               <p>Track daily attendance and working hours.</p>
             </div>
-            {isEmployee && (
-              <div className="attendance-actions">
-                {!todayRecord?.clockIn && <Button size="sm" loading={actionLoading} onClick={clockIn}>Clock in</Button>}
-                {todayRecord?.clockIn && !todayRecord?.clockOut && <Button size="sm" loading={actionLoading} onClick={clockOut}>Clock out</Button>}
-              </div>
-            )}
+            <div className="attendance-actions">
+              {!isEmployee && <Button variant="secondary" size="sm" onClick={() => navigate('/attendance/shifts')}>Manage shifts</Button>}
+              {isEmployee && (
+                <>
+                  {!todayRecord?.clockIn && <Button size="sm" loading={actionLoading} onClick={clockIn}>Clock in</Button>}
+                  {todayRecord?.clockIn && !todayRecord?.clockOut && <Button size="sm" loading={actionLoading} onClick={clockOut}>Clock out</Button>}
+                </>
+              )}
+            </div>
           </div>
 
           {!isEmployee && summary && (

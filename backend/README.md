@@ -450,4 +450,6 @@ The frontend authenticated shell is centralized in `src/components/common/AppShe
 
 Clock-in and clock-out are tenant-scoped transactional operations with row locking, duplicate prevention, invalid-sequence validation, and `attendance_clocked_in` / `attendance_clocked_out` audit events. Existing attendance summary fields remain available, with `presentToday` and `onLeaveToday` aliases for the current frontend. No attendance migration is required for this phase.
 
+Attendance Phase 2 migration `20260814000100-create-attendance-shifts.js` adds `shifts`, `shift_weekly_schedules`, and `employee_shift_assignments`. Shift management is admin-only, tenant-scoped, audited, and prevents overlapping effective-dated assignments.
+
 The backend workflow is: create/configure cycle → activate → collect goals/evidence/reviews → submit reviews → `POST /api/v1/performance/cycles/:cycleId/calculate` → optional calibration → generate explanations/signatures/fairness flags → `POST /api/v1/performance/cycles/:cycleId/recalculate-equivalence` → complete/archive the cycle for employee release. All protected queries require the authenticated tenant; manager reads are department-scoped and employee reads are self-scoped/release-gated.

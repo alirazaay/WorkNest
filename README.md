@@ -458,3 +458,5 @@ All authenticated pages render through `src/components/common/AppShell.jsx`. The
 ## Attendance Phase 1
 
 The attendance foundation now uses transactional, tenant-scoped clock-in and clock-out mutations with row locking, duplicate protection, and audit events. The frontend uses the canonical `clockIn`/`clockOut` fields and the existing `PATCH /api/v1/attendance/:id/clock-out` endpoint. Shift, GPS, QR, biometric, and calendar enhancements are planned for later attendance phases.
+
+Attendance Phase 2 adds tenant-scoped shifts, weekly schedules, effective-dated employee shift assignments, admin APIs, and an admin shift-management screen at `/attendance/shifts`.
