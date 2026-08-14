@@ -57,7 +57,7 @@ The frontend uses `VITE_API_BASE_URL` and sends access tokens through the Axios 
 
 ## Prerequisites
 
-- Node.js 18 or newer.
+- Node.js 22 LTS and npm 10 or newer.
 - npm.
 - MySQL 8.x, or Docker Desktop with Docker Compose.
 - PowerShell for the documented Windows helper scripts.

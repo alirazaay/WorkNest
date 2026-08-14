@@ -4,6 +4,8 @@ Phase 1 foundation for the WorkNest HR platform.
 
 ## Setup
 
+Runtime requirement: Node.js 22 LTS with npm 10 or newer. The backend package declares this engine range, CI uses Node 22, and the production Docker image uses `node:22-alpine`.
+
 1. Create a MySQL database named `worknest`.
 2. Copy `.env.example` to `.env` and set the database credentials.
 3. Install dependencies with `npm install`.
@@ -17,7 +19,7 @@ npm run db:migrate
 
 The Phase 3 migration adds departments, employees, salary structures, and employee documents. Run the same command after the Phase 2 migration to apply it in order.
 
-Run foundation tests with `npm test`.
+Run safe automated tests with `npm test`; it executes only files under `test/`. Database freshness and rollback utilities are never part of normal CI. `npm run db:rollback:test` remains explicitly protected and requires `ALLOW_ROLLBACK_TEST=true` against an isolated database.
 
 ## Endpoints
 
