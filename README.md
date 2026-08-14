@@ -467,6 +467,8 @@ Attendance Phase 4 adds the tenant-scoped calendar at `/attendance/calendar`. It
 
 Attendance Phase 5 adds GPS clock-in through `/api/v1/attendance/clock-in/gps`. Admins configure allowed locations under `/attendance/shifts`; the backend validates tenant ownership, GPS accuracy, Haversine distance, active location status, and duplicate attendance before accepting the record.
 
+Attendance Phase 9 refines the frontend experience with a today-status panel, source/shift context, late and overtime visibility, richer status filters, responsive loading skeletons, actionable empty states, and navigation between table, calendar, and shift-management views.
+
 ### Deferred attendance features
 
 QR Code Attendance is intentionally deferred. No QR token tables, endpoints, UI, or feature flags have been added. It should remain unavailable until explicitly scheduled for implementation.

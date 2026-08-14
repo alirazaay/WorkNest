@@ -458,6 +458,8 @@ Attendance Phase 4 migration `20260814000300-create-attendance-holidays.js` adds
 
 Attendance Phase 5 adds `20260814000400-create-attendance-locations.js` and `20260814000500-add-gps-metadata-to-attendance.js`. GPS clock-in validates an active tenant location, accuracy, and Haversine radius; location metadata is stored on the attendance record and location mutations are audited.
 
+Attendance Phase 9 is a frontend UX refinement and does not change backend attendance calculations, authorization, or database behavior.
+
 QR Code Attendance is deferred by product decision. The backend currently exposes no QR token model or route, so the feature cannot be used accidentally or partially enabled.
 
 Biometric Attendance is deferred as well. No biometric provider adapter, device ingestion route, biometric tables, or biometric data storage has been introduced. Face recognition remains a future extension only.

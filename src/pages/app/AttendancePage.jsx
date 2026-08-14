@@ -105,6 +105,13 @@ export default function AttendancePage({ user, onExit }) {
             </div>
           </div>
 
+          {isEmployee && todayRecord && (
+            <section className="attendance-status-card">
+              <div><span className="eyebrow">Today’s attendance</span><h2>{todayRecord.clockOut ? 'Attendance completed' : 'Attendance in progress'}</h2><p>{todayRecord.shift?.name || (todayRecord.scheduledStart ? `Scheduled ${todayRecord.scheduledStart.slice(0, 5)} – ${todayRecord.scheduledEnd?.slice(0, 5)}` : 'No shift assignment')} · {todayRecord.source === 'gps' ? 'GPS verified' : 'Web clock'}</p></div>
+              <div className="attendance-status-details"><span><small>Clock in</small><strong>{displayTime(todayRecord.clockIn)}</strong></span><span><small>Clock out</small><strong>{displayTime(todayRecord.clockOut)}</strong></span><span><small>Late</small><strong>{todayRecord.lateMinutes || 0} min</strong></span><span><small>Overtime</small><strong>{todayRecord.overtimeMinutes || 0} min</strong></span></div>
+            </section>
+          )}
+
           {!isEmployee && summary && (
             <div className="attendance-summary">
               <div className="kpi-card"><small>Present today</small><strong>{summary.presentToday ?? '—'}</strong></div>
@@ -121,11 +128,14 @@ export default function AttendancePage({ user, onExit }) {
               <option value="present">Present</option>
               <option value="late">Late</option>
               <option value="absent">Absent</option>
+              <option value="on-leave">Leave</option>
+              <option value="half-day">Half day</option>
+              <option value="overtime">Overtime</option>
             </select>
           </div>
 
           {error && <ErrorState message={error} onRetry={() => load(pagination.page)} />}
-          {loading && !error && <LoadingState label="Loading attendance…" />}
+          {loading && !error && <div className="attendance-loading-list"><span /><span /><span /><span /><span /></div>}
           {!loading && !error && (
             <>
               <div className="attendance-table-wrap">
@@ -157,7 +167,7 @@ export default function AttendancePage({ user, onExit }) {
                     ))}
                   </tbody>
                 </table>
-                {!records.length && <div className="table-empty">No attendance records found for this period.</div>}
+                {!records.length && <div className="table-empty"><strong>No attendance records found</strong><span>Try another date range or status filter.</span></div>}
               </div>
               <Pagination page={pagination.page || 1} totalPages={pagination.totalPages || 1} onChange={load} />
             </>
