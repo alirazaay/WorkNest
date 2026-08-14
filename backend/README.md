@@ -454,4 +454,6 @@ Attendance Phase 2 migration `20260814000100-create-attendance-shifts.js` adds `
 
 Attendance Phase 3 migration `20260814000200-add-shift-calculations-to-attendance.js` adds shift references, worked/overtime minutes, and calculation snapshots to attendance records. The server derives late and overtime values from the effective assignment; tenant work-hour settings remain the fallback when no shift applies.
 
+Attendance Phase 4 migration `20260814000300-create-attendance-holidays.js` adds tenant holidays. `GET /api/v1/attendance/calendar` returns scoped daily states and summaries; approved leave, holidays, schedules, and attendance records are combined server-side.
+
 The backend workflow is: create/configure cycle → activate → collect goals/evidence/reviews → submit reviews → `POST /api/v1/performance/cycles/:cycleId/calculate` → optional calibration → generate explanations/signatures/fairness flags → `POST /api/v1/performance/cycles/:cycleId/recalculate-equivalence` → complete/archive the cycle for employee release. All protected queries require the authenticated tenant; manager reads are department-scoped and employee reads are self-scoped/release-gated.

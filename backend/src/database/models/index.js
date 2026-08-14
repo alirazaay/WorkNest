@@ -44,6 +44,7 @@ import { AttendanceRecord } from './AttendanceRecord.js';
 import { Shift } from './Shift.js';
 import { ShiftWeeklySchedule } from './ShiftWeeklySchedule.js';
 import { EmployeeShiftAssignment } from './EmployeeShiftAssignment.js';
+import { AttendanceHoliday } from './AttendanceHoliday.js';
 import { LeaveType } from './LeaveType.js';
 import { LeaveBalance } from './LeaveBalance.js';
 import { LeaveRequest } from './LeaveRequest.js';
@@ -218,6 +219,9 @@ AttendanceRecord.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' 
 AttendanceRecord.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
 AttendanceRecord.belongsTo(Shift, { foreignKey: 'shiftId', as: 'shift' });
 Shift.hasMany(AttendanceRecord, { foreignKey: 'shiftId', as: 'attendanceRecords' });
+Tenant.hasMany(AttendanceHoliday, { foreignKey: 'tenantId', as: 'attendanceHolidays' });
+AttendanceHoliday.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
+AttendanceHoliday.belongsTo(User, { foreignKey: 'createdBy', as: 'creator' });
 Tenant.hasMany(Shift, { foreignKey: 'tenantId', as: 'shifts' });
 Shift.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
 Shift.belongsTo(User, { foreignKey: 'createdBy', as: 'creator' });
@@ -255,4 +259,4 @@ PayrollItemLine.belongsTo(PayrollItem, { foreignKey: 'payrollItemId', as: 'item'
 AuditLog.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
 AuditLog.belongsTo(User, { foreignKey: 'actorUserId', as: 'actor' });
 
-export { Tenant, TenantSetting, User, UserSession, Invitation, PasswordResetToken, Department, Employee, EmployeeSalaryStructure, SalaryComponent, EmployeeSalaryComponent, Bonus, EmployeeDeduction, EmployeeLoan, LoanInstallment, EmployeeBankAccount, EmployeeTaxConfiguration, PayrollAdjustment, PerformanceCycle, PerformanceCriterion, PerformanceTemplate, PerformanceTemplateCriterion, PerformanceGoal, PerformanceEvidence, PerformanceReview, PerformanceReviewScore, PerformanceScoreSnapshot, PerformanceRatingBand, PerformanceEquivalenceSetting, PerformanceEquivalenceGroup, PerformanceEquivalenceMember, PerformanceSignatureRule, PerformanceSignature, PromotionProfile, PromotionReadinessCriterion, EmployeePromotionAssessment, PerformanceReward, PerformanceCalibrationDecision, PerformanceCalibrationSetting, PerformanceAppraisalExplanation, PerformanceFairnessFlag, EmployeeDocument, AttendanceRecord, Shift, ShiftWeeklySchedule, EmployeeShiftAssignment, LeaveType, LeaveBalance, LeaveRequest, Notification, PayrollRun, PayrollItem, PayrollItemLine, AuditLog, EmployeeHistoryEvent, HistoricalPerformanceRecord, PerformanceCycleLink, TrainingNeed };
+export { Tenant, TenantSetting, User, UserSession, Invitation, PasswordResetToken, Department, Employee, EmployeeSalaryStructure, SalaryComponent, EmployeeSalaryComponent, Bonus, EmployeeDeduction, EmployeeLoan, LoanInstallment, EmployeeBankAccount, EmployeeTaxConfiguration, PayrollAdjustment, PerformanceCycle, PerformanceCriterion, PerformanceTemplate, PerformanceTemplateCriterion, PerformanceGoal, PerformanceEvidence, PerformanceReview, PerformanceReviewScore, PerformanceScoreSnapshot, PerformanceRatingBand, PerformanceEquivalenceSetting, PerformanceEquivalenceGroup, PerformanceEquivalenceMember, PerformanceSignatureRule, PerformanceSignature, PromotionProfile, PromotionReadinessCriterion, EmployeePromotionAssessment, PerformanceReward, PerformanceCalibrationDecision, PerformanceCalibrationSetting, PerformanceAppraisalExplanation, PerformanceFairnessFlag, EmployeeDocument, AttendanceRecord, Shift, ShiftWeeklySchedule, EmployeeShiftAssignment, AttendanceHoliday, LeaveType, LeaveBalance, LeaveRequest, Notification, PayrollRun, PayrollItem, PayrollItemLine, AuditLog, EmployeeHistoryEvent, HistoricalPerformanceRecord, PerformanceCycleLink, TrainingNeed };

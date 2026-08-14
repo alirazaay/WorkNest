@@ -80,6 +80,7 @@ export default function AttendancePage({ user, onExit }) {
               <p>Track daily attendance and working hours.</p>
             </div>
             <div className="attendance-actions">
+              <Button variant="secondary" size="sm" onClick={() => navigate('/attendance/calendar')}>Calendar</Button>
               {!isEmployee && <Button variant="secondary" size="sm" onClick={() => navigate('/attendance/shifts')}>Manage shifts</Button>}
               {isEmployee && (
                 <>

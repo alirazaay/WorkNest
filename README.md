@@ -462,3 +462,5 @@ The attendance foundation now uses transactional, tenant-scoped clock-in and clo
 Attendance Phase 2 adds tenant-scoped shifts, weekly schedules, effective-dated employee shift assignments, admin APIs, and an admin shift-management screen at `/attendance/shifts`.
 
 Attendance Phase 3 derives late minutes, worked minutes, and overtime minutes from the effective shift assignment on the backend. Attendance records snapshot the shift timing rules used for the calculation, including overnight support, so later shift edits do not rewrite historical calculations.
+
+Attendance Phase 4 adds the tenant-scoped calendar at `/attendance/calendar`. It derives Present, Late, Overtime, Absent, Leave, Holiday, Half Day, and Day off states from real attendance, approved leave, holidays, and schedules without fabricating attendance rows.
