@@ -460,4 +460,6 @@ Attendance Phase 5 adds `20260814000400-create-attendance-locations.js` and `202
 
 QR Code Attendance is deferred by product decision. The backend currently exposes no QR token model or route, so the feature cannot be used accidentally or partially enabled.
 
+Biometric Attendance is deferred as well. No biometric provider adapter, device ingestion route, biometric tables, or biometric data storage has been introduced. Face recognition remains a future extension only.
+
 The backend workflow is: create/configure cycle → activate → collect goals/evidence/reviews → submit reviews → `POST /api/v1/performance/cycles/:cycleId/calculate` → optional calibration → generate explanations/signatures/fairness flags → `POST /api/v1/performance/cycles/:cycleId/recalculate-equivalence` → complete/archive the cycle for employee release. All protected queries require the authenticated tenant; manager reads are department-scoped and employee reads are self-scoped/release-gated.

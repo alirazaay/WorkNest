@@ -470,3 +470,5 @@ Attendance Phase 5 adds GPS clock-in through `/api/v1/attendance/clock-in/gps`. 
 ### Deferred attendance features
 
 QR Code Attendance is intentionally deferred. No QR token tables, endpoints, UI, or feature flags have been added. It should remain unavailable until explicitly scheduled for implementation.
+
+Biometric Attendance is also deferred. No biometric device tables, provider adapters, ingestion endpoints, or biometric data storage have been added. Face recognition remains future-only and is not implemented.
