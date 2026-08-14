@@ -446,4 +446,8 @@ FairRank equivalence-group details are displayed by the frontend using the exist
 
 The frontend authenticated shell is centralized in `src/components/common/AppShell.jsx` and `src/components/common/Sidebar.jsx`; backend modules should not introduce page-specific navigation or permission assumptions.
 
+## Attendance Phase 1
+
+Clock-in and clock-out are tenant-scoped transactional operations with row locking, duplicate prevention, invalid-sequence validation, and `attendance_clocked_in` / `attendance_clocked_out` audit events. Existing attendance summary fields remain available, with `presentToday` and `onLeaveToday` aliases for the current frontend. No attendance migration is required for this phase.
+
 The backend workflow is: create/configure cycle → activate → collect goals/evidence/reviews → submit reviews → `POST /api/v1/performance/cycles/:cycleId/calculate` → optional calibration → generate explanations/signatures/fairness flags → `POST /api/v1/performance/cycles/:cycleId/recalculate-equivalence` → complete/archive the cycle for employee release. All protected queries require the authenticated tenant; manager reads are department-scoped and employee reads are self-scoped/release-gated.

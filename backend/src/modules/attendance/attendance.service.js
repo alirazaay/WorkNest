@@ -2,6 +2,7 @@ import { Op } from 'sequelize';
 import { sequelize } from '../../config/database.js';
 import { TenantSetting } from '../../database/models/TenantSetting.js';
 import { AttendanceRecord, Department, Employee, User } from '../../database/models/index.js';
+import { recordAudit } from '../../services/audit.service.js';
 import { AppError } from '../../middleware/error.js';
 
 const employeeInclude = { model: Employee, as: 'employee', attributes: ['id', 'employeeCode', 'departmentId', 'employmentStatus'], include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatarUrl'] }, { model: Department, as: 'department', attributes: ['id', 'name'] }] };
@@ -47,26 +48,34 @@ export async function clockIn(auth) {
   const employee = await employeeForUser(auth);
   const settings = await TenantSetting.findOne({ where: { tenantId: auth.tenantId } });
   const now = new Date(); const local = localParts(now, settings?.timezone || 'Asia/Karachi');
-  const existing = await AttendanceRecord.findOne({ where: { tenantId: auth.tenantId, employeeId: employee.id, attendanceDate: local.date } });
-  if (existing) throw new AppError(existing.clockOut ? 'Attendance has already been completed for today' : 'You are already clocked in', 409, 'ALREADY_CLOCKED_IN');
   const lateMinutes = Math.max(0, local.minutes - timeToMinutes(settings?.lateThreshold));
-  try {
-    return await AttendanceRecord.create({ tenantId: auth.tenantId, employeeId: employee.id, attendanceDate: local.date, clockIn: now, lateMinutes, status: lateMinutes > 0 ? 'late' : 'present', source: 'web' });
-  } catch (error) {
-    if (error.name === 'SequelizeUniqueConstraintError') throw new AppError('You are already clocked in', 409, 'ALREADY_CLOCKED_IN');
-    throw error;
-  }
+  return sequelize.transaction(async (transaction) => {
+    const existing = await AttendanceRecord.findOne({ where: { tenantId: auth.tenantId, employeeId: employee.id, attendanceDate: local.date }, transaction, lock: transaction.LOCK.UPDATE });
+    if (existing) throw new AppError(existing.clockOut ? 'Attendance has already been completed for today' : 'You are already clocked in', 409, 'ALREADY_CLOCKED_IN');
+    try {
+      const record = await AttendanceRecord.create({ tenantId: auth.tenantId, employeeId: employee.id, attendanceDate: local.date, clockIn: now, lateMinutes, status: lateMinutes > 0 ? 'late' : 'present', source: 'web' }, { transaction });
+      await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'attendance_clocked_in', entityType: 'attendance_record', entityId: record.id, afterData: record.toJSON(), transaction });
+      return record;
+    } catch (error) {
+      if (error.name === 'SequelizeUniqueConstraintError') throw new AppError('You are already clocked in', 409, 'ALREADY_CLOCKED_IN');
+      throw error;
+    }
+  });
 }
 
 export async function clockOut(auth, id) {
   const employee = await employeeForUser(auth);
-  const record = await AttendanceRecord.findOne({ where: { id, tenantId: auth.tenantId, employeeId: employee.id } });
-  if (!record) throw new AppError('Attendance record not found', 404, 'ATTENDANCE_NOT_FOUND');
-  if (!record.clockIn) throw new AppError('Attendance has no clock-in time', 409, 'INVALID_ATTENDANCE');
-  if (record.clockOut) throw new AppError('You are already clocked out', 409, 'ALREADY_CLOCKED_OUT');
-  const clockOutTime = new Date(); const totalMinutes = Math.max(0, Math.floor((clockOutTime.getTime() - new Date(record.clockIn).getTime()) / 60_000));
-  record.clockOut = clockOutTime; record.totalMinutes = totalMinutes; record.status = record.lateMinutes > 0 ? 'late' : 'present'; await record.save({ fields: ['clockOut', 'totalMinutes', 'status'] });
-  return record;
+  return sequelize.transaction(async (transaction) => {
+    const record = await AttendanceRecord.findOne({ where: { id, tenantId: auth.tenantId, employeeId: employee.id }, transaction, lock: transaction.LOCK.UPDATE });
+    if (!record) throw new AppError('Attendance record not found', 404, 'ATTENDANCE_NOT_FOUND');
+    if (!record.clockIn) throw new AppError('Attendance has no clock-in time', 409, 'INVALID_ATTENDANCE');
+    if (record.clockOut) throw new AppError('You are already clocked out', 409, 'ALREADY_CLOCKED_OUT');
+    const before = record.toJSON();
+    const clockOutTime = new Date(); const totalMinutes = Math.max(0, Math.floor((clockOutTime.getTime() - new Date(record.clockIn).getTime()) / 60_000));
+    record.clockOut = clockOutTime; record.totalMinutes = totalMinutes; record.status = record.lateMinutes > 0 ? 'late' : 'present'; await record.save({ fields: ['clockOut', 'totalMinutes', 'status'], transaction });
+    await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'attendance_clocked_out', entityType: 'attendance_record', entityId: record.id, beforeData: before, afterData: record.toJSON(), transaction });
+    return record;
+  });
 }
 
 function attendanceWhere(auth, query, employeeId) {
@@ -100,5 +109,10 @@ export async function summary(auth, query) {
   const rows = await AttendanceRecord.findAll({ where, include: managerDepartmentId ? [{ model: Employee, as: 'employee', where: { departmentId: managerDepartmentId }, attributes: [] }] : [] });
   const byStatus = (status) => rows.filter((row) => row.status === status).length;
   const completed = rows.filter((row) => ['present', 'late', 'half-day'].includes(row.status)).length;
-  return { month: query.month || range.from.slice(0, 7), fromDate: range.from, toDate: range.to, recordedDays: rows.length, presentDays: byStatus('present'), lateDays: byStatus('late'), absentDays: byStatus('absent'), onLeaveDays: byStatus('on-leave'), incompleteDays: byStatus('incomplete'), totalMinutes: rows.reduce((total, row) => total + (row.totalMinutes || 0), 0), attendanceRate: rows.length ? Number(((completed / rows.length) * 100).toFixed(2)) : 0 };
+  const presentDays = byStatus('present');
+  const lateDays = byStatus('late');
+  const absentDays = byStatus('absent');
+  const onLeaveDays = byStatus('on-leave');
+  const attendanceRate = rows.length ? Number(((completed / rows.length) * 100).toFixed(2)) : 0;
+  return { month: query.month || range.from.slice(0, 7), fromDate: range.from, toDate: range.to, recordedDays: rows.length, presentDays, lateDays, absentDays, onLeaveDays, incompleteDays: byStatus('incomplete'), totalMinutes: rows.reduce((total, row) => total + (row.totalMinutes || 0), 0), attendanceRate, presentToday: presentDays, onLeaveToday: onLeaveDays };
 }

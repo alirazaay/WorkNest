@@ -61,7 +61,7 @@ export default function AttendancePage({ user, onExit }) {
 
   async function clockOut() {
     setActionLoading(true);
-    try { await api.post('/attendance/clock-out'); await load(1); }
+    try { await api.patch(`/attendance/${todayRecord.id}/clock-out`); await load(1); }
     catch (err) { setError(err.response?.data?.error?.message || 'Could not clock out.'); }
     finally { setActionLoading(false); }
   }
@@ -79,8 +79,8 @@ export default function AttendancePage({ user, onExit }) {
             </div>
             {isEmployee && (
               <div className="attendance-actions">
-                {!todayRecord?.checkIn && <Button size="sm" loading={actionLoading} onClick={clockIn}>Clock in</Button>}
-                {todayRecord?.checkIn && !todayRecord?.checkOut && <Button size="sm" loading={actionLoading} onClick={clockOut}>Clock out</Button>}
+                {!todayRecord?.clockIn && <Button size="sm" loading={actionLoading} onClick={clockIn}>Clock in</Button>}
+                {todayRecord?.clockIn && !todayRecord?.clockOut && <Button size="sm" loading={actionLoading} onClick={clockOut}>Clock out</Button>}
               </div>
             )}
           </div>
@@ -124,8 +124,8 @@ export default function AttendancePage({ user, onExit }) {
                       <tr key={record.id}>
                         {!isEmployee && <td><strong>{record.employee?.user?.name || 'Employee'}</strong><small>{record.employee?.employeeCode || ''}</small></td>}
                         <td>{displayDate(record.attendanceDate)}</td>
-                        <td>{displayTime(record.checkIn)}</td>
-                        <td>{displayTime(record.checkOut)}</td>
+                        <td>{displayTime(record.clockIn)}</td>
+                        <td>{displayTime(record.clockOut)}</td>
                         <td><StatusBadge status={record.status} /></td>
                       </tr>
                     ))}
