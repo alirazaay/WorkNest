@@ -462,4 +462,8 @@ QR Code Attendance is deferred by product decision. The backend currently expose
 
 Biometric Attendance is deferred as well. No biometric provider adapter, device ingestion route, biometric tables, or biometric data storage has been introduced. Face recognition remains a future extension only.
 
+### Phase 8 — Face recognition boundary
+
+This phase is intentionally documentation-only. The backend has no face-recognition provider contract, route, model, image/template storage, or embedding storage. Future implementation must require explicit tenant enablement, consent and privacy controls, configurable retention, provider isolation, audit logging, and a security review before activation.
+
 The backend workflow is: create/configure cycle → activate → collect goals/evidence/reviews → submit reviews → `POST /api/v1/performance/cycles/:cycleId/calculate` → optional calibration → generate explanations/signatures/fairness flags → `POST /api/v1/performance/cycles/:cycleId/recalculate-equivalence` → complete/archive the cycle for employee release. All protected queries require the authenticated tenant; manager reads are department-scoped and employee reads are self-scoped/release-gated.
