@@ -276,6 +276,8 @@ Do not use the local Compose secrets, development JWT values, demo data, or loca
 
 ## Troubleshooting
 
+If the API is stopped, the frontend shows a retryable “Backend unavailable” state instead of repeatedly refreshing the session. Leave balances are requested only for employee accounts or users with an explicit employee profile; administrators without one can still load leave requests and types without a fatal `EMPLOYEE_PROFILE_REQUIRED` error.
+
 ### Performance audit returns `Unknown column 'AuditLog.createdAt'`
 
 Restart the backend after updating to the current model code. Audit timestamps are explicitly mapped to the existing `audit_logs.created_at` column; no destructive schema change is required.

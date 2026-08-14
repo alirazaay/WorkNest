@@ -15,6 +15,7 @@ const isoToday = () => new Date().toISOString().slice(0, 10);
 export default function LeavesPage({ user, onExit }) {
   const role = user?.user?.role || 'employee';
   const canReview = role === 'admin' || role === 'manager';
+  const canFetchOwnBalance = role === 'employee' || Boolean(user?.user?.employeeId || user?.user?.employee?.id);
 
   const [requests, setRequests] = useState([]);
   const [types, setTypes] = useState([]);
@@ -29,21 +30,28 @@ export default function LeavesPage({ user, onExit }) {
     setLoading(true);
     setError('');
     try {
-      const [listRes, typeRes, balanceRes] = await Promise.all([
+      const results = await Promise.allSettled([
         api.get('/leaves/requests', { params: cleanParams({ status, page, pageSize: 10 }) }),
         api.get('/leaves/types'),
-        api.get('/leaves/balances/me'),
+        ...(canFetchOwnBalance ? [api.get('/leaves/balances/me')] : []),
       ]);
+      const [listResult, typeResult, balanceResult] = results;
+      if (listResult.status === 'rejected') throw listResult.reason;
+      if (typeResult.status === 'rejected') throw typeResult.reason;
+      const listRes = listResult.value;
+      const typeRes = typeResult.value;
       setRequests(listRes.data.data?.items || []);
       setPagination(listRes.data.data?.pagination || { page, totalPages: 1 });
       setTypes(typeRes.data.data || []);
-      setBalances(balanceRes.data.data || []);
+      if (canFetchOwnBalance && balanceResult?.status === 'fulfilled') setBalances(balanceResult.value.data.data || []);
+      else if (!canFetchOwnBalance || balanceResult?.reason?.response?.data?.error?.code === 'EMPLOYEE_PROFILE_REQUIRED') setBalances([]);
+      else if (balanceResult?.status === 'rejected') throw balanceResult.reason;
     } catch (err) {
       setError(err.response?.data?.error?.message || 'Could not load leave data.');
     } finally {
       setLoading(false);
     }
-  }, [status]);
+  }, [canFetchOwnBalance, status]);
 
   useEffect(() => { load(1); }, [load]);
 
