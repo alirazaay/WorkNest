@@ -458,4 +458,6 @@ Attendance Phase 4 migration `20260814000300-create-attendance-holidays.js` adds
 
 Attendance Phase 5 adds `20260814000400-create-attendance-locations.js` and `20260814000500-add-gps-metadata-to-attendance.js`. GPS clock-in validates an active tenant location, accuracy, and Haversine radius; location metadata is stored on the attendance record and location mutations are audited.
 
+QR Code Attendance is deferred by product decision. The backend currently exposes no QR token model or route, so the feature cannot be used accidentally or partially enabled.
+
 The backend workflow is: create/configure cycle → activate → collect goals/evidence/reviews → submit reviews → `POST /api/v1/performance/cycles/:cycleId/calculate` → optional calibration → generate explanations/signatures/fairness flags → `POST /api/v1/performance/cycles/:cycleId/recalculate-equivalence` → complete/archive the cycle for employee release. All protected queries require the authenticated tenant; manager reads are department-scoped and employee reads are self-scoped/release-gated.
