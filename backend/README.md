@@ -19,7 +19,7 @@ npm run db:migrate
 
 The Phase 3 migration adds departments, employees, salary structures, and employee documents. Run the same command after the Phase 2 migration to apply it in order.
 
-Run safe automated tests with `npm test`; it executes only files under `test/`. Database freshness and rollback utilities are never part of normal CI. `npm run db:rollback:test` remains explicitly protected and requires `ALLOW_ROLLBACK_TEST=true` against an isolated database.
+Run safe automated tests with `npm test`; the cross-platform runner discovers only `test/**/*.test.js` files and passes them explicitly to Node's test runner. Database freshness and rollback utilities are never part of normal CI. `npm run db:rollback:test` remains explicitly protected and requires `ALLOW_ROLLBACK_TEST=true` against an isolated database.
 
 ## Endpoints
 
@@ -416,7 +416,7 @@ Critical finalization mutations now use Sequelize transactions for the business 
 
 ## FairRank Phase 27: testing
 
-FairRank now has explicit regression coverage for weight totals, server-side score calculation, rating-band selection, equivalence thresholds, separate promotion readiness, review/override validation, employee release gates, finalized-cycle guards, tenant scoping, and manager department scoping. Run `node --test test/performance-*.test.js` for the performance suite. Database-backed integration tests remain opt-in until a dedicated isolated test database fixture is configured.
+FairRank now has explicit regression coverage for weight totals, server-side score calculation, rating-band selection, equivalence thresholds, separate promotion readiness, review/override validation, employee release gates, finalized-cycle guards, tenant scoping, and manager department scoping. Run `npm test` for the complete performance and backend suite; the runner discovers only `test/**/*.test.js`. Database-backed integration tests remain opt-in until a dedicated isolated test database fixture is configured.
 
 ## FairRank Phase 28: deterministic MVP boundary
 
@@ -478,4 +478,4 @@ The backend workflow is: create/configure cycle → activate → collect goals/e
 
 The final attendance hardening pass verifies transactional clock mutations, tenant isolation, role authorization, duplicate prevention, GPS validation, audit logging, and server-authoritative shift calculations. The continuity importer syntax issue was fixed, and `npm test` now runs only `test/`, keeping the explicit rollback utility opt-in. Shift update schemas are compatible with Zod v4 by applying `.partial()` before cross-field refinements.
 
-Verification: `node --test test` passed all 76 tests; the frontend build passed; database schema, performance-isolation, and safety verification passed; and the continuity importer passes `node --check`. Live endpoint/browser checks require running services. QR and biometric attendance remain deferred.
+Verification: `npm test` uses the cross-platform runner and passed all 76 tests; the frontend build passed; database schema, performance-isolation, and safety verification passed; and the continuity importer passes `node --check`. Live endpoint/browser checks require running services. QR and biometric attendance remain deferred.

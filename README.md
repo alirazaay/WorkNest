@@ -237,11 +237,11 @@ The backend is authoritative for authorization. Tenant IDs are never trusted fro
 
 ## Testing and quality checks
 
-Run the focused FairRank suite:
+Run the complete backend regression suite (including FairRank, attendance, auth, payroll, TNA, and tenant-isolation coverage):
 
 ```powershell
 cd backend
-node --test (Get-ChildItem test -Filter 'performance-*.test.js').FullName
+npm test
 ```
 
 Run all backend tests:
@@ -484,6 +484,6 @@ Biometric Attendance is also deferred. No biometric device tables, provider adap
 Phase 8 is intentionally closed as a future-only boundary. WorkNest currently accepts only web and GPS attendance sources. Any future face-recognition implementation must be introduced behind explicit tenant configuration, provider contracts, consent/privacy controls, retention rules, and security review. No face templates, images, embeddings, or recognition endpoints exist today.
 ### Attendance Phase 10 — security, performance, and QA
 
-Phase 10 completed the final static hardening pass for attendance. Mutations remain transactional and tenant-scoped; role authorization, duplicate clock prevention, GPS validation, audit logging, and backend-derived shift calculations are covered by the test suite. The historical continuity importer syntax issue was corrected, and the backend test command now targets `test/` so guarded operational scripts are not auto-discovered. Zod v4-compatible shift update schemas derive partial objects before applying cross-field refinements.
+Phase 10 completed the final static hardening pass for attendance. Mutations remain transactional and tenant-scoped; role authorization, duplicate clock prevention, GPS validation, audit logging, and backend-derived shift calculations are covered by the test suite. The backend test command uses a cross-platform Node runner that discovers only `test/**/*.test.js`, so guarded operational scripts are not auto-discovered. Zod v4-compatible shift update schemas derive partial objects before applying cross-field refinements.
 
-Verification: `node --test test` passed 76 tests with 0 failures; `npm.cmd run build` passed; database schema, tenant-isolation, and safety verification passed; and `node --check scripts/historical-data/import-historical-hr.js` passed. Live browser/API checks require running services. QR and biometric attendance remain intentionally deferred.
+Verification: `npm test` uses the cross-platform test runner and passed 76 tests with 0 failures; `npm.cmd run build` passed; database schema, tenant-isolation, and safety verification passed; and `node --check scripts/historical-data/import-historical-hr.js` passed. Live browser/API checks require running services. QR and biometric attendance remain intentionally deferred.
