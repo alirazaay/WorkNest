@@ -23,6 +23,7 @@ export default function AttendancePage({ user, onExit }) {
   const [records, setRecords] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1 });
   const [summary, setSummary] = useState(null);
+  const [locations, setLocations] = useState([]);
   const [filters, setFilters] = useState({ fromDate: `${month()}-01`, toDate: today(), status: '' });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -51,6 +52,7 @@ export default function AttendancePage({ user, onExit }) {
   }, [filters, isEmployee]);
 
   useEffect(() => { load(1); }, [load]);
+  useEffect(() => { if (isEmployee) api.get('/attendance/locations').then((response) => setLocations(response.data.data || [])).catch(() => setLocations([])); }, [isEmployee]);
 
   const todayRecord = useMemo(() => records.find((r) => String(r.attendanceDate).slice(0, 10) === today()), [records]);
 
@@ -66,6 +68,17 @@ export default function AttendancePage({ user, onExit }) {
     try { await api.patch(`/attendance/${todayRecord.id}/clock-out`); await load(1); }
     catch (err) { setError(err.response?.data?.error?.message || 'Could not clock out.'); }
     finally { setActionLoading(false); }
+  }
+
+  function clockInGps() {
+    if (!locations.length) { setError('No active GPS attendance location is configured.'); return; }
+    if (!navigator.geolocation) { setError('This browser does not support GPS attendance.'); return; }
+    setActionLoading(true);
+    navigator.geolocation.getCurrentPosition(async (position) => {
+      try { await api.post('/attendance/clock-in/gps', { locationId: locations[0].id, latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy, deviceMetadata: { userAgent: window.navigator.userAgent.slice(0, 180) } }); await load(1); }
+      catch (err) { setError(err.response?.data?.error?.message || 'Could not clock in with GPS.'); }
+      finally { setActionLoading(false); }
+    }, () => { setActionLoading(false); setError('Location permission is required for GPS attendance.'); }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
   }
 
   return (
@@ -85,6 +98,7 @@ export default function AttendancePage({ user, onExit }) {
               {isEmployee && (
                 <>
                   {!todayRecord?.clockIn && <Button size="sm" loading={actionLoading} onClick={clockIn}>Clock in</Button>}
+                  {!todayRecord?.clockIn && locations.length > 0 && <Button variant="secondary" size="sm" loading={actionLoading} onClick={clockInGps}>GPS clock in</Button>}
                   {todayRecord?.clockIn && !todayRecord?.clockOut && <Button size="sm" loading={actionLoading} onClick={clockOut}>Clock out</Button>}
                 </>
               )}

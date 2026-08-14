@@ -4,6 +4,7 @@ import { TenantSetting } from '../../database/models/TenantSetting.js';
 import { AttendanceRecord, Department, Employee, User } from '../../database/models/index.js';
 import { recordAudit } from '../../services/audit.service.js';
 import { calculateLateMinutes, calculateOvertimeMinutes, resolveShiftForDate, shiftDurationMinutes, timeToMinutes as shiftTimeToMinutes } from './shift.service.js';
+import { assertGpsLocation } from './location.service.js';
 import { AppError } from '../../middleware/error.js';
 
 const employeeInclude = { model: Employee, as: 'employee', attributes: ['id', 'employeeCode', 'departmentId', 'employmentStatus'], include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatarUrl'] }, { model: Department, as: 'department', attributes: ['id', 'name'] }] };
@@ -40,17 +41,18 @@ async function findScopedEmployee(auth, employeeId) {
   return employee;
 }
 
-export async function clockIn(auth) {
+export async function clockIn(auth, options = {}) {
   const employee = await employeeForUser(auth);
   const settings = await TenantSetting.findOne({ where: { tenantId: auth.tenantId } });
   const now = new Date(); const local = localParts(now, settings?.timezone || 'Asia/Karachi');
+  const gps = options.source === 'gps' ? await assertGpsLocation(auth, options) : null;
   return sequelize.transaction(async (transaction) => {
     const existing = await AttendanceRecord.findOne({ where: { tenantId: auth.tenantId, employeeId: employee.id, attendanceDate: local.date }, transaction, lock: transaction.LOCK.UPDATE });
     if (existing) throw new AppError(existing.clockOut ? 'Attendance has already been completed for today' : 'You are already clocked in', 409, 'ALREADY_CLOCKED_IN');
     const shift = await resolveShiftForDate(auth, employee.id, local.date, transaction);
     const lateMinutes = shift ? calculateLateMinutes(local.minutes, shift) : Math.max(0, local.minutes - shiftTimeToMinutes(settings?.lateThreshold || '09:15:00'));
     try {
-      const record = await AttendanceRecord.create({ tenantId: auth.tenantId, employeeId: employee.id, shiftId: shift?.id || null, attendanceDate: local.date, clockIn: now, lateMinutes, scheduledStart: shift?.startTime || null, scheduledEnd: shift?.endTime || null, breakMinutesSnapshot: shift?.breakMinutes ?? null, graceMinutesSnapshot: shift?.graceMinutes ?? null, overtimeAfterMinutesSnapshot: shift?.overtimeAfterMinutes ?? null, status: lateMinutes > 0 ? 'late' : 'present', source: 'web' }, { transaction });
+      const record = await AttendanceRecord.create({ tenantId: auth.tenantId, employeeId: employee.id, shiftId: shift?.id || null, locationId: gps?.location.id || null, latitude: gps ? options.latitude : null, longitude: gps ? options.longitude : null, locationAccuracy: gps ? options.accuracy : null, deviceMetadata: options.deviceMetadata || null, attendanceDate: local.date, clockIn: now, lateMinutes, scheduledStart: shift?.startTime || null, scheduledEnd: shift?.endTime || null, breakMinutesSnapshot: shift?.breakMinutes ?? null, graceMinutesSnapshot: shift?.graceMinutes ?? null, overtimeAfterMinutesSnapshot: shift?.overtimeAfterMinutes ?? null, status: lateMinutes > 0 ? 'late' : 'present', source: options.source || 'web' }, { transaction });
       await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'attendance_clocked_in', entityType: 'attendance_record', entityId: record.id, afterData: record.toJSON(), transaction });
       return record;
     } catch (error) {

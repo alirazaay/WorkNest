@@ -12,15 +12,17 @@ const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frida
 export default function AttendanceShiftsPage({ user, onExit }) {
   const navigate = useNavigate();
   const [shifts, setShifts] = useState([]);
+  const [locations, setLocations] = useState([]);
   const [form, setForm] = useState({ name: '', startTime: '09:00', endTime: '17:00', graceMinutes: 15, breakMinutes: 60, overtimeAfterMinutes: 480, isOvernight: false });
   const [days, setDays] = useState([1, 2, 3, 4, 5]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [locationForm, setLocationForm] = useState({ name: '', latitude: '', longitude: '', radiusMeters: 150 });
 
   async function load() {
     setLoading(true); setError('');
-    try { const response = await api.get('/attendance/shifts'); setShifts(response.data.data || []); }
+    try { const [shiftResponse, locationResponse] = await Promise.all([api.get('/attendance/shifts'), api.get('/attendance/locations')]); setShifts(shiftResponse.data.data || []); setLocations(locationResponse.data.data || []); }
     catch (err) { setError(err.response?.data?.error?.message || 'Could not load shifts.'); }
     finally { setLoading(false); }
   }
@@ -36,6 +38,13 @@ export default function AttendanceShiftsPage({ user, onExit }) {
       setForm({ name: '', startTime: '09:00', endTime: '17:00', graceMinutes: 15, breakMinutes: 60, overtimeAfterMinutes: 480, isOvernight: false });
       await load();
     } catch (err) { setError(err.response?.data?.error?.message || 'Could not create shift.'); }
+    finally { setSaving(false); }
+  }
+
+  async function createLocation(event) {
+    event.preventDefault(); setSaving(true); setError('');
+    try { await api.post('/attendance/locations', { ...locationForm, latitude: Number(locationForm.latitude), longitude: Number(locationForm.longitude), radiusMeters: Number(locationForm.radiusMeters) }); setLocationForm({ name: '', latitude: '', longitude: '', radiusMeters: 150 }); await load(); }
+    catch (err) { setError(err.response?.data?.error?.message || 'Could not create attendance location.'); }
     finally { setSaving(false); }
   }
 
@@ -55,5 +64,6 @@ export default function AttendanceShiftsPage({ user, onExit }) {
       </form></section>
       <section className="settings-card"><h2>Existing shifts</h2><p>{shifts.length ? `${shifts.length} shift${shifts.length === 1 ? '' : 's'} configured` : 'No shifts configured yet.'}</p>{loading ? <LoadingState label="Loading shifts…" /> : <div className="shift-list">{shifts.map((shift) => <div className="shift-row" key={shift.id}><div><strong>{shift.name}</strong><small>{shift.startTime?.slice(0, 5)} – {shift.endTime?.slice(0, 5)}{shift.isOvernight ? ' · Overnight' : ''}</small><small>{(shift.weeklySchedules || []).filter((day) => day.isWorkingDay).map((day) => weekdays[day.weekday].slice(0, 3)).join(', ') || 'No working days'}</small></div><span>{shift.isActive ? 'Active' : 'Inactive'}</span></div>)}</div>}</section>
     </div>
+    <section className="settings-card location-settings-card"><h2>GPS attendance locations</h2><p>Employees must be within the configured radius to use GPS clock-in.</p><form onSubmit={createLocation}><div className="form-grid"><label>Location name<input required value={locationForm.name} onChange={(e) => setLocationForm({ ...locationForm, name: e.target.value })} placeholder="Main office" /></label><label>Radius (meters)<input type="number" min="25" max="5000" required value={locationForm.radiusMeters} onChange={(e) => setLocationForm({ ...locationForm, radiusMeters: e.target.value })} /></label></div><div className="form-grid"><label>Latitude<input type="number" step="any" min="-90" max="90" required value={locationForm.latitude} onChange={(e) => setLocationForm({ ...locationForm, latitude: e.target.value })} placeholder="24.8607" /></label><label>Longitude<input type="number" step="any" min="-180" max="180" required value={locationForm.longitude} onChange={(e) => setLocationForm({ ...locationForm, longitude: e.target.value })} placeholder="67.0011" /></label></div><Button type="submit" loading={saving}>Add GPS location</Button></form><div className="shift-list">{locations.map((location) => <div className="shift-row" key={location.id}><div><strong>{location.name}</strong><small>{location.latitude}, {location.longitude} · {location.radiusMeters}m radius</small></div><span>{location.isActive ? 'Active' : 'Inactive'}</span></div>)}</div></section>
   </AppShell>;
 }

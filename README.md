@@ -464,3 +464,5 @@ Attendance Phase 2 adds tenant-scoped shifts, weekly schedules, effective-dated 
 Attendance Phase 3 derives late minutes, worked minutes, and overtime minutes from the effective shift assignment on the backend. Attendance records snapshot the shift timing rules used for the calculation, including overnight support, so later shift edits do not rewrite historical calculations.
 
 Attendance Phase 4 adds the tenant-scoped calendar at `/attendance/calendar`. It derives Present, Late, Overtime, Absent, Leave, Holiday, Half Day, and Day off states from real attendance, approved leave, holidays, and schedules without fabricating attendance rows.
+
+Attendance Phase 5 adds GPS clock-in through `/api/v1/attendance/clock-in/gps`. Admins configure allowed locations under `/attendance/shifts`; the backend validates tenant ownership, GPS accuracy, Haversine distance, active location status, and duplicate attendance before accepting the record.
