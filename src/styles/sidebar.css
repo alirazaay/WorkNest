@@ -1,0 +1,105 @@
+/* Single authenticated navigation surface. Pages must use AppShell/Sidebar. */
+.app-sidebar {
+  width: 248px;
+  min-height: 100vh;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 248px;
+}
+
+.sidebar-brand {
+  flex: 0 0 auto;
+}
+
+.sidebar-nav {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #555b6b transparent;
+  padding-bottom: 12px;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: #555b6b;
+  border-radius: 999px;
+}
+
+.sidebar-bottom {
+  flex: 0 0 auto;
+  margin-top: auto;
+  padding: 16px 0 0;
+  border-top: 1px solid #383c48;
+}
+
+.sidebar-account {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 0 8px 12px;
+}
+
+.sidebar-account > span:last-child {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-account strong,
+.sidebar-account small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-account strong {
+  color: #e4e6ed;
+  font-size: 11px;
+}
+
+.sidebar-account small {
+  color: #83899a;
+  font-size: 9px;
+  margin-top: 2px;
+  text-transform: capitalize;
+}
+
+.sidebar-signout {
+  margin-bottom: 0;
+}
+
+.side-link:focus-visible,
+.sidebar-close:focus-visible {
+  outline: 2px solid #9a8fff;
+  outline-offset: 2px;
+}
+
+@media (max-width: 620px) {
+  .app-sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 248px;
+    height: 100vh;
+    min-height: 100vh;
+    transform: translateX(-105%);
+    transition: transform .2s ease;
+    box-shadow: 15px 0 35px #10132333;
+  }
+
+  .app-sidebar.mobile-open {
+    transform: translateX(0);
+  }
+}

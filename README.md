@@ -450,3 +450,7 @@ The FairRank equivalence-group view now exposes a functional Info action for eac
 Managers are restricted to their department. Employees can access only their own permitted data. FairRank equivalence is a grouping aid, not forced ranking, and promotion readiness is intentionally separate from performance scoring.
 
 Cycle names must contain at least three characters. The create-cycle dialog displays validation and API errors inline.
+
+## Shared application shell
+
+All authenticated pages render through `src/components/common/AppShell.jsx`. The shell owns the shared `Sidebar`, `Topbar`, mobile menu state, navigation callbacks, and logout flow. Do not add page-level sidebar markup. The sidebar keeps role-filtered navigation scrollable while its account and sign-out controls remain pinned at the bottom on desktop and mobile.

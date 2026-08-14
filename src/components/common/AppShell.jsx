@@ -34,6 +34,7 @@ export default function AppShell({ user, active, onExit, children }) {
       <Sidebar
         active={active}
         role={user?.user?.role || 'employee'}
+        user={user}
         open={mobileOpen}
         onClose={() => setMobileOpen(false)}
         onNavigate={handleNavigate}

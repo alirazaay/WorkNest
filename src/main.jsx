@@ -14,6 +14,7 @@ import './styles/public-auth.css';
 import './styles/login-reference.css';
 import './styles/login-viewport-fix.css';
 import './styles/shell.css';
+import './styles/sidebar.css';
 import './styles/dashboard.css';
 import './styles/dashboard-overrides.css';
 import './styles/departments.css';
@@ -80,6 +81,8 @@ function Landing({ onLaunch, onRegister = onLaunch }) {
   </div>;
 }
 
+/* Retired mock dashboard. Authenticated routes use AppShell and the shared Sidebar. */
+/*
 function Dashboard({ onExit }) {
   const [active, setActive] = useState('Overview'); const [dark, setDark] = useState(false); const [query, setQuery] = useState(''); const [departments, setDepartments] = useState(seedDepartments); const [modal, setModal] = useState(false); const [toast, setToast] = useState('');
   const nav = [['Overview', Gauge], ['People', Users], ['Time off', CalendarDays], ['Payroll', WalletCards], ['Reports', TrendingUp]];
@@ -93,6 +96,7 @@ function Overview({ onAdd, active, onAction }) { return <><div className="page-h
 
 function Departments({ departments, onAdd, onDelete, query }) { return <><div className="page-heading"><div><div className="eyebrow">Workspace / Manage</div><h1>Departments</h1><p>Shape the teams and spaces that make your organization work.</p></div><button className="primary-button small" onClick={onAdd}><Plus size={16}/> Add department</button></div><div className="department-toolbar"><span>{departments.length} departments</span><button className="select-button"><Command size={14}/> Sort by <strong>Most people</strong><ChevronDown size={14}/></button></div>{departments.length===0?<div className="empty-state"><BriefcaseBusiness size={28}/><h2>No departments found</h2><p>{query ? `No results for “${query}”` : 'Add your first department to organize your people.'}</p><button className="primary-button" onClick={onAdd}><Plus size={16}/> Add department</button></div>:<div className="department-grid">{departments.map(d=><div className="department-card" key={d.name}><div className={`department-art ${d.color}`}>{d.icon}</div><div className="dept-top"><div className="department-icon"><BriefcaseBusiness size={19}/></div><button className="icon-button" onClick={()=>onDelete(d.name)}><MoreHorizontal size={17}/></button></div><h2>{d.name}</h2><p>{d.desc}</p><div className="dept-meta"><span><small>Department lead</small><strong>{d.lead}</strong></span><span><small>People</small><strong>{d.count}</strong></span></div></div>)}</div>}</> }
 
+*/
 function LoginRoute() { const navigate = useNavigate(); const { setSession } = useAuth(); return <LoginPage onSuccess={(session) => { setSession(session); navigate('/dashboard', { replace: true }); }} />; }
 function LandingRoute() { const navigate = useNavigate(); return <Landing onLaunch={() => navigate('/login')} onRegister={() => navigate('/register')} />; }
 function RegisterRoute() { const navigate = useNavigate(); const { setSession } = useAuth(); return <Register onSuccess={session => { setSession(session); navigate('/dashboard', { replace: true }); }} />; }
