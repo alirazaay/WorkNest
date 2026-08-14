@@ -216,6 +216,8 @@ EmployeeDocument.belongsTo(User, { foreignKey: 'uploadedBy', as: 'uploader' });
 Employee.hasMany(AttendanceRecord, { foreignKey: 'employeeId', as: 'attendanceRecords' });
 AttendanceRecord.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
 AttendanceRecord.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
+AttendanceRecord.belongsTo(Shift, { foreignKey: 'shiftId', as: 'shift' });
+Shift.hasMany(AttendanceRecord, { foreignKey: 'shiftId', as: 'attendanceRecords' });
 Tenant.hasMany(Shift, { foreignKey: 'tenantId', as: 'shifts' });
 Shift.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
 Shift.belongsTo(User, { foreignKey: 'createdBy', as: 'creator' });

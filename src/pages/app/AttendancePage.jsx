@@ -121,6 +121,9 @@ export default function AttendancePage({ user, onExit }) {
                       <th>Date</th>
                       <th>Check in</th>
                       <th>Check out</th>
+                      <th>Worked</th>
+                      <th>Late</th>
+                      <th>Overtime</th>
                       <th>Status</th>
                     </tr>
                   </thead>
@@ -131,6 +134,9 @@ export default function AttendancePage({ user, onExit }) {
                         <td>{displayDate(record.attendanceDate)}</td>
                         <td>{displayTime(record.clockIn)}</td>
                         <td>{displayTime(record.clockOut)}</td>
+                        <td>{record.workedMinutes ?? record.totalMinutes ?? '—'} min</td>
+                        <td>{record.lateMinutes || 0} min</td>
+                        <td>{record.overtimeMinutes || 0} min</td>
                         <td><StatusBadge status={record.status} /></td>
                       </tr>
                     ))}

@@ -3,6 +3,7 @@ import { sequelize } from '../../config/database.js';
 import { TenantSetting } from '../../database/models/TenantSetting.js';
 import { AttendanceRecord, Department, Employee, User } from '../../database/models/index.js';
 import { recordAudit } from '../../services/audit.service.js';
+import { calculateLateMinutes, calculateOvertimeMinutes, resolveShiftForDate, shiftDurationMinutes, timeToMinutes as shiftTimeToMinutes } from './shift.service.js';
 import { AppError } from '../../middleware/error.js';
 
 const employeeInclude = { model: Employee, as: 'employee', attributes: ['id', 'employeeCode', 'departmentId', 'employmentStatus'], include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatarUrl'] }, { model: Department, as: 'department', attributes: ['id', 'name'] }] };
@@ -11,11 +12,6 @@ function localParts(date, timezone) {
   const parts = new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(date);
   const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
   return { date: `${values.year}-${values.month}-${values.day}`, minutes: Number(values.hour) * 60 + Number(values.minute) };
-}
-
-function timeToMinutes(value = '09:15:00') {
-  const [hours, minutes] = String(value).split(':').map(Number);
-  return hours * 60 + minutes;
 }
 
 function monthRange(value) {
@@ -48,12 +44,13 @@ export async function clockIn(auth) {
   const employee = await employeeForUser(auth);
   const settings = await TenantSetting.findOne({ where: { tenantId: auth.tenantId } });
   const now = new Date(); const local = localParts(now, settings?.timezone || 'Asia/Karachi');
-  const lateMinutes = Math.max(0, local.minutes - timeToMinutes(settings?.lateThreshold));
   return sequelize.transaction(async (transaction) => {
     const existing = await AttendanceRecord.findOne({ where: { tenantId: auth.tenantId, employeeId: employee.id, attendanceDate: local.date }, transaction, lock: transaction.LOCK.UPDATE });
     if (existing) throw new AppError(existing.clockOut ? 'Attendance has already been completed for today' : 'You are already clocked in', 409, 'ALREADY_CLOCKED_IN');
+    const shift = await resolveShiftForDate(auth, employee.id, local.date, transaction);
+    const lateMinutes = shift ? calculateLateMinutes(local.minutes, shift) : Math.max(0, local.minutes - shiftTimeToMinutes(settings?.lateThreshold || '09:15:00'));
     try {
-      const record = await AttendanceRecord.create({ tenantId: auth.tenantId, employeeId: employee.id, attendanceDate: local.date, clockIn: now, lateMinutes, status: lateMinutes > 0 ? 'late' : 'present', source: 'web' }, { transaction });
+      const record = await AttendanceRecord.create({ tenantId: auth.tenantId, employeeId: employee.id, shiftId: shift?.id || null, attendanceDate: local.date, clockIn: now, lateMinutes, scheduledStart: shift?.startTime || null, scheduledEnd: shift?.endTime || null, breakMinutesSnapshot: shift?.breakMinutes ?? null, graceMinutesSnapshot: shift?.graceMinutes ?? null, overtimeAfterMinutesSnapshot: shift?.overtimeAfterMinutes ?? null, status: lateMinutes > 0 ? 'late' : 'present', source: 'web' }, { transaction });
       await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'attendance_clocked_in', entityType: 'attendance_record', entityId: record.id, afterData: record.toJSON(), transaction });
       return record;
     } catch (error) {
@@ -72,7 +69,9 @@ export async function clockOut(auth, id) {
     if (record.clockOut) throw new AppError('You are already clocked out', 409, 'ALREADY_CLOCKED_OUT');
     const before = record.toJSON();
     const clockOutTime = new Date(); const totalMinutes = Math.max(0, Math.floor((clockOutTime.getTime() - new Date(record.clockIn).getTime()) / 60_000));
-    record.clockOut = clockOutTime; record.totalMinutes = totalMinutes; record.status = record.lateMinutes > 0 ? 'late' : 'present'; await record.save({ fields: ['clockOut', 'totalMinutes', 'status'], transaction });
+    const workedMinutes = Math.max(0, totalMinutes - Number(record.breakMinutesSnapshot || 0));
+    const overtimeMinutes = record.shiftId && record.overtimeAfterMinutesSnapshot != null ? calculateOvertimeMinutes(workedMinutes, { overtimeAfterMinutes: record.overtimeAfterMinutesSnapshot, startTime: record.scheduledStart, endTime: record.scheduledEnd, isOvernight: record.scheduledEnd < record.scheduledStart }) : 0;
+    record.clockOut = clockOutTime; record.totalMinutes = totalMinutes; record.workedMinutes = workedMinutes; record.overtimeMinutes = overtimeMinutes; record.status = record.lateMinutes > 0 ? 'late' : 'present'; await record.save({ fields: ['clockOut', 'totalMinutes', 'workedMinutes', 'overtimeMinutes', 'status'], transaction });
     await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'attendance_clocked_out', entityType: 'attendance_record', entityId: record.id, beforeData: before, afterData: record.toJSON(), transaction });
     return record;
   });

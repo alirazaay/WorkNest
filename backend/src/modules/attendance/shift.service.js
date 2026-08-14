@@ -6,6 +6,27 @@ import { AppError } from '../../middleware/error.js';
 
 const shiftInclude = [{ model: ShiftWeeklySchedule, as: 'weeklySchedules', attributes: ['id', 'weekday', 'isWorkingDay'] }, { model: User, as: 'creator', attributes: ['id', 'name'] }];
 
+export function timeToMinutes(value = '00:00:00') {
+  const [hours, minutes] = String(value).split(':').map(Number);
+  return (hours * 60) + minutes;
+}
+
+export function shiftDurationMinutes(shift) {
+  const start = timeToMinutes(shift.startTime);
+  const end = timeToMinutes(shift.endTime);
+  return Math.max(0, (shift.isOvernight ? end + 1440 : end) - start);
+}
+
+export function calculateLateMinutes(localMinutes, shift) {
+  return Math.max(0, localMinutes - timeToMinutes(shift.startTime) - Number(shift.graceMinutes || 0));
+}
+
+export function calculateOvertimeMinutes(workedMinutes, shift) {
+  const configuredThreshold = Number(shift.overtimeAfterMinutes || 0);
+  const threshold = configuredThreshold > 0 ? configuredThreshold : shiftDurationMinutes(shift);
+  return Math.max(0, workedMinutes - threshold);
+}
+
 async function getShift(auth, id, transaction) {
   const shift = await Shift.findOne({ where: { id, tenantId: auth.tenantId }, include: shiftInclude, transaction });
   if (!shift) throw new AppError('Shift not found', 404, 'SHIFT_NOT_FOUND');
@@ -16,6 +37,20 @@ async function getEmployee(auth, employeeId, transaction) {
   const employee = await Employee.findOne({ where: { id: employeeId, tenantId: auth.tenantId, employmentStatus: { [Op.ne]: 'terminated' } }, transaction });
   if (!employee) throw new AppError('Employee not found in this workspace', 404, 'EMPLOYEE_NOT_FOUND');
   return employee;
+}
+
+export async function resolveShiftForDate(auth, employeeId, attendanceDate, transaction) {
+  const assignment = await EmployeeShiftAssignment.findOne({
+    where: { tenantId: auth.tenantId, employeeId, effectiveFrom: { [Op.lte]: attendanceDate }, [Op.or]: [{ effectiveTo: null }, { effectiveTo: { [Op.gte]: attendanceDate } }] },
+    include: [{ model: Shift, as: 'shift', include: [{ model: ShiftWeeklySchedule, as: 'weeklySchedules', attributes: ['weekday', 'isWorkingDay'] }] }],
+    order: [['effectiveFrom', 'DESC']],
+    transaction
+  });
+  if (!assignment?.shift) return null;
+  const weekday = new Date(`${attendanceDate}T00:00:00Z`).getUTCDay();
+  const schedules = assignment.shift.weeklySchedules || [];
+  if (schedules.length && !schedules.some((schedule) => Number(schedule.weekday) === weekday && schedule.isWorkingDay)) return null;
+  return assignment.shift;
 }
 
 function overlapWhere(effectiveFrom, effectiveTo) {

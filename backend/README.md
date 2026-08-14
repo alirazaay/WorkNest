@@ -452,4 +452,6 @@ Clock-in and clock-out are tenant-scoped transactional operations with row locki
 
 Attendance Phase 2 migration `20260814000100-create-attendance-shifts.js` adds `shifts`, `shift_weekly_schedules`, and `employee_shift_assignments`. Shift management is admin-only, tenant-scoped, audited, and prevents overlapping effective-dated assignments.
 
+Attendance Phase 3 migration `20260814000200-add-shift-calculations-to-attendance.js` adds shift references, worked/overtime minutes, and calculation snapshots to attendance records. The server derives late and overtime values from the effective assignment; tenant work-hour settings remain the fallback when no shift applies.
+
 The backend workflow is: create/configure cycle → activate → collect goals/evidence/reviews → submit reviews → `POST /api/v1/performance/cycles/:cycleId/calculate` → optional calibration → generate explanations/signatures/fairness flags → `POST /api/v1/performance/cycles/:cycleId/recalculate-equivalence` → complete/archive the cycle for employee release. All protected queries require the authenticated tenant; manager reads are department-scoped and employee reads are self-scoped/release-gated.
