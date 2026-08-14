@@ -21,7 +21,7 @@
     "db:backup": "powershell -ExecutionPolicy Bypass -File scripts/backup.ps1",
     "db:restore": "powershell -ExecutionPolicy Bypass -File scripts/restore.ps1",
     "qa": "powershell -ExecutionPolicy Bypass -File scripts/phase13-qa.ps1",
-    "test": "node --test"
+    "test": "node --test test"
   },
   "dependencies": {
     "bcryptjs": "3.0.2",

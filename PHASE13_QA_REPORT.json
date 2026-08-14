@@ -1,9 +1,9 @@
 {
-    "generatedAt":  "2026-08-08T10:19:25.9821554Z",
+    "generatedAt":  "2026-08-14T14:13:03.5806048Z",
     "results":  {
-                    "backendSyntax":  "passed",
-                    "backendTests":  "blocked_or_failed: run output contains environment/runtime failure",
-                    "frontendBuild":  "blocked_or_failed: run output contains environment/runtime failure",
+                    "backendSyntax":  "passed: continuity importer and backend source checks",
+                    "backendTests":  "passed: node --test test (76 passed, 0 failed)",
+                    "frontendBuild":  "passed: npm.cmd run build",
                     "liveChecks":  "not_run: pass -Live after services are running"
                 },
     "note":  "Full workflow tests require MySQL and running API services."

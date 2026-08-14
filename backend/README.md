@@ -460,6 +460,9 @@ Attendance Phase 5 adds `20260814000400-create-attendance-locations.js` and `202
 
 Attendance Phase 9 is a frontend UX refinement and does not change backend attendance calculations, authorization, or database behavior.
 
+### Attendance Phase 10 — security, performance, and QA
+
+
 QR Code Attendance is deferred by product decision. The backend currently exposes no QR token model or route, so the feature cannot be used accidentally or partially enabled.
 
 Biometric Attendance is deferred as well. No biometric provider adapter, device ingestion route, biometric tables, or biometric data storage has been introduced. Face recognition remains a future extension only.
@@ -469,3 +472,8 @@ Biometric Attendance is deferred as well. No biometric provider adapter, device 
 This phase is intentionally documentation-only. The backend has no face-recognition provider contract, route, model, image/template storage, or embedding storage. Future implementation must require explicit tenant enablement, consent and privacy controls, configurable retention, provider isolation, audit logging, and a security review before activation.
 
 The backend workflow is: create/configure cycle → activate → collect goals/evidence/reviews → submit reviews → `POST /api/v1/performance/cycles/:cycleId/calculate` → optional calibration → generate explanations/signatures/fairness flags → `POST /api/v1/performance/cycles/:cycleId/recalculate-equivalence` → complete/archive the cycle for employee release. All protected queries require the authenticated tenant; manager reads are department-scoped and employee reads are self-scoped/release-gated.
+### Attendance Phase 10 — security, performance, and QA
+
+The final attendance hardening pass verifies transactional clock mutations, tenant isolation, role authorization, duplicate prevention, GPS validation, audit logging, and server-authoritative shift calculations. The continuity importer syntax issue was fixed, and `npm test` now runs only `test/`, keeping the explicit rollback utility opt-in.
+
+Verification: `node --test test` passed all 76 tests; the frontend build passed; database schema, performance-isolation, and safety verification passed; and the continuity importer passes `node --check`. Live endpoint/browser checks require running services. QR and biometric attendance remain deferred.

@@ -469,6 +469,8 @@ Attendance Phase 5 adds GPS clock-in through `/api/v1/attendance/clock-in/gps`. 
 
 Attendance Phase 9 refines the frontend experience with a today-status panel, source/shift context, late and overtime visibility, richer status filters, responsive loading skeletons, actionable empty states, and navigation between table, calendar, and shift-management views.
 
+### Attendance Phase 10 — security, performance, and QA
+
 ### Deferred attendance features
 
 QR Code Attendance is intentionally deferred. No QR token tables, endpoints, UI, or feature flags have been added. It should remain unavailable until explicitly scheduled for implementation.
@@ -478,3 +480,8 @@ Biometric Attendance is also deferred. No biometric device tables, provider adap
 ### Phase 8 — Face recognition boundary
 
 Phase 8 is intentionally closed as a future-only boundary. WorkNest currently accepts only web and GPS attendance sources. Any future face-recognition implementation must be introduced behind explicit tenant configuration, provider contracts, consent/privacy controls, retention rules, and security review. No face templates, images, embeddings, or recognition endpoints exist today.
+### Attendance Phase 10 — security, performance, and QA
+
+Phase 10 completed the final static hardening pass for attendance. Mutations remain transactional and tenant-scoped; role authorization, duplicate clock prevention, GPS validation, audit logging, and backend-derived shift calculations are covered by the test suite. The historical continuity importer syntax issue was corrected, and the backend test command now targets `test/` so guarded operational scripts are not auto-discovered.
+
+Verification: `node --test test` passed 76 tests with 0 failures; `npm.cmd run build` passed; database schema, tenant-isolation, and safety verification passed; and `node --check scripts/historical-data/import-historical-hr.js` passed. Live browser/API checks require running services. QR and biometric attendance remain intentionally deferred.
