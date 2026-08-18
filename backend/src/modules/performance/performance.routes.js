@@ -29,7 +29,7 @@ router.post('/cycles', authorize('admin'), validate(performanceCycleCreateSchema
 router.get('/cycles/:id', authorize('admin', 'manager', 'employee'), cycleGet);
 router.get('/cycles/:cycleId/continuity-summary', authorize('admin', 'manager', 'employee'), cycleContinuitySummaryGet);
 router.patch('/cycles/:id', authorize('admin'), validate(performanceCycleUpdateSchema), cycleUpdate);
-router.get('/criteria', authorize('admin', 'manager'), criteriaList);
+router.get('/criteria', authorize('admin', 'manager', 'employee'), criteriaList);
 router.post('/criteria', authorize('admin'), validate(performanceCriterionCreateSchema), criterionCreate);
 router.patch('/criteria/:id', authorize('admin'), validate(performanceCriterionUpdateSchema), criterionUpdate);
 router.get('/templates', authorize('admin', 'manager'), templatesList);

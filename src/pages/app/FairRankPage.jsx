@@ -55,7 +55,7 @@ const TAB_GROUPS = [
     ],
   },
 ];
-const endpoints = { cycles: '/performance/cycles', criteria: '/performance/templates', goals: '/performance/goals', evidence: '/performance/evidence', reviews: '/performance/reviews', readiness: '/performance/promotion-profiles', rewards: '/performance/rewards', audit: '/performance/audit' };
+const endpoints = { cycles: '/performance/cycles', criteria: '/performance/criteria', goals: '/performance/goals', evidence: '/performance/evidence', reviews: '/performance/reviews', readiness: '/performance/promotion-profiles', rewards: '/performance/rewards', audit: '/performance/audit' };
 
 function responseData(res) { return res?.data?.data ?? res?.data ?? []; }
 function titleCase(v) { return String(v || '').replaceAll('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase()); }
@@ -126,7 +126,26 @@ export default function FairRankPage({ user, onExit }) {
         if (!cycle) setData({ items: [], cycles: [] });
         else setData({ items: responseData(await api.get(`/performance/cycles/${cycle.id}/${tab === 'calibration' ? 'calibration' : 'equivalence-groups'}`)), cycles, cycle });
       } else if (tab === 'goals') {
-        const [goalsRes, cyclesRes] = await Promise.all([api.get(endpoints[tab]), api.get('/performance/cycles')]); setData({ items: responseData(goalsRes), cycles: responseData(cyclesRes) });
+        const requests = [api.get(endpoints[tab]), api.get('/performance/cycles')];
+        if (canManage) requests.push(api.get('/employees', { params: { page: 1, pageSize: 100 } }));
+        const [goalsRes, cyclesRes, employeeRes] = await Promise.all(requests); const employeeData = employeeRes ? responseData(employeeRes) : [];
+        setData({ items: responseData(goalsRes), cycles: responseData(cyclesRes), employees: employeeData?.items || employeeData || [] });
+      } else if (['criteria', 'evidence', 'reviews', 'readiness', 'rewards'].includes(tab)) {
+        const requests = [api.get(endpoints[tab])];
+        if (['evidence', 'reviews', 'readiness', 'rewards'].includes(tab)) requests.push(api.get('/performance/cycles'));
+        if (['evidence', 'reviews'].includes(tab) && !canManage) requests.push(api.get('/performance/me'));
+        else if (['evidence', 'reviews', 'readiness', 'rewards'].includes(tab) && canManage) requests.push(api.get('/employees', { params: { page: 1, pageSize: 100 } }));
+        if (tab === 'reviews') requests.push(api.get('/performance/criteria'));
+        if (tab === 'readiness') requests.push(api.get('/performance/promotion-profiles'));
+        const responses = await Promise.all(requests);
+        const next = { items: responseData(responses[0]) };
+        let index = 1;
+        if (['evidence', 'reviews', 'readiness', 'rewards'].includes(tab)) next.cycles = responseData(responses[index++]);
+        if (['evidence', 'reviews'].includes(tab) && !canManage) { const selfData = responseData(responses[index++]); next.employees = selfData?.employee ? [selfData.employee] : []; }
+        else if (['evidence', 'reviews', 'readiness', 'rewards'].includes(tab) && canManage) { const employeeData = responseData(responses[index++]); next.employees = employeeData?.items || employeeData || []; }
+        if (tab === 'reviews') next.criteria = responseData(responses[index++]);
+        if (tab === 'readiness') next.profiles = responseData(responses[index++]);
+        setData(next);
       } else {
         setData({ items: responseData(await api.get(endpoints[tab])) });
       }
@@ -250,10 +269,13 @@ function PageContent({ tab, data, canManage, canAdmin, activeCycle, onRetry, set
   if (tab === 'my') return <MyPerformance data={data} />;
   if (tab === 'audit') return <AuditList items={data.items || []} />;
   if (tab === 'comparison') return <Comparison employees={data.employees || []} cycles={data.cycles || []} />;
+  if (tab === 'cycles') return <CyclesWorkspace items={data.items || []} onRetry={onRetry} canAdmin={canAdmin} />;
   if (tab === 'fairrank') return <FairRankGroups items={data.items || []} cycles={data.cycles || []} cycle={data.cycle} canAdmin={canAdmin} onRetry={onRetry} />;
+  if (tab === 'calibration') return <CalibrationWorkspace items={data.items || []} cycles={data.cycles || []} cycle={data.cycle} canAdmin={canAdmin} onRetry={onRetry} />;
   if (tab === 'continuity') return <ContinuityWorkspace data={data} onRetry={onRetry} setData={setData} canManage={canManage} />;
   if (tab === 'tna') return <TnaWorkspace items={data.items || []} onRetry={onRetry} />;
-  if (tab === 'goals') return <GoalsWorkspace items={data.items || []} cycles={data.cycles || []} onRetry={onRetry} canManage={canManage} />;
+  if (tab === 'goals') return <><div className="performance-action-bar">{canManage && <><GoalCreateButton cycles={data.cycles || []} employees={data.employees || []} onSaved={onRetry} /><GoalEditButton items={data.items || []} onSaved={onRetry} /></>}</div><GoalsWorkspace items={data.items || []} cycles={data.cycles || []} employees={data.employees || []} onRetry={onRetry} canManage={canManage} /></>;
+  if (['criteria', 'evidence', 'reviews', 'readiness', 'rewards'].includes(tab)) return <ActionWorkspace tab={tab} items={data.items || []} cycles={data.cycles || []} employees={data.employees || []} criteria={data.criteria || []} profiles={data.profiles || []} onRetry={onRetry} canManage={canManage} canAdmin={canAdmin} canSelfServe={!canManage && !canAdmin} />;
   if (tab === 'overview') {
     const values = data.overview || [];
     return <>
@@ -363,6 +385,20 @@ function FairRankGroups({ items, cycles, cycle, canAdmin, onRetry }) {
     } finally { setExpLoading(false); }
   }
 
+  async function resolveFlag(flag) {
+    const resolutionNote = window.prompt('Resolution note (minimum 5 characters):');
+    if (!resolutionNote || resolutionNote.trim().length < 5) return;
+    setAction(`resolve-${flag.id}`); setMessage('');
+    try {
+      await api.patch(`/performance/fairness-flags/${flag.id}`, { status: 'resolved', resolutionNote: resolutionNote.trim() });
+      setExplanations(responseData(await api.get(`/performance/cycles/${selectedCycleId}/fairness-flags`)));
+      setMessage('Fairness flag resolved and recorded in the audit log.');
+      await onRetry();
+    } catch (err) {
+      setMessage(err.response?.data?.error?.message || 'Unable to resolve fairness flag.');
+    } finally { setAction(''); }
+  }
+
   return <>
     <article className="performance-card">
       <div className="performance-card-heading">
@@ -422,7 +458,7 @@ function FairRankGroups({ items, cycles, cycle, canAdmin, onRetry }) {
                 <strong>{titleCase(flag.flagType)}</strong>
                 <small>{flag.employee?.user?.name || flag.employee?.employeeCode || 'Employee'} · {flag.message}</small>
               </div>
-              <div><StatusBadge status={flag.severity} /><StatusBadge status={flag.status} /></div>
+              <div><StatusBadge status={flag.severity} /><StatusBadge status={flag.status} />{canAdmin && flag.status !== 'resolved' && <button type="button" className="table-link" onClick={() => resolveFlag(flag)} disabled={Boolean(action)}>Resolve</button>}</div>
             </article>
           ))}</div>
         ) : <EmptyState text="No fairness flags for the selected cycle. Generate flags after calculating scores." />}
@@ -491,15 +527,131 @@ function ContinuityWorkspace({ data, onRetry, setData, canManage }) {
   </div>;
 }
 
+function CyclesWorkspace({ items, onRetry, canAdmin }) {
+  const transitions = { draft: ['active', 'Activate'], active: ['review', 'Open review'], review: ['calibration', 'Start calibration'], calibration: ['completed', 'Complete cycle'] };
+  const [message, setMessage] = useState('');
+  async function transition(cycle) { const [status, label] = transitions[cycle.status] || []; if (!status || !window.confirm(`${label} ${cycle.name}?`)) return; try { await api.patch(`/performance/cycles/${cycle.id}`, { status }); setMessage(`Cycle ${status} successfully.`); await onRetry(); } catch (err) { setMessage(err.response?.data?.error?.message || 'Unable to update cycle status.'); } }
+  return <article className="performance-card"><div className="performance-card-heading"><div><h2>Cycles</h2><p>Create cycles, activate them, collect reviews, calibrate, and complete the workflow.</p></div></div>{message && <p className="performance-inline-message">{message}</p>}{items.length ? <div className="performance-list">{items.map((cycle) => <article className="performance-list-card" key={cycle.id}><div><strong>{cycle.name}</strong><small>{cycle.year} · {titleCase(cycle.cycleType)} · {cycle.startDate} → {cycle.endDate}</small></div><div><StatusBadge status={cycle.status} />{canAdmin && transitions[cycle.status] && <button className="table-link" onClick={() => transition(cycle)}>{transitions[cycle.status][1]}</button>}</div></article>)}</div> : <EmptyState text="No performance cycles are available. Use New cycle to begin." />}</article>;
+}
+
+function CalibrationWorkspace({ items, cycles, cycle, canAdmin, onRetry }) {
+  const [cycleId, setCycleId] = useState(cycle?.id || cycles[0]?.id || ''); const [message, setMessage] = useState('');
+  const [rows, setRows] = useState(items);
+  useEffect(() => { setRows(items); }, [items]);
+  async function selectCycle(event) { const id = event.target.value; setCycleId(id); if (!id) { setRows([]); return; } try { setRows(responseData(await api.get(`/performance/cycles/${id}/calibration`))); } catch (err) { setMessage(err.response?.data?.error?.message || 'Unable to load calibration reviews.'); } }
+  async function decide(reviewId, action) { const justification = action === 'request_clarification' ? window.prompt('Explain what needs clarification:') : null; if (action === 'request_clarification' && !justification) return; try { await api.post(`/performance/reviews/${reviewId}/calibrate`, { action, justification }); setMessage('Calibration decision saved.'); await onRetry(); } catch (err) { setMessage(err.response?.data?.error?.message || 'Unable to save calibration decision.'); } }
+  return <article className="performance-card"><div className="performance-card-heading"><div><h2>Calibration</h2><p>Review submitted appraisals before FairRank calculation and release.</p></div></div><label className="comparison-cycle">Cycle<select value={cycleId} onChange={selectCycle}><option value="">Select cycle</option>{cycles.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label>{message && <p className="performance-inline-message">{message}</p>}{rows.length ? <div className="performance-list">{rows.map((item) => { const review = item.review || item; return <article className="performance-list-card" key={review.id}><div><strong>{review.employee?.user?.name || `Review #${review.id}`}</strong><small>{titleCase(review.reviewType)} · score {review.overallScore ?? item.scoreSnapshot?.finalScore ?? 'Pending'} · {titleCase(review.status)}</small></div><div><StatusBadge status={review.status} />{canAdmin && ['submitted', 'in_progress', 'draft'].includes(review.status) && <><button className="table-link" onClick={() => decide(review.id, 'confirm')}>Confirm</button><button className="table-link" onClick={() => decide(review.id, 'request_clarification')}>Clarify</button></>}</div></article>; })}</div> : <EmptyState text="No submitted reviews are available for calibration." />}</article>;
+}
+
+function ActionWorkspace({ tab, items, cycles, employees, criteria, profiles, onRetry, canManage, canAdmin, canSelfServe }) {
+  const [modal, setModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+  const [formError, setFormError] = useState('');
+  const [profileId, setProfileId] = useState('');
+  const [readinessRows, setReadinessRows] = useState([]);
+  const [editId, setEditId] = useState('');
+  const selectedProfile = profiles.find((profile) => String(profile.id) === String(profileId));
+  const title = { criteria: 'Criteria', evidence: 'Evidence', reviews: 'Reviews', readiness: 'Readiness', rewards: 'Rewards' }[tab];
+  const actionLabel = { criteria: 'criterion', evidence: 'evidence', reviews: 'review', readiness: 'assessment', rewards: 'reward' }[tab];
+  const canCreate = tab === 'criteria' ? canAdmin : (['evidence', 'reviews'].includes(tab) ? (canManage || canSelfServe) : canManage);
+  async function viewReadiness(employeeId) { try { setReadinessRows(responseData(await api.get(`/performance/employees/${employeeId}/promotion-readiness`))); } catch (err) { setMessage(err.response?.data?.error?.message || 'Unable to load promotion readiness.'); } }
+  async function editRecord() { const item = items.find((row) => String(row.id) === String(editId)); if (!item) return; const value = window.prompt(tab === 'criteria' ? 'Criterion name:' : 'Goal progress (0-100):', tab === 'criteria' ? item.name : item.progressPercentage); if (value === null) return; try { const payload = tab === 'criteria' ? { name: value.trim() } : { progressPercentage: Number(value) }; await api.patch(`/performance/${tab}/${item.id}`, payload); setMessage(`${title} updated successfully.`); await onRetry(); } catch (err) { setMessage(err.response?.data?.error?.message || `Unable to update ${title.toLowerCase()}.`); } }
+
+  async function submit(event) {
+    event.preventDefault(); setSaving(true); setFormError('');
+    const form = new FormData(event.currentTarget); const raw = Object.fromEntries(form.entries());
+    try {
+      let payload = raw; let route = `/performance/${tab}`;
+      if (tab === 'criteria') payload = { ...raw, weight: Number(raw.weight || 0), ratingScaleMin: Number(raw.ratingScaleMin || 0), ratingScaleMax: Number(raw.ratingScaleMax || 5), evidenceRequired: raw.evidenceRequired === 'on' };
+      if (tab === 'evidence') payload = { ...raw, cycleId: Number(raw.cycleId), employeeId: Number(raw.employeeId), eventDate: raw.eventDate, sourceType: raw.sourceType || 'manual' };
+      if (tab === 'reviews') {
+        payload = { cycleId: Number(raw.cycleId), employeeId: Number(raw.employeeId), reviewType: raw.reviewType, strengths: raw.strengths || null, improvementAreas: raw.improvementAreas || null, comments: raw.comments || null, scores: criteria.map((criterion) => ({ criterionId: Number(criterion.id), rawScore: Number(raw[`score_${criterion.id}`]) })).filter((score) => Number.isFinite(score.rawScore)) };
+      }
+      if (tab === 'readiness') {
+        payload = { cycleId: Number(raw.cycleId), employeeId: Number(raw.employeeId), promotionProfileId: Number(raw.promotionProfileId), comments: raw.comments || null, scores: (selectedProfile?.criteria || []).map((criterion) => ({ criterionId: Number(criterion.id), score: Number(raw[`promotion_${criterion.id}`]) })).filter((score) => Number.isFinite(score.score)) };
+        route = '/performance/promotion-assessments';
+      }
+      if (tab === 'rewards') payload = { cycleId: Number(raw.cycleId), employeeId: Number(raw.employeeId), rewardType: raw.rewardType, recommendedValue: Number(raw.recommendedValue), reason: raw.reason };
+      if (tab === 'reviews' && !payload.scores.length) throw new Error('Enter at least one criterion score.');
+      if (tab === 'readiness' && !payload.scores.length) throw new Error('Enter at least one readiness score.');
+      await api.post(route, payload); setModal(false); setProfileId(''); setMessage(`${title} record saved successfully.`); await onRetry();
+    } catch (err) { setFormError(err.response?.data?.error?.message || err.message || `Unable to save ${title.toLowerCase()}.`); }
+    finally { setSaving(false); }
+  }
+
+  async function reviewReward(id, action) {
+    const reason = action === 'reject' ? window.prompt('Reason for rejecting this reward:') : null;
+    if (action === 'reject' && !reason) return;
+    try { await api.post(`/performance/rewards/${id}/${action}`, action === 'reject' ? { reason } : {}); setMessage(`Reward ${action}d successfully.`); await onRetry(); }
+    catch (err) { setMessage(err.response?.data?.error?.message || 'Unable to update reward status.'); }
+  }
+
+  return <article className="performance-card">
+    <div className="performance-card-heading"><div><h2>{title}</h2><p>{tab === 'criteria' ? 'Define the criteria used by review templates.' : `Manage ${title.toLowerCase()} using saved tenant-scoped records.`}</p></div>{canCreate && <Button size="sm" onClick={() => { setFormError(''); setModal(true); }}> <Plus size={15} /> Add {actionLabel}</Button>}</div>
+    {message && <p className="performance-inline-message" role="status">{message}</p>}
+    {['criteria', 'goals'].includes(tab) && canManage && <div className="performance-action-bar"><select value={editId} onChange={(event) => setEditId(event.target.value)}><option value="">Select record to edit</option>{items.map((item) => <option value={item.id} key={item.id}>{item.name || item.title}</option>)}</select><button className="table-link" disabled={!editId} onClick={editRecord}>Edit selected</button></div>}
+    {tab === 'readiness' && canManage && <div className="performance-list"><h3>Employee readiness results</h3>{employees.map((employee) => <button className="table-link" key={employee.id} onClick={() => viewReadiness(employee.id)}>{employee.user?.name || employee.employeeCode}</button>)}{readinessRows.map((row) => <div className="performance-list-card" key={row.id}><strong>{row.profile?.name || 'Assessment'}</strong><span>{row.readinessScore}% · {titleCase(row.recommendation)}</span></div>)}</div>}
+    {items.length ? <div className="performance-list">{items.map((item) => <article className="performance-list-card" key={item.id || item.name}>
+      <div><strong>{item.name || item.title || item.employee?.user?.name || item.employee?.employeeCode || `Record #${item.id}`}</strong><small>{item.description || item.reason || item.status || item.category || item.targetRole || ''}</small></div>
+      <div className="performance-row-actions"><StatusBadge status={titleCase(item.status || item.verificationStatus || 'recorded')} />{tab === 'reviews' && item.status === 'draft' && <button className="table-link" onClick={async () => { try { await api.post(`/performance/reviews/${item.id}/submit`); await onRetry(); } catch (err) { setMessage(err.response?.data?.error?.message || 'Unable to submit review.'); } }}>Submit</button>}{tab === 'evidence' && canManage && item.verificationStatus === 'pending' && <button className="table-link" onClick={async () => { try { await api.patch(`/performance/evidence/${item.id}/verify`, { verificationStatus: 'verified' }); await onRetry(); } catch (err) { setMessage(err.response?.data?.error?.message || 'Unable to verify evidence.'); } }}>Verify</button>}{tab === 'rewards' && canAdmin && item.status === 'recommended' && <><button className="table-link" onClick={() => reviewReward(item.id, 'approve')}>Approve</button><button className="table-link danger" onClick={() => reviewReward(item.id, 'reject')}>Reject</button></>}</div>
+    </article>)}</div> : <EmptyState text={`No ${title.toLowerCase()} records are available yet.`} />}
+    {modal && <div className="modal-backdrop"><form className="modal performance-modal" onSubmit={submit}><button type="button" className="modal-close" onClick={() => setModal(false)}>×</button><h2>Add {title.slice(0, -1)}</h2><p>Save this step to continue the FairRank workflow.</p>
+      {tab === 'criteria' && <><label>Name<input name="name" required minLength="2" /></label><label>Category<input name="category" required minLength="2" /></label><label>Weight (%)<input name="weight" type="number" min="0" max="100" defaultValue="0" /></label><label>Description<textarea name="description" /></label><label>Rating max<input name="ratingScaleMax" type="number" min="1" max="100" defaultValue="5" /></label><label><input name="evidenceRequired" type="checkbox" defaultChecked /> Evidence required</label></>}
+      {tab === 'evidence' && <><RecordSelectors cycles={cycles} employees={employees} /><label>Evidence type<select name="evidenceType" defaultValue="manager_observation"><option value="kpi_result">KPI result</option><option value="project_completion">Project completion</option><option value="manager_observation">Manager observation</option><option value="training_completion">Training completion</option><option value="quality_metric">Quality metric</option></select></label><label>Title<input name="title" required minLength="3" /></label><label>Event date<input name="eventDate" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} /></label><label>Description<textarea name="description" /></label></>}
+      {tab === 'reviews' && <><RecordSelectors cycles={cycles} employees={employees} /><label>Review type<select name="reviewType" defaultValue={canManage ? 'manager' : 'self'}><option value="self">Self</option>{canManage && <option value="manager">Manager</option>}</select></label><fieldset><legend>Criterion scores (0–100)</legend>{criteria.map((criterion) => <label key={criterion.id}>{criterion.name}<input name={`score_${criterion.id}`} type="number" min="0" max="100" /></label>)}</fieldset><label>Comments<textarea name="comments" /></label></>}
+      {tab === 'readiness' && <><RecordSelectors cycles={cycles} employees={employees} /><label>Promotion profile<select name="promotionProfileId" required value={profileId} onChange={(event) => setProfileId(event.target.value)}><option value="">Select profile</option>{profiles.map((profile) => <option value={profile.id} key={profile.id}>{profile.name} → {profile.targetRole}</option>)}</select></label>{selectedProfile?.criteria?.map((criterion) => <label key={criterion.id}>{criterion.criterionName}<input name={`promotion_${criterion.id}`} type="number" min="0" max="100" /></label>)}<label>Comments<textarea name="comments" /></label></>}
+      {tab === 'rewards' && <><RecordSelectors cycles={cycles} employees={employees} /><label>Reward type<select name="rewardType" defaultValue="recognition"><option value="salary_increment">Salary increment</option><option value="performance_bonus">Performance bonus</option><option value="promotion">Promotion</option><option value="recognition">Recognition</option><option value="development_opportunity">Development opportunity</option></select></label><label>Recommended value<input name="recommendedValue" type="number" min="0" defaultValue="0" /></label><label>Reason<textarea name="reason" required minLength="5" /></label></>}
+      {formError && <p className="performance-form-error" role="alert">{formError}</p>}<Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save record'} <ArrowRight size={16} /></Button>
+    </form></div>}
+  </article>;
+}
+
+function RecordSelectors({ cycles, employees }) { return <><label>Performance cycle<select name="cycleId" required><option value="">Select cycle</option>{cycles.map((cycle) => <option value={cycle.id} key={cycle.id}>{cycle.name}</option>)}</select></label><label>Employee<select name="employeeId" required><option value="">Select employee</option>{employees.map((employee) => <option value={employee.id} key={employee.id}>{employee.user?.name || employee.employeeCode} ({employee.employeeCode})</option>)}</select></label></>; }
+
 function TnaWorkspace({ items, onRetry }) {
   const [priority, setPriority] = useState(''); const [status, setStatus] = useState(''); const [signal, setSignal] = useState(''); const filtered = items.filter((item) => (!priority || item.priority === priority) && (!status || item.status === status) && (!signal || item.signalCode === signal));
   return <article className="performance-card"><div className="performance-card-heading"><div><h2>Training Needs Analysis</h2><p>Deterministic development signals from historical performance continuity.</p></div><button className="icon-button" onClick={onRetry} aria-label="Refresh training needs"><RefreshCw size={17} /></button></div><div className="tna-filters"><select value={priority} onChange={(e) => setPriority(e.target.value)}><option value="">All priorities</option><option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select><select value={status} onChange={(e) => setStatus(e.target.value)}><option value="">All statuses</option><option value="identified">Identified</option><option value="reviewed">Reviewed</option><option value="planned">Planned</option><option value="in_progress">In progress</option><option value="completed">Completed</option></select><select value={signal} onChange={(e) => setSignal(e.target.value)}><option value="">All signals</option>{[...new Set(items.map((item) => item.signalCode).filter(Boolean))].map((value) => <option value={value} key={value}>{titleCase(value)}</option>)}</select></div>{filtered.length ? <div className="performance-list">{filtered.map((item) => <article className="performance-list-card tna-card" key={item.id}><div><strong>{item.employee?.user?.name || item.employee?.employeeCode || 'Employee'}</strong><small>{titleCase(item.signalCode || 'MANUAL')} · {item.reason}</small><small>Recommended: {item.recommendedTraining || 'Review with manager'}</small></div><div><StatusBadge status={item.priority} /><StatusBadge status={item.status} /></div></article>)}</div> : <EmptyState text="No training needs match the selected filters." />}</article>;
 }
 
-function GoalsWorkspace({ items, cycles, onRetry, canManage }) {
+function GoalsWorkspace({ items, cycles, employees, onRetry, canManage }) {
   const [targetCycles, setTargetCycles] = useState({}); const [message, setMessage] = useState(''); const incomplete = items.filter((item) => !['completed', 'cancelled'].includes(item.status) && Number(item.progressPercentage || 0) < 100);
   async function carryForward(goal) { const targetCycleId = targetCycles[goal.id]; if (!targetCycleId) return; setMessage(''); try { await api.post(`/performance/goals/${goal.id}/carry-forward`, { targetCycleId: Number(targetCycleId) }); setMessage('Goal carried forward successfully.'); onRetry(); } catch (err) { setMessage(err.response?.data?.error?.message || 'Unable to carry forward this goal.'); } }
   return <article className="performance-card"><div className="performance-card-heading"><div><h2>Goals and continuity</h2><p>Completed goals remain historical. Only incomplete goals can be explicitly carried forward.</p></div><button className="icon-button" onClick={onRetry} aria-label="Refresh goals"><RefreshCw size={17} /></button></div>{message && <p className="performance-inline-message">{message}</p>}{items.length ? <div className="performance-list">{items.map((goal) => <article className="performance-list-card goal-continuity-card" key={goal.id}><div><strong>{goal.title}</strong><small>{goal.cycle?.name || 'Performance cycle'} · {titleCase(goal.status)} · {Number(goal.progressPercentage || 0)}% complete</small><small>Continuity: {titleCase(goal.continuityStatus || 'not_applicable')}</small></div>{canManage && incomplete.some((item) => item.id === goal.id) && <div className="goal-carry-forward"><select value={targetCycles[goal.id] || ''} onChange={(event) => setTargetCycles((current) => ({ ...current, [goal.id]: event.target.value }))}><option value="">Carry to cycle...</option>{cycles.filter((cycle) => cycle.id !== goal.cycleId && !['completed', 'archived'].includes(cycle.status)).map((cycle) => <option value={cycle.id} key={cycle.id}>{cycle.name}</option>)}</select><button className="table-link" disabled={!targetCycles[goal.id]} onClick={() => carryForward(goal)}>Carry forward</button></div>}</article>)}</div> : <EmptyState text="No performance goals are available." />}</article>;
+}
+
+function GoalCreateButton({ cycles, employees, onSaved }) {
+  const [open, setOpen] = useState(false); const [saving, setSaving] = useState(false); const [error, setError] = useState('');
+  async function submit(event) { event.preventDefault(); setSaving(true); setError(''); try { const raw = Object.fromEntries(new FormData(event.currentTarget)); await api.post('/performance/goals', { ...raw, cycleId: Number(raw.cycleId), employeeId: Number(raw.employeeId), weight: Number(raw.weight || 0), progressPercentage: 0, status: 'not_started' }); setOpen(false); onSaved(); } catch (err) { setError(err.response?.data?.error?.message || 'Unable to create goal.'); } finally { setSaving(false); } }
+  return <>{<Button size="sm" onClick={() => setOpen(true)}><Plus size={15} /> Add goal</Button>}{open && <div className="modal-backdrop"><form className="modal performance-modal" onSubmit={submit}><button type="button" className="modal-close" onClick={() => setOpen(false)}>×</button><h2>Add goal</h2><label>Cycle<select name="cycleId" required><option value="">Select cycle</option>{cycles.map((cycle) => <option value={cycle.id} key={cycle.id}>{cycle.name}</option>)}</select></label><label>Employee<select name="employeeId" required><option value="">Select employee</option>{employees.map((employee) => <option value={employee.id} key={employee.id}>{employee.user?.name || employee.employeeCode}</option>)}</select></label><label>Title<input name="title" required minLength="3" /></label><label>Goal type<select name="goalType" defaultValue="kpi"><option value="kpi">KPI</option><option value="objective">Objective</option><option value="development">Development</option><option value="project">Project</option></select></label><label>Weight (%)<input name="weight" type="number" min="0" max="100" defaultValue="0" /></label>{error && <p className="performance-form-error" role="alert">{error}</p>}<Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Create goal'}</Button></form></div>}</>;
+}
+
+function GoalEditButton({ items, onSaved }) {
+  const [goalId, setGoalId] = useState('');
+  const [saving, setSaving] = useState(false);
+  async function editGoal() {
+    const goal = items.find((item) => String(item.id) === String(goalId));
+    if (!goal) return;
+    const value = window.prompt('Goal progress (0-100):', String(goal.progressPercentage ?? 0));
+    if (value === null) return;
+    const progressPercentage = Number(value);
+    if (!Number.isFinite(progressPercentage) || progressPercentage < 0 || progressPercentage > 100) return;
+    setSaving(true);
+    try {
+      await api.patch(`/performance/goals/${goal.id}`, { progressPercentage });
+      await onSaved();
+      setGoalId('');
+    } finally {
+      setSaving(false);
+    }
+  }
+  return <div className="performance-action-bar">
+    <select aria-label="Select goal to edit" value={goalId} onChange={(event) => setGoalId(event.target.value)}>
+      <option value="">Select goal to edit</option>
+      {items.map((item) => <option value={item.id} key={item.id}>{item.title}</option>)}
+    </select>
+    <button type="button" className="table-link" disabled={!goalId || saving} onClick={editGoal}>{saving ? 'Saving...' : 'Edit selected'}</button>
+  </div>;
 }
 
 function EmptyState({ text }) { return <div className="performance-empty"><CircleAlert size={22} /><p>{text}</p></div>; }
