@@ -84,7 +84,6 @@ export default function FairRankPage({ user, onExit }) {
   const [formError, setFormError] = useState('');
   const tabCache = useRef(new Map());
   const [page, setPage] = useState(1);
-  const [actionResult, setActionResult] = useState(null);
 
   // Filter each group down to tabs the current role can see; drop empty groups.
   const visibleGroups = TAB_GROUPS
@@ -337,6 +336,7 @@ function FairRankGroups({ items, cycles, cycle, canAdmin, onRetry }) {
   const [groupItems, setGroupItems] = useState(items);
   const [action, setAction] = useState('');
   const [message, setMessage] = useState('');
+  const [actionResult, setActionResult] = useState(null);
 
   // Sub-panel: signatures and explanations
   const [sigPanel, setSigPanel] = useState(false);
