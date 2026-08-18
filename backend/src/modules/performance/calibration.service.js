@@ -40,10 +40,12 @@ export async function listCalibration(auth, cycleId, revealIdentity = false) {
     if (!manager?.departmentId) throw new AppError('Manager is not assigned to a department', 403, 'NO_MANAGER_DEPARTMENT');
     const employees = await Employee.findAll({ where: { tenantId: auth.tenantId, departmentId: manager.departmentId }, attributes: ['id'] }); where.employeeId = { [Op.in]: employees.map(row => row.id) };
   }
-  const reviews = await PerformanceReview.findAll({ where, include: reviewInclude, order: [['created_at', 'DESC']] });
-  const snapshots = await PerformanceScoreSnapshot.findAll({ where: { tenantId: auth.tenantId, ...(cycleId ? { cycleId } : {}) } });
-  const decisions = await PerformanceCalibrationDecision.findAll({ where: { tenantId: auth.tenantId, ...(cycleId ? { cycleId } : {}) } });
-  const groups = await PerformanceEquivalenceGroup.findAll({ where: { tenantId: auth.tenantId, ...(cycleId ? { cycleId } : {}) }, include: [{ model: PerformanceEquivalenceMember, as: 'members' }] });
+  const [reviews, snapshots, decisions, groups] = await Promise.all([
+    PerformanceReview.findAll({ where, include: reviewInclude, order: [['created_at', 'DESC']] }),
+    PerformanceScoreSnapshot.findAll({ where: { tenantId: auth.tenantId, ...(cycleId ? { cycleId } : {}) } }),
+    PerformanceCalibrationDecision.findAll({ where: { tenantId: auth.tenantId, ...(cycleId ? { cycleId } : {}) } }),
+    PerformanceEquivalenceGroup.findAll({ where: { tenantId: auth.tenantId, ...(cycleId ? { cycleId } : {}) }, include: [{ model: PerformanceEquivalenceMember, as: 'members' }] }),
+  ]);
   const snapshotMap = new Map(snapshots.map(row => [`${row.cycleId}:${row.employeeId}`, row])); const decisionMap = new Map(decisions.map(row => [row.reviewId, row])); const groupMap = new Map(); for (const group of groups) for (const member of group.members) groupMap.set(`${group.cycleId}:${member.employeeId}`, group);
   const settings = await getCalibrationSettings(auth); const items = reviews.map(review => { const snapshot = snapshotMap.get(`${review.cycleId}:${review.employeeId}`); const evidenceTotal = review.scores.length; const covered = review.scores.filter(score => Number(score.evidenceCount) > 0).length; return { review, scoreSnapshot: snapshot, evidenceCoveragePercentage: evidenceTotal ? Math.round((covered / evidenceTotal) * 10000) / 100 : 0, equivalenceGroup: groupMap.get(`${review.cycleId}:${review.employeeId}`) ?? null, calibrationDecision: decisionMap.get(review.id) ?? null }; });
   return settings.blindReviewEnabled && !(auth.role === 'admin' && revealIdentity) ? items.map((item, index) => blindItem(item, index + 1)) : items.map(item => ({ ...item, identityHidden: false }));

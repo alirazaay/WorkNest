@@ -26,28 +26,56 @@ async function employeeFor(auth, id) {
   return employee;
 }
 
-async function sourceData(auth, cycleId, employeeId) {
-  const snapshot = await PerformanceScoreSnapshot.findOne({ where: { tenantId: auth.tenantId, cycleId, employeeId } });
+/**
+ * Fetch all source data needed to build an explanation for one employee.
+ * Accepts an optional Sequelize `transaction` so calls inside `generateCycleExplanations`
+ * read from the same consistent snapshot as the outer transaction.
+ */
+async function sourceData(auth, cycleId, employeeId, transaction) {
+  const txOpt = transaction ? { transaction } : {};
+  const snapshot = await PerformanceScoreSnapshot.findOne({ where: { tenantId: auth.tenantId, cycleId, employeeId }, ...txOpt });
   if (!snapshot) throw new AppError('Performance score has not been calculated yet', 404, 'PERFORMANCE_SCORE_NOT_FOUND');
-  const reviews = await PerformanceReview.findAll({ where: { tenantId: auth.tenantId, cycleId, employeeId, status: { [Op.in]: ['submitted', 'released'] } }, include: [{ model: PerformanceReviewScore, as: 'scores' }] }); const review = reviews.sort((a, b) => (priority[b.reviewType] || 0) - (priority[a.reviewType] || 0))[0] ?? null;
+  const reviews = await PerformanceReview.findAll({ where: { tenantId: auth.tenantId, cycleId, employeeId, status: { [Op.in]: ['submitted', 'released'] } }, include: [{ model: PerformanceReviewScore, as: 'scores' }], ...txOpt });
+  const review = reviews.sort((a, b) => (priority[b.reviewType] || 0) - (priority[a.reviewType] || 0))[0] ?? null;
   const evidenceCoverage = review?.scores?.length ? (review.scores.filter(score => Number(score.evidenceCount) > 0).length / review.scores.length) * 100 : 0;
-  const signature = await PerformanceSignature.findOne({ where: { tenantId: auth.tenantId, cycleId, employeeId } });
-  const promotionAssessment = await EmployeePromotionAssessment.findOne({ where: { tenantId: auth.tenantId, cycleId, employeeId }, order: [['created_at', 'DESC']] });
-  const promotionProfile = promotionAssessment ? await PromotionProfile.findOne({ where: { id: promotionAssessment.promotionProfileId, tenantId: auth.tenantId }, attributes: ['id', 'targetRole'] }) : null;
-  const groups = await PerformanceEquivalenceGroup.findAll({ where: { tenantId: auth.tenantId, cycleId }, include: [{ model: PerformanceEquivalenceMember, as: 'members' }] }); const equivalenceGroup = groups.find(group => group.members.some(member => member.employeeId === employeeId)) ?? null;
+  const signature = await PerformanceSignature.findOne({ where: { tenantId: auth.tenantId, cycleId, employeeId }, ...txOpt });
+  const promotionAssessment = await EmployeePromotionAssessment.findOne({ where: { tenantId: auth.tenantId, cycleId, employeeId }, order: [['created_at', 'DESC']], ...txOpt });
+  const promotionProfile = promotionAssessment ? await PromotionProfile.findOne({ where: { id: promotionAssessment.promotionProfileId, tenantId: auth.tenantId }, attributes: ['id', 'targetRole'], ...txOpt }) : null;
+  const groups = await PerformanceEquivalenceGroup.findAll({ where: { tenantId: auth.tenantId, cycleId }, include: [{ model: PerformanceEquivalenceMember, as: 'members' }], ...txOpt });
+  const equivalenceGroup = groups.find(group => group.members.some(member => member.employeeId === employeeId)) ?? null;
   return { snapshot, review, evidenceCoverage, signature, equivalenceGroup, promotionAssessment, promotionProfile };
 }
 
-export async function getAppraisalExplanation(auth, cycleId, employeeId) { const cycle = await PerformanceCycle.findOne({ where: { id: cycleId, tenantId: auth.tenantId } }); if (!cycle) throw new AppError('Performance cycle not found', 404, 'PERFORMANCE_CYCLE_NOT_FOUND'); await employeeFor(auth, employeeId); assertEmployeeRelease(auth, cycle); const explanation = await PerformanceAppraisalExplanation.findOne({ where: { tenantId: auth.tenantId, cycleId, employeeId }, include: employeeInclude }); if (!explanation) throw new AppError('Appraisal explanation has not been generated yet', 404, 'APPRAISAL_EXPLANATION_NOT_FOUND'); return explanation; }
+export async function getAppraisalExplanation(auth, cycleId, employeeId) {
+  const cycle = await PerformanceCycle.findOne({ where: { id: cycleId, tenantId: auth.tenantId } });
+  if (!cycle) throw new AppError('Performance cycle not found', 404, 'PERFORMANCE_CYCLE_NOT_FOUND');
+  await employeeFor(auth, employeeId);
+  assertEmployeeRelease(auth, cycle);
+  const explanation = await PerformanceAppraisalExplanation.findOne({ where: { tenantId: auth.tenantId, cycleId, employeeId }, include: employeeInclude });
+  if (!explanation) throw new AppError('Appraisal explanation has not been generated yet', 404, 'APPRAISAL_EXPLANATION_NOT_FOUND');
+  return explanation;
+}
 
 export async function generateCycleExplanations(auth, cycleId) {
-  const cycle = await PerformanceCycle.findOne({ where: { id: cycleId, tenantId: auth.tenantId } }); if (!cycle) throw new AppError('Performance cycle not found', 404, 'PERFORMANCE_CYCLE_NOT_FOUND');
+  const cycle = await PerformanceCycle.findOne({ where: { id: cycleId, tenantId: auth.tenantId } });
+  if (!cycle) throw new AppError('Performance cycle not found', 404, 'PERFORMANCE_CYCLE_NOT_FOUND');
   return sequelize.transaction(async transaction => {
-    const snapshots = await PerformanceScoreSnapshot.findAll({ where: { tenantId: auth.tenantId, cycleId }, transaction }); const created = []; const skipped = [];
+    const snapshots = await PerformanceScoreSnapshot.findAll({ where: { tenantId: auth.tenantId, cycleId }, transaction });
+
+    // Pre-batch: load all existing explanations for this cycle in one query to avoid N+1 inside the loop.
+    const existingExplanations = await PerformanceAppraisalExplanation.findAll({ where: { tenantId: auth.tenantId, cycleId }, attributes: ['employeeId', 'id'], transaction });
+    const existingByEmployee = new Map(existingExplanations.map(exp => [exp.employeeId, exp]));
+
+    const created = []; const skipped = [];
     for (const snapshot of snapshots) {
-      const existing = await PerformanceAppraisalExplanation.findOne({ where: { tenantId: auth.tenantId, cycleId, employeeId: snapshot.employeeId }, transaction, lock: transaction.LOCK.UPDATE }); if (existing) { skipped.push({ employeeId: snapshot.employeeId, explanationId: existing.id }); continue; }
-      const data = await sourceData(auth, cycleId, snapshot.employeeId); const explanation = buildPerformanceExplanation({ snapshot, ...data }); const row = await PerformanceAppraisalExplanation.create({ tenantId: auth.tenantId, cycleId, employeeId: snapshot.employeeId, ...explanation, generatedBy: auth.userId, generatedAt: new Date() }, { transaction });
-      await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'performance_appraisal_explanation_generated', entityType: 'performance_appraisal_explanation', entityId: row.id, afterData: { cycleId, employeeId: snapshot.employeeId, sourceSnapshotId: snapshot.id }, transaction }); created.push(row);
+      const existing = existingByEmployee.get(snapshot.employeeId);
+      if (existing) { skipped.push({ employeeId: snapshot.employeeId, explanationId: existing.id }); continue; }
+      // Pass the transaction so sourceData reads from the same consistent state.
+      const data = await sourceData(auth, cycleId, snapshot.employeeId, transaction);
+      const explanation = buildPerformanceExplanation({ snapshot, ...data });
+      const row = await PerformanceAppraisalExplanation.create({ tenantId: auth.tenantId, cycleId, employeeId: snapshot.employeeId, ...explanation, generatedBy: auth.userId, generatedAt: new Date() }, { transaction });
+      await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'performance_appraisal_explanation_generated', entityType: 'performance_appraisal_explanation', entityId: row.id, afterData: { cycleId, employeeId: snapshot.employeeId, sourceSnapshotId: snapshot.id }, transaction });
+      created.push(row);
     }
     return { cycleId, snapshotCount: snapshots.length, created, skipped };
   });

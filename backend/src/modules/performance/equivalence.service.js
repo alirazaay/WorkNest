@@ -53,6 +53,9 @@ export async function listEquivalenceGroups(auth, cycleId) {
 export async function recalculateEquivalence(auth, cycleId) {
   const cycle = await PerformanceCycle.findOne({ where: { id: cycleId, tenantId: auth.tenantId } });
   if (!cycle) throw new AppError('Performance cycle not found', 404, 'PERFORMANCE_CYCLE_NOT_FOUND');
+  if (['completed', 'archived'].includes(cycle.status)) {
+    throw new AppError('Equivalence groups cannot be changed for completed or archived cycles', 409, 'PERFORMANCE_CYCLE_FROZEN');
+  }
   const settings = await getEquivalenceSettings(auth);
   return sequelize.transaction(async transaction => {
     const snapshots = await PerformanceScoreSnapshot.findAll({ where: { tenantId: auth.tenantId, cycleId }, transaction });

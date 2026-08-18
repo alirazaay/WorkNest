@@ -6,6 +6,7 @@ import { recordAudit } from '../../services/audit.service.js';
 import { assertEmployeeRelease } from './access.js';
 
 const normalize = value => String(value || '').trim().toLowerCase();
+
 function categoriesFor(rule) {
   const value = rule?.categories;
   if (Array.isArray(value)) return value;
@@ -25,8 +26,18 @@ export function selectPerformanceSignature(lines, rules) {
   }).filter(row => row.matching.length).sort((a, b) => b.score - a.score || Number(a.rule.sortOrder || 0) - Number(b.rule.sortOrder || 0) || String(a.rule.name).localeCompare(String(b.rule.name)));
   if (!ranked.length) return null;
   const chosen = ranked[0];
+  // Derive the matched categories from the actual rule object (not from `chosen`, which is our ranked result).
+  const ruleCategories = categoriesFor(chosen.rule);
   const strongestFactors = [...chosen.matching].sort((a, b) => Number(b.weightedScore || 0) - Number(a.weightedScore || 0)).slice(0, 3).map(line => ({ criterionId: line.criterionId, factor: line.criterion || line.category, category: line.category, weightedScore: Number(line.weightedScore || 0) }));
-  return { ruleId: chosen.rule.id, signatureName: chosen.rule.name, signatureScore: Math.round(chosen.score * 1000) / 1000, strongestFactors, matchedCategories: chosen.matching.map(line => line.category).filter(Boolean) };
+  return {
+    ruleId: chosen.rule.id,
+    signatureName: chosen.rule.name,
+    signatureScore: Math.round(chosen.score * 1000) / 1000,
+    strongestFactors,
+    matchedCategories: chosen.matching.map(line => line.category).filter(Boolean),
+    // Store the rule's configured categories for the calculationDetails — derived from the rule object itself.
+    ruleCategories,
+  };
 }
 
 export async function listSignatureRules(auth) { return PerformanceSignatureRule.findAll({ where: { tenantId: auth.tenantId }, order: [['sort_order', 'ASC'], ['name', 'ASC']] }); }
@@ -73,16 +84,33 @@ export async function generateCycleSignatures(auth, cycleId) {
   if (!rules.length) throw new AppError('Create at least one active signature rule before generating signatures', 409, 'SIGNATURE_RULES_REQUIRED');
   return sequelize.transaction(async transaction => {
     const snapshots = await PerformanceScoreSnapshot.findAll({ where: { tenantId: auth.tenantId, cycleId }, transaction });
+
+    // Pre-batch: load all existing signatures for this cycle in one query to avoid N+1 inside the loop.
+    const existingSignatures = await PerformanceSignature.findAll({ where: { tenantId: auth.tenantId, cycleId }, attributes: ['employeeId', 'id'], transaction });
+    const existingByEmployee = new Map(existingSignatures.map(sig => [sig.employeeId, sig]));
+
     const created = []; const skipped = []; const unmatched = [];
     for (const snapshot of snapshots) {
-      const existing = await PerformanceSignature.findOne({ where: { tenantId: auth.tenantId, cycleId, employeeId: snapshot.employeeId }, transaction, lock: transaction.LOCK.UPDATE });
+      const existing = existingByEmployee.get(snapshot.employeeId);
       if (existing) { skipped.push({ employeeId: snapshot.employeeId, signatureId: existing.id }); continue; }
       const selected = selectPerformanceSignature(snapshot.calculationDetails?.lines || [], rules);
       if (!selected) { unmatched.push(snapshot.employeeId); continue; }
-      const signature = await PerformanceSignature.create({ tenantId: auth.tenantId, cycleId, employeeId: snapshot.employeeId, signatureRuleId: selected.ruleId, signatureName: selected.signatureName, strongestFactors: selected.strongestFactors, signatureScore: selected.signatureScore, calculationDetails: { version: 1, sourceSnapshotId: snapshot.id, matchedCategories: selected.matchedCategories, ruleCategories: categoriesFor(selected.rule) }, generatedBy: auth.userId, generatedAt: new Date() }, { transaction });
+      const signature = await PerformanceSignature.create({
+        tenantId: auth.tenantId, cycleId, employeeId: snapshot.employeeId,
+        signatureRuleId: selected.ruleId, signatureName: selected.signatureName,
+        strongestFactors: selected.strongestFactors, signatureScore: selected.signatureScore,
+        calculationDetails: {
+          version: 1,
+          sourceSnapshotId: snapshot.id,
+          matchedCategories: selected.matchedCategories,
+          // Fixed: use selected.ruleCategories (derived from the rule object) instead of the removed selected.rule reference.
+          ruleCategories: selected.ruleCategories,
+        },
+        generatedBy: auth.userId, generatedAt: new Date()
+      }, { transaction });
       await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'performance_signature_generated', entityType: 'performance_signature', entityId: signature.id, afterData: { cycleId, employeeId: snapshot.employeeId, signatureName: selected.signatureName, sourceSnapshotId: snapshot.id }, transaction });
       created.push(signature);
     }
-    return { cycleId, snapshotCount: snapshots.length, created, skipped, unmatched }; 
+    return { cycleId, snapshotCount: snapshots.length, created, skipped, unmatched };
   });
 }

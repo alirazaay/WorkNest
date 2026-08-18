@@ -1,6 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import multer from 'multer';
+import { z } from 'zod';
 import { Router } from 'express';
 import { env } from '../../config/env.js';
 import { authenticate } from '../../middleware/authenticate.js';
@@ -57,7 +58,7 @@ router.post('/reviews', authorize('admin', 'manager', 'employee'), validate(perf
 router.get('/reviews/:id', authorize('admin', 'manager', 'employee'), reviewGet);
 router.post('/reviews/:id/submit', authorize('admin', 'manager', 'employee'), reviewSubmit);
 router.get('/employees/:employeeId/score', authorize('admin', 'manager', 'employee'), validate(performanceScoreQuerySchema, 'query'), employeeScoreGet);
-router.post('/cycles/:cycleId/calculate', authorize('admin'), cycleScoresCalculate);
+router.post('/cycles/:cycleId/calculate', authorize('admin'), validate(z.object({ force: z.coerce.boolean().optional().default(false) }), 'query'), cycleScoresCalculate);
 router.get('/rating-bands', authorize('admin', 'manager', 'employee'), ratingBandsList);
 router.post('/rating-bands', authorize('admin'), validate(performanceRatingBandCreateSchema), ratingBandCreate);
 router.patch('/rating-bands/:id', authorize('admin'), validate(performanceRatingBandUpdateSchema), ratingBandUpdate);

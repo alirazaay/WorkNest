@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, BarChart3, CheckCircle2, CircleAlert, ClipboardList, FileText, LineChart, Plus, RefreshCw, Target, Users } from 'lucide-react';
+import { ArrowRight, BarChart3, CheckCircle2, CircleAlert, ClipboardList, FileText, LineChart, Plus, RefreshCw, Target, Users, Award, Lightbulb } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AppShell from '../../components/common/AppShell.jsx';
 import Breadcrumbs from '../../components/common/Breadcrumbs.jsx';
@@ -65,8 +65,16 @@ export default function FairRankPage({ user, onExit }) {
         if (results.every((r) => r.status === 'rejected')) throw results[0].reason;
         setData({ overview: results.map((r) => r.status === 'fulfilled' ? responseData(r.value) : null) });
       } else if (tab === 'continuity') {
-        if (role === 'employee') setData({ employees: [], history: responseData(await api.get('/performance/me/continuity')) });
-        else { const empData = responseData(await api.get('/employees', { params: { page: 1, pageSize: 100 } })); const employees = empData?.items || empData || []; const history = employees[0] ? responseData(await api.get(`/performance/employees/${employees[0].id}/history`)) : null; setData({ employees, history }); }
+        // FIX: Don't auto-fetch the first employee's history — that causes a wasted sequential
+        // API call. Just load the employee list; history is fetched lazily on employee selection.
+        if (role === 'employee') {
+          setData({ employees: [], history: responseData(await api.get('/performance/me/continuity')) });
+        } else {
+          const empData = responseData(await api.get('/employees', { params: { page: 1, pageSize: 100 } }));
+          const employees = empData?.items || empData || [];
+          // Intentionally NOT pre-fetching employees[0] history here.
+          setData({ employees, history: null });
+        }
       } else if (tab === 'tna') {
         if (role === 'employee') { const result = responseData(await api.get('/performance/me/development-signals')); setData({ items: (result.signals || []).map((item) => ({ ...item, signalCode: item.code, employee: result.employee, status: 'identified', priority: item.code === 'MISSING_REVIEW_DATA' ? 'low' : 'high', recommendedTraining: 'Review this development signal with your manager.' })) }); }
         else setData({ items: responseData(await api.get('/performance/training-needs')) });
@@ -89,7 +97,15 @@ export default function FairRankPage({ user, onExit }) {
 
   useEffect(() => { load(); }, [load]);
 
-  const activeCycle = useMemo(() => (data.items || []).find((item) => item.status === 'active') || (data.items || [])[0], [data.items]);
+  // FIX: activeCycle for Overview tab — derive from data.overview[0] (the cycles array).
+  // For all other tabs, fall back to data.items as before.
+  const activeCycle = useMemo(() => {
+    if (tab === 'overview') {
+      const cycles = Array.isArray(data.overview?.[0]) ? data.overview[0] : [];
+      return cycles.find((item) => item.status === 'active') || cycles[0] || null;
+    }
+    return (data.items || []).find((item) => item.status === 'active') || (data.items || [])[0];
+  }, [tab, data]);
 
   const createCycle = async (event) => {
     event.preventDefault();
@@ -174,6 +190,7 @@ function PageContent({ tab, data, canManage, canAdmin, activeCycle, onRetry, set
         </article>
         <article className="performance-card">
           <h2>Latest cycle</h2>
+          {/* FIX: activeCycle is now correctly derived from data.overview[0] for this tab. */}
           {activeCycle ? <ListCard item={activeCycle} /> : <EmptyState text="No performance cycles have been created yet." />}
         </article>
       </div>
@@ -192,28 +209,44 @@ function PageContent({ tab, data, canManage, canAdmin, activeCycle, onRetry, set
   );
 }
 
+// ---------------------------------------------------------------------------
+// FairRank tab — Equivalence Groups + Signatures + Explanations inline views
+// ---------------------------------------------------------------------------
 function FairRankGroups({ items, cycles, cycle, canAdmin, onRetry }) {
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [selectedCycleId, setSelectedCycleId] = useState(cycle?.id || '');
   const [groupItems, setGroupItems] = useState(items);
   const [action, setAction] = useState('');
   const [message, setMessage] = useState('');
+
+  // Sub-panel: signatures and explanations
+  const [sigPanel, setSigPanel] = useState(false);
+  const [sigLoading, setSigLoading] = useState(false);
+  const [signatures, setSignatures] = useState([]);
+  const [expPanel, setExpPanel] = useState(false);
+  const [expLoading, setExpLoading] = useState(false);
+  const [explanations, setExplanations] = useState([]);
+
   useEffect(() => { setSelectedCycleId(cycle?.id || ''); setGroupItems(items); }, [cycle?.id, items]);
+
   async function selectCycle(event) {
     const id = event.target.value;
     setSelectedCycleId(id); setMessage('');
+    setSigPanel(false); setExpPanel(false);
     if (!id) { setGroupItems([]); return; }
     setAction('load');
     try { setGroupItems(responseData(await api.get(`/performance/cycles/${id}/equivalence-groups`))); }
     catch (err) { setMessage(err.response?.data?.error?.message || 'Unable to load equivalence groups for this cycle.'); }
     finally { setAction(''); }
   }
+
   async function runAction(name) {
     if (!selectedCycleId) return;
     setAction(name); setMessage('');
     try {
       const actions = {
         calculate: `/performance/cycles/${selectedCycleId}/calculate`,
+        forceRecalculate: `/performance/cycles/${selectedCycleId}/calculate?force=true`,
         equivalence: `/performance/cycles/${selectedCycleId}/recalculate-equivalence`,
         signatures: `/performance/cycles/${selectedCycleId}/generate-signatures`,
         explanations: `/performance/cycles/${selectedCycleId}/generate-explanations`,
@@ -227,19 +260,47 @@ function FairRankGroups({ items, cycles, cycle, canAdmin, onRetry }) {
       setMessage(err.response?.data?.error?.message || err.response?.data?.message || 'Unable to complete this FairRank action.');
     } finally { setAction(''); }
   }
+
+  async function loadSignatures() {
+    if (!selectedCycleId) return;
+    setSigPanel(true); setSigLoading(true); setExpPanel(false);
+    try {
+      const res = await api.get('/performance/signature-rules');
+      setSignatures(responseData(res));
+    } catch (err) {
+      setMessage(err.response?.data?.error?.message || 'Unable to load signature rules.');
+    } finally { setSigLoading(false); }
+  }
+
+  async function loadExplanations() {
+    if (!selectedCycleId) return;
+    setExpPanel(true); setExpLoading(true); setSigPanel(false);
+    try {
+      const res = await api.get('/performance/fairness-flags'.replace('fairness-flags', `cycles/${selectedCycleId}/fairness-flags`));
+      setExplanations(responseData(res));
+    } catch (err) {
+      setMessage(err.response?.data?.error?.message || 'Unable to load fairness flags.');
+    } finally { setExpLoading(false); }
+  }
+
   return <>
     <article className="performance-card">
       <div className="performance-card-heading">
-        <div><h2>Performance equivalents</h2><p>{items.length ? `${items.length} equivalent group${items.length === 1 ? '' : 's'} found.` : 'Groups are created from calculated scores, rating bands, and the configured threshold.'}</p></div>
+        <div><h2>Performance equivalents</h2><p>{groupItems.length ? `${groupItems.length} equivalent group${groupItems.length === 1 ? '' : 's'} found.` : 'Groups are created from calculated scores, rating bands, and the configured threshold.'}</p></div>
       </div>
       <div className="fairrank-toolbar">
         <label>Cycle<select value={selectedCycleId} onChange={selectCycle}><option value="">Select a cycle</option>{cycles.map((item) => <option value={item.id} key={item.id}>{item.name} ({item.status})</option>)}</select></label>
         {canAdmin && <div className="fairrank-actions">
           <button type="button" onClick={() => runAction('calculate')} disabled={!selectedCycleId || action}>Calculate scores</button>
+          <button type="button" onClick={() => runAction('forceRecalculate')} disabled={!selectedCycleId || action} title="Force-recalculate even if snapshots already exist">Force recalculate</button>
           <button type="button" onClick={() => runAction('equivalence')} disabled={!selectedCycleId || action}>Recalculate groups</button>
           <button type="button" onClick={() => runAction('signatures')} disabled={!selectedCycleId || action}>Generate signatures</button>
           <button type="button" onClick={() => runAction('explanations')} disabled={!selectedCycleId || action}>Generate explanations</button>
           <button type="button" onClick={() => runAction('fairness')} disabled={!selectedCycleId || action}>Check fairness</button>
+        </div>}
+        {canAdmin && selectedCycleId && <div className="fairrank-view-actions">
+          <button type="button" className={`table-link${sigPanel ? ' active' : ''}`} onClick={loadSignatures} disabled={!selectedCycleId}><Award size={14} /> View signature rules</button>
+          <button type="button" className={`table-link${expPanel ? ' active' : ''}`} onClick={loadExplanations} disabled={!selectedCycleId}><Lightbulb size={14} /> View fairness flags</button>
         </div>}
       </div>
       {action && <p className="performance-inline-message">Running FairRank action…</p>}
@@ -254,6 +315,40 @@ function FairRankGroups({ items, cycles, cycle, canAdmin, onRetry }) {
         </article>;
       })}</div> : <EmptyState text="No performance-equivalent groups are available for the selected cycle." />}
     </article>
+
+    {/* Signature Rules inline panel */}
+    {sigPanel && (
+      <article className="performance-card">
+        <div className="performance-card-heading"><div><h2><Award size={16} style={{ display: 'inline', marginRight: 6 }} />Signature Rules</h2><p>Active rules that determine each employee's performance signature label.</p></div><button className="icon-button" onClick={() => setSigPanel(false)} aria-label="Close signature panel">×</button></div>
+        {sigLoading ? <LoadingState label="Loading signature rules…" /> : signatures.length ? (
+          <div className="performance-list">{signatures.map((rule) => (
+            <article className="performance-list-card" key={rule.id}>
+              <div><strong>{rule.name}</strong><small>Categories: {Array.isArray(rule.categories) ? rule.categories.join(', ') : JSON.parse(rule.categories || '[]').join(', ')}</small></div>
+              <StatusBadge status={rule.isActive ? 'Active' : 'Inactive'} />
+            </article>
+          ))}</div>
+        ) : <EmptyState text="No signature rules are configured. Create at least one active rule before generating signatures." />}
+      </article>
+    )}
+
+    {/* Fairness Flags inline panel */}
+    {expPanel && (
+      <article className="performance-card">
+        <div className="performance-card-heading"><div><h2><Lightbulb size={16} style={{ display: 'inline', marginRight: 6 }} />Fairness Flags</h2><p>Detected fairness concerns for the selected cycle. Resolve before releasing appraisals.</p></div><button className="icon-button" onClick={() => setExpPanel(false)} aria-label="Close fairness flags panel">×</button></div>
+        {expLoading ? <LoadingState label="Loading fairness flags…" /> : explanations.length ? (
+          <div className="performance-list">{explanations.map((flag) => (
+            <article className="performance-list-card tna-card" key={flag.id}>
+              <div>
+                <strong>{titleCase(flag.flagType)}</strong>
+                <small>{flag.employee?.user?.name || flag.employee?.employeeCode || 'Employee'} · {flag.message}</small>
+              </div>
+              <div><StatusBadge status={flag.severity} /><StatusBadge status={flag.status} /></div>
+            </article>
+          ))}</div>
+        ) : <EmptyState text="No fairness flags for the selected cycle. Generate flags after calculating scores." />}
+      </article>
+    )}
+
     {selectedGroup && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setSelectedGroup(null)}>
       <section className="modal performance-info-modal" role="dialog" aria-modal="true" aria-labelledby="fairrank-group-title">
         <button type="button" className="modal-close" onClick={() => setSelectedGroup(null)} aria-label="Close group details">×</button>
@@ -266,22 +361,52 @@ function FairRankGroups({ items, cycles, cycle, canAdmin, onRetry }) {
   </>;
 }
 
+// ---------------------------------------------------------------------------
+// Continuity — FIX: lazy-load history only on employee select, not on mount
+// ---------------------------------------------------------------------------
 function ContinuityWorkspace({ data, onRetry, setData, canManage }) {
-  const employees = data.employees || []; const history = data.history; const [employeeId, setEmployeeId] = useState(employees[0]?.id || ''); const [loadingEmployee, setLoadingEmployee] = useState(false); const [analyzing, setAnalyzing] = useState(false); const [message, setMessage] = useState('');
-  useEffect(() => { if (!employeeId && employees[0]?.id) setEmployeeId(employees[0].id); }, [employeeId, employees]);
-  async function selectEmployee(event) { const id = event.target.value; setEmployeeId(id); if (!id) return; setLoadingEmployee(true); setMessage(''); try { const res = await api.get(`/performance/employees/${id}/history`); setData((current) => ({ ...current, history: responseData(res) })); } catch (err) { setMessage(err.response?.data?.error?.message || 'Unable to load employee history.'); } finally { setLoadingEmployee(false); } }
-  async function analyze() { if (!employeeId) return; setAnalyzing(true); setMessage(''); try { await api.post(`/performance/employees/${employeeId}/analyze-tna`, {}); setMessage('Development signals analyzed successfully.'); } catch (err) { setMessage(err.response?.data?.error?.message || 'Unable to analyze development needs.'); } finally { setAnalyzing(false); } }
+  const employees = data.employees || [];
+  const history = data.history;
+  const [employeeId, setEmployeeId] = useState('');
+  const [loadingEmployee, setLoadingEmployee] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [message, setMessage] = useState('');
+
+  async function selectEmployee(event) {
+    const id = event.target.value;
+    setEmployeeId(id);
+    if (!id) return;
+    setLoadingEmployee(true); setMessage('');
+    try {
+      const res = await api.get(`/performance/employees/${id}/history`);
+      setData((current) => ({ ...current, history: responseData(res) }));
+    } catch (err) {
+      setMessage(err.response?.data?.error?.message || 'Unable to load employee history.');
+    } finally { setLoadingEmployee(false); }
+  }
+
+  async function analyze() {
+    if (!employeeId) return;
+    setAnalyzing(true); setMessage('');
+    try {
+      await api.post(`/performance/employees/${employeeId}/analyze-tna`, {});
+      setMessage('Development signals analyzed successfully.');
+    } catch (err) {
+      setMessage(err.response?.data?.error?.message || 'Unable to analyze development needs.');
+    } finally { setAnalyzing(false); }
+  }
+
   return <div className="continuity-workspace">
     <article className="performance-card">
       <div className="performance-card-heading"><div><h2>Performance continuity</h2><p>Review historical ratings without fabricating missing years or detailed criterion scores.</p></div><button className="icon-button" onClick={onRetry} aria-label="Refresh continuity"><RefreshCw size={17} /></button></div>
-      {canManage ? <label className="comparison-cycle">Employee<select value={employeeId} onChange={selectEmployee}><option value="">Select an employee</option>{employees.map((employee) => <option value={employee.id} key={employee.id}>{employee.user?.name || employee.employeeCode} ({employee.employeeCode})</option>)}</select></label> : <p className="performance-inline-message">Showing your permitted historical performance information.</p>}
+      {canManage ? <label className="comparison-cycle">Employee<select value={employeeId} onChange={selectEmployee}><option value="">Select an employee to view continuity</option>{employees.map((employee) => <option value={employee.id} key={employee.id}>{employee.user?.name || employee.employeeCode} ({employee.employeeCode})</option>)}</select></label> : <p className="performance-inline-message">Showing your permitted historical performance information.</p>}
       {message && <p className="performance-inline-message">{message}</p>}
       {loadingEmployee ? <LoadingState label="Loading employee history..." /> : history ? <>
         <div className="performance-kpis continuity-kpis"><SummaryCard label="Years reviewed" value={history.summary?.yearsReviewed ?? 0} icon={LineChart} /><SummaryCard label="Average rating" value={history.summary?.averageHistoricalRating == null ? '—' : `${history.summary.averageHistoricalRating}/5`} icon={BarChart3} tone="blue" /><SummaryCard label="Latest rating" value={history.summary?.latestRating == null ? '—' : `${history.summary.latestRating}/5`} icon={ClipboardList} tone="mint" /></div>
         <div className="continuity-timeline">{(history.timeline || []).map((row) => <div className={`continuity-year ${row.status === 'no_review_data' ? 'missing' : ''}`} key={row.year}><strong>{row.year}</strong><span>{row.originalRating == null ? 'No Review Data' : `${row.originalRating}/5`}</span><StatusBadge status={row.trend === 'insufficient_history' ? 'neutral' : row.trend} /><small>{row.changeFromPreviousYear == null ? 'Baseline / insufficient history' : `${row.changeFromPreviousYear > 0 ? '+' : ''}${row.changeFromPreviousYear} from previous year`}</small></div>)}</div>
         <div className="continuity-summary"><span>Best: {history.summary?.bestRating ?? '—'}/5</span><span>Worst: {history.summary?.worstRating ?? '—'}/5</span><span>Volatility: {history.summary?.ratingVolatility ?? '—'}</span><span>Missing years: {history.summary?.missingReviewYears?.length ? history.summary.missingReviewYears.join(', ') : 'None'}</span></div>
         {canManage && <Button onClick={analyze} disabled={analyzing || !employeeId}>{analyzing ? 'Analyzing...' : 'Analyze TNA'} <ArrowRight size={16} /></Button>}
-      </> : <EmptyState text={employees.length ? 'Select an employee to view historical continuity.' : 'No employees are available.'} />}
+      </> : <EmptyState text={canManage ? (employees.length ? 'Select an employee to view historical continuity.' : 'No employees are available.') : 'Loading your continuity data…'} />}
     </article>
   </div>;
 }

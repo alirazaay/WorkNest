@@ -48,7 +48,7 @@ export async function reviewGet(req, res, next) { try { send(res, await getRevie
 export async function reviewCreate(req, res, next) { try { send(res, await createReview(req.auth, req.validated.body), 201); } catch (error) { next(error); } }
 export async function reviewSubmit(req, res, next) { try { send(res, await submitReview(req.auth, Number(req.params.id))); } catch (error) { next(error); } }
 export async function employeeScoreGet(req, res, next) { try { send(res, await getEmployeeScore(req.auth, req.validated.query.cycleId, Number(req.params.employeeId))); } catch (error) { next(error); } }
-export async function cycleScoresCalculate(req, res, next) { try { send(res, await calculateCycleScores(req.auth, Number(req.params.cycleId))); } catch (error) { next(error); } }
+export async function cycleScoresCalculate(req, res, next) { try { send(res, await calculateCycleScores(req.auth, Number(req.params.cycleId), Boolean(req.validated?.query?.force))); } catch (error) { next(error); } }
 export async function ratingBandsList(req, res, next) { try { send(res, await listRatingBands(req.auth)); } catch (error) { next(error); } }
 export async function ratingBandCreate(req, res, next) { try { send(res, await createRatingBand(req.auth, req.validated.body), 201); } catch (error) { next(error); } }
 export async function ratingBandUpdate(req, res, next) { try { send(res, await updateRatingBand(req.auth, Number(req.params.id), req.validated.body)); } catch (error) { next(error); } }
