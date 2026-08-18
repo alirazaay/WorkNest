@@ -54,3 +54,11 @@ test('confirmed reviews use an audited revision workflow instead of direct editi
   assert.match(source, /performance_review_reopened_for_correction/);
   assert.match(source, /status: 'correction_required'/);
 });
+
+test('comparison exposes selected equivalence subgroups from persisted groups', async () => {
+  const source = await readFile(new URL('../src/modules/performance/comparison.service.js', import.meta.url), 'utf8');
+  assert.match(source, /const equivalenceGroups = groups\.map/);
+  assert.match(source, /selectedIds/);
+  assert.match(source, /thresholdUsed/);
+  assert.match(source, /Performance differentiation requires review/);
+});

@@ -503,3 +503,5 @@ Verified criterion-linked evidence is counted during calculation and exposed in 
 The FairRank tab loads persisted cycle score snapshots separately from equivalence groups. Zero groups is a valid result: calculated employee scores remain visible, while grouping requires the same rating band and the configured threshold. Later FairRank actions are enabled only after scores exist.
 
 Confirmed reviews are corrected through an audited revision workflow: an authorized administrator reopens the review with a reason, the original confirmed version is preserved, the draft revision is edited and resubmitted, and Calibration must confirm it again before an explicit force recalculation can update snapshots.
+
+Compare uses persisted FairRank snapshots and equivalence groups. It reports the overall comparison separately from selected-employee equivalent subgroups, including each subgroup's spread versus the configured threshold and employees outside the threshold.

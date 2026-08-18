@@ -191,6 +191,10 @@
 .comparison-conclusion.equivalent { background: #e7f8f0; color: #087a5a; }
 .comparison-conclusion span { font-size: 13px; }
 .comparison-result { margin-top: 18px; }
+.comparison-subgroups { display: grid; gap: 10px; margin-top: 16px; }
+.comparison-subgroups h3 { margin: 0; font-size: 15px; }
+.comparison-subgroup { display: grid; gap: 4px; padding: 12px 14px; border: 1px solid #d8eee4; border-radius: 10px; background: #f3fbf7; color: #087a5a; }
+.comparison-subgroup span { font-size: 13px; }
 .comparison-cycle { display: grid; gap: 7px; max-width: 420px; color: #4e5872; }
 .comparison-cycle select { border: 1px solid #dfe2eb; border-radius: 9px; padding: 10px 12px; font: inherit; }
 
@@ -229,5 +233,4 @@
 /* ── Breakpoints ─────────────────────────────────────────────────────────── */
 @media (max-width: 800px) { .performance-kpis, .performance-grid { grid-template-columns: 1fr; } .performance-workflow { grid-template-columns: repeat(2, 1fr); } .performance-heading { align-items: flex-start; gap: 18px; } }
 @media (max-width: 560px) { .performance-kpi, .performance-card { padding: 16px; } .performance-form-grid, .tna-filters { grid-template-columns: 1fr; } .continuity-kpis { grid-template-columns: 1fr; } .performance-heading { flex-direction: column; } .comparison-picker { grid-template-columns: 1fr; } }
-
 

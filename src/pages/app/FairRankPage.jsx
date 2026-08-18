@@ -818,11 +818,18 @@ function Comparison({ employees, cycles }) {
             <strong>{result.comparison?.conclusion}</strong>
             <span>Spread: {result.comparison?.spread} · Threshold: {result.comparison?.threshold}</span>
           </div>
+          {(result.equivalenceGroups || []).length > 0 && <div className="comparison-subgroups">
+            <h3>Equivalent subgroups</h3>
+            {result.equivalenceGroups.map((group) => <div className="comparison-subgroup" key={group.id}>
+              <strong>Equivalent subgroup: {group.members.map((member) => member.name || member.employeeCode).join(' + ')}</strong>
+              <span>Score spread: {group.spread.toFixed(2)} ≤ threshold {group.threshold}</span>
+            </div>)}
+          </div>}
           <div className="performance-list">
             {(result.employees || []).map((item) => (
               <div className="performance-list-card" key={item.employee.id}>
                 <div><strong>{item.employee.name || item.employee.employeeCode}</strong><small>{item.employee.designation || ''} · {item.signature || 'Signature pending'}</small></div>
-                <span><strong>{item.score.toFixed(2)}</strong><small>{item.ratingBand || 'Unrated'}</small></span>
+                <span><strong>{item.score.toFixed(2)}</strong><small>{item.ratingBand || 'Unrated'}</small><small>{item.equivalenceGroup ? `Equivalent subgroup #${item.equivalenceGroup.id} · spread ${item.equivalenceGroup.spread.toFixed(2)} / threshold ${item.equivalenceGroup.threshold}` : 'Outside equivalence threshold'}</small></span>
               </div>
             ))}
           </div>

@@ -21,5 +21,29 @@ export async function compareEmployees(auth, input) {
   for (const group of groups) for (const member of group.members || []) groupMap.set(member.employeeId, group);
   const rows = employees.map(employee => { const snapshot = snapshotMap.get(employee.id); const signature = signatureMap.get(employee.id); const group = groupMap.get(employee.id); return { employee: { id: employee.id, employeeCode: employee.employeeCode, name: employee.user?.name || null, designation: employee.designation }, score: Number(snapshot.finalScore), ratingBand: snapshot.ratingBand, signature: signature?.signatureName || null, strongestFactors: signature?.strongestFactors || [], equivalenceGroupId: group?.id || null }; });
   const scores = rows.map(row => row.score); const spread = Math.max(...scores) - Math.min(...scores); const settings = await PerformanceEquivalenceSetting.findOne({ where: { tenantId: auth.tenantId }, attributes: ['threshold', 'strictRanking'] }); const threshold = Number(settings?.threshold ?? 1); const sameBand = new Set(rows.map(row => row.ratingBand)).size <= 1; const equivalent = !settings?.strictRanking && sameBand && spread <= threshold;
-  return { cycle, employees: rows, comparison: { equivalent, conclusion: equivalent ? 'Performance Equivalent' : 'Performance differentiation requires review', spread: Number(spread.toFixed(3)), threshold, sameRatingBand: sameBand, strictRanking: Boolean(settings?.strictRanking) } };
+  const selectedIds = new Set(input.employeeIds);
+  const equivalenceGroups = groups.map((group) => {
+    const members = (group.members || [])
+      .filter((member) => selectedIds.has(member.employeeId))
+      .map((member) => {
+        const row = rows.find((item) => item.employee.id === member.employeeId);
+        return row ? { employeeId: row.employee.id, employeeCode: row.employee.employeeCode, name: row.employee.name, score: row.score } : null;
+      })
+      .filter(Boolean);
+    if (members.length < 2) return null;
+    const groupScores = members.map((member) => member.score);
+    return {
+      id: group.id,
+      ratingBand: group.ratingBand,
+      threshold: Number(group.thresholdUsed ?? threshold),
+      members,
+      spread: Number((Math.max(...groupScores) - Math.min(...groupScores)).toFixed(3)),
+    };
+  }).filter(Boolean);
+  const subgroupByEmployee = new Map(equivalenceGroups.flatMap((group) => group.members.map((member) => [member.employeeId, group])));
+  rows.forEach((row) => {
+    const subgroup = subgroupByEmployee.get(row.employee.id);
+    if (subgroup) row.equivalenceGroup = { id: subgroup.id, spread: subgroup.spread, threshold: subgroup.threshold, ratingBand: subgroup.ratingBand };
+  });
+  return { cycle, employees: rows, equivalenceGroups, comparison: { equivalent, conclusion: equivalent ? 'Performance Equivalent' : 'Performance differentiation requires review', spread: Number(spread.toFixed(3)), threshold, sameRatingBand: sameBand, strictRanking: Boolean(settings?.strictRanking) } };
 }
