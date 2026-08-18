@@ -1,12 +1,38 @@
 import { Op } from 'sequelize';
 import { sequelize } from '../../config/database.js';
-import { Employee, PerformanceAppraisalExplanation, PerformanceCycle, User } from '../../database/models/index.js';
+import { Employee, PerformanceAppraisalExplanation, PerformanceCriterion, PerformanceCycle, PerformanceTemplate, PerformanceTemplateCriterion, User } from '../../database/models/index.js';
 import { AppError } from '../../middleware/error.js';
 import { recordAudit } from '../../services/audit.service.js';
 import { createNotification } from '../../services/notification.service.js';
 
 const statuses = ['draft', 'active', 'review', 'calibration', 'completed', 'archived'];
 const transitions = { draft: ['active', 'archived'], active: ['review', 'archived'], review: ['calibration', 'completed'], calibration: ['completed'], completed: ['archived'], archived: [] };
+
+export function canTransitionCycle(from, to) { return statuses.includes(to) && Boolean(transitions[from]?.includes(to)); }
+
+export function validateCycleActivation(template) {
+  if (!template) throw new AppError('Activate a performance template before activating this cycle', 422, 'CYCLE_ACTIVATION_TEMPLATE_REQUIRED');
+  const criteria = template.criteria || [];
+  if (!criteria.length) throw new AppError('The active performance template must contain at least one criterion', 422, 'CYCLE_ACTIVATION_CRITERIA_REQUIRED');
+  const totalWeight = criteria.reduce((total, row) => total + Number(row.weight || 0), 0);
+  if (Math.abs(totalWeight - 100) > 0.001) throw new AppError(`The active performance template criteria weights must total 100%. Current total: ${totalWeight.toFixed(3)}%`, 422, 'CYCLE_ACTIVATION_WEIGHTS_INCOMPLETE');
+}
+
+async function activationTemplateFor(auth, transaction) {
+  const template = await PerformanceTemplate.findOne({
+    where: { tenantId: auth.tenantId, status: 'active' },
+    include: [{
+      model: PerformanceTemplateCriterion,
+      as: 'criteria',
+      required: false,
+      include: [{ model: PerformanceCriterion, as: 'criterion', where: { tenantId: auth.tenantId, isActive: true }, required: true }]
+    }],
+    order: [['id', 'DESC']],
+    transaction,
+  });
+  validateCycleActivation(template);
+  return template;
+}
 
 function assertDates(input) {
   const dates = [input.startDate, input.endDate, input.goalSettingStart, input.goalSettingEnd, input.reviewStart, input.reviewEnd].filter(Boolean).map(value => new Date(`${value}T00:00:00Z`));
@@ -40,20 +66,29 @@ export async function createPerformanceCycle(auth, input) {
 }
 
 export async function updatePerformanceCycle(auth, id, input) {
-  const cycle = await getPerformanceCycle(auth, id);
-  if (cycle.status !== 'draft' && Object.keys(input).some(key => key !== 'status')) throw new AppError('Cycle configuration is frozen after activation', 409, 'PERFORMANCE_CYCLE_FROZEN');
-  if (input.status && (!statuses.includes(input.status) || !transitions[cycle.status].includes(input.status))) throw new AppError(`Cannot move a ${cycle.status} cycle to ${input.status}`, 409, 'INVALID_PERFORMANCE_CYCLE_TRANSITION');
-  const next = { ...cycle.toJSON(), ...input };
-  assertDates(next);
-  if (input.status === 'active') {
-    const active = await PerformanceCycle.findOne({ where: { tenantId: auth.tenantId, year: cycle.year, cycleType: cycle.cycleType, status: 'active', id: { [Op.ne]: id } } });
-    if (active) throw new AppError('Another active cycle already exists for this year and cycle type', 409, 'ACTIVE_PERFORMANCE_CYCLE_EXISTS');
+  let cycle;
+  try {
+    cycle = await sequelize.transaction(async transaction => {
+    const current = await PerformanceCycle.findOne({ where: { id, tenantId: auth.tenantId }, include: [includeCreator()], transaction, lock: transaction.LOCK.UPDATE });
+    if (!current) throw new AppError('Performance cycle not found', 404, 'PERFORMANCE_CYCLE_NOT_FOUND');
+    if (current.status !== 'draft' && Object.keys(input).some(key => key !== 'status')) throw new AppError('Cycle configuration is frozen after activation', 409, 'PERFORMANCE_CYCLE_FROZEN');
+    if (input.status && !canTransitionCycle(current.status, input.status)) throw new AppError(`Cannot move a ${current.status} cycle to ${input.status}`, 409, 'INVALID_PERFORMANCE_CYCLE_TRANSITION');
+    const next = { ...current.toJSON(), ...input };
+    assertDates(next);
+    if (input.status === 'active') {
+      await activationTemplateFor(auth, transaction);
+      const active = await PerformanceCycle.findOne({ where: { tenantId: auth.tenantId, year: current.year, cycleType: current.cycleType, status: 'active', id: { [Op.ne]: id } }, transaction, lock: transaction.LOCK.UPDATE });
+      if (active) throw new AppError('Another active cycle already exists for this year and cycle type', 409, 'ACTIVE_PERFORMANCE_CYCLE_EXISTS');
+    }
+    const before = current.toJSON();
+    await current.update(input, { transaction });
+    await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: input.status ? `performance_cycle_${input.status}` : 'performance_cycle_updated', entityType: 'performance_cycle', entityId: id, beforeData: before, afterData: current.toJSON(), transaction });
+      return current;
+    });
+  } catch (error) {
+    if (error.name === 'SequelizeUniqueConstraintError') throw new AppError('Another performance cycle already exists for this year and cycle type', 409, 'PERFORMANCE_CYCLE_EXISTS');
+    throw error;
   }
-  const before = cycle.toJSON();
-  await sequelize.transaction(async transaction => {
-    await cycle.update(input, { transaction });
-    await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: input.status ? `performance_cycle_${input.status}` : 'performance_cycle_updated', entityType: 'performance_cycle', entityId: id, beforeData: before, afterData: cycle.toJSON(), transaction });
-  });
   if (input.status === 'review') await notifyManagersForReview(auth);
   if (input.status === 'calibration') await notifyAdminsForCalibration(auth);
   if (input.status === 'completed') await notifyReleasedAppraisals(auth, id);
