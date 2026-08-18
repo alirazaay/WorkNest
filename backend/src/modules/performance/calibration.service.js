@@ -54,12 +54,14 @@ export async function listCalibration(auth, cycleId, revealIdentity = false) {
 export async function calibrateReview(auth, id, input) {
   const review = await reviewFor(auth, id); if (review.status !== 'submitted' && review.status !== 'released') throw new AppError('Only submitted reviews can enter calibration', 409, 'CALIBRATION_STATUS_INVALID');
   return sequelize.transaction(async transaction => {
-    const previous = await PerformanceCalibrationDecision.findOne({ where: { tenantId: auth.tenantId, reviewId: id }, transaction });
+    const lockedReview = await reviewFor(auth, id, transaction);
+    const previous = await PerformanceCalibrationDecision.findOne({ where: { tenantId: auth.tenantId, reviewId: id }, transaction, lock: transaction.LOCK.UPDATE });
+    if (input.action === 'confirm' && previous?.status === 'confirmed') throw new AppError('This review has already been confirmed in calibration', 409, 'CALIBRATION_ALREADY_CONFIRMED');
     if (previous?.status === 'overridden') throw new AppError('An overridden review cannot be calibrated again', 409, 'CALIBRATION_ALREADY_OVERRIDDEN');
-    const values = { tenantId: auth.tenantId, cycleId: review.cycleId, reviewId: id, employeeId: review.employeeId, status: input.action === 'confirm' ? 'confirmed' : 'clarification_requested', previousScore: review.overallScore, newScore: review.overallScore, previousRatingBand: review.ratingBand, newRatingBand: review.ratingBand, justification: input.justification ?? null, decidedBy: auth.userId, decidedAt: new Date() };
+    const values = { tenantId: auth.tenantId, cycleId: lockedReview.cycleId, reviewId: id, employeeId: lockedReview.employeeId, status: input.action === 'confirm' ? 'confirmed' : 'clarification_requested', previousScore: lockedReview.overallScore, newScore: lockedReview.overallScore, previousRatingBand: lockedReview.ratingBand, newRatingBand: lockedReview.ratingBand, justification: input.justification ?? null, decidedBy: auth.userId, decidedAt: new Date() };
     const decision = previous ? await previous.update(values, { transaction }) : await PerformanceCalibrationDecision.create(values, { transaction });
     await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: `performance_calibration_${values.status}`, entityType: 'performance_review', entityId: id, beforeData: previous?.toJSON() ?? null, afterData: decision.toJSON(), transaction });
-    await notifyCalibrationDecision(auth, review, values.status, transaction);
+    await notifyCalibrationDecision(auth, lockedReview, values.status, transaction);
     return decision;
   });
 }
@@ -86,5 +88,4 @@ async function notifyCalibrationOverride(auth, review, transaction) {
   if (!review.employee?.userId) return;
   await createNotification({ tenantId: auth.tenantId, userId: review.employee.userId, type: 'performance_rating_updated', title: 'Your performance rating was updated', message: 'Your performance rating was updated during calibration. The finalized appraisal will be available when released.', entityType: 'performance_review', entityId: review.id, transaction });
 }
-
 
