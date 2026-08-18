@@ -4,9 +4,133 @@
 .access-denied-state h1, .access-denied-state p { margin: 0; }
 .access-denied-state p { color: #727a92; }
 .performance-heading { align-items: flex-end; }
+/* ── Old flat tab nav (kept so any page still referencing it doesn't break) ── */
 .performance-tabs { display: flex; gap: 8px; overflow-x: auto; margin: 24px 0; padding-bottom: 4px; }
 .performance-tabs button { border: 1px solid var(--border, #e4e6ef); background: #fff; color: #68708a; border-radius: 999px; padding: 9px 15px; white-space: nowrap; cursor: pointer; }
 .performance-tabs button.active { background: #6f5ce7; border-color: #6f5ce7; color: #fff; }
+
+/* ── Grouped workflow navigation ─────────────────────────────────────────── */
+/* Outer nav: a horizontal scrollable bar with a hairline bottom border       */
+.perf-grouped-nav {
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+  overflow-x: auto;
+  margin: 22px 0 0;
+  padding-bottom: 0;
+  border-bottom: 1.5px solid #e8eaf1;
+  /* hide scrollbar on webkit */
+  scrollbar-width: none;
+}
+.perf-grouped-nav::-webkit-scrollbar { display: none; }
+
+/* Home pill (Overview / My Performance) — slightly larger, always at the left */
+.perf-home-tab {
+  flex-shrink: 0;
+  padding: 8px 18px 12px;
+  border: none;
+  border-bottom: 2.5px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: #68708a;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+  margin-bottom: -1.5px;
+}
+.perf-home-tab:hover { color: #6f5ce7; }
+.perf-home-tab.active { color: #6f5ce7; border-bottom-color: #6f5ce7; font-weight: 600; }
+
+/* Vertical divider between home tab and first group, and between groups */
+.perf-nav-divider {
+  display: block;
+  flex-shrink: 0;
+  width: 1px;
+  height: 28px;
+  background: #e3e5ed;
+  align-self: center;
+  margin: 0 10px 8px;
+}
+
+/* One group: stacks a tiny label above a row of buttons */
+.perf-nav-group {
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+  flex-shrink: 0;
+}
+
+/* "SETUP", "PERFORMANCE", etc. — tiny all-caps label above the tab cluster */
+.perf-nav-group-label {
+  display: block;
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 10px;
+  padding: 0 10px 4px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #a5adca;
+  white-space: nowrap;
+  /* pull it above the tab buttons */
+  position: absolute;
+  transform: translateY(-100%) translateY(-2px);
+  pointer-events: none;
+}
+
+/* Wrapper so the absolute label has a positioning parent */
+.perf-nav-group {
+  position: relative;
+  padding-top: 20px; /* room for the floating label */
+}
+
+/* Row of pill buttons inside a group */
+.perf-nav-group-tabs {
+  display: flex;
+  gap: 2px;
+  align-items: flex-end;
+  padding: 0 6px 0 0;
+}
+
+/* Individual tab button inside a group */
+.perf-nav-group-tabs button {
+  flex-shrink: 0;
+  padding: 7px 14px 11px;
+  border: none;
+  border-bottom: 2.5px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: #68708a;
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color .15s, border-color .15s, background .1s;
+  margin-bottom: -1.5px;
+}
+.perf-nav-group-tabs button:hover { color: #6f5ce7; background: #f7f6ff; border-radius: 8px 8px 0 0; }
+.perf-nav-group-tabs button.active {
+  color: #6f5ce7;
+  border-bottom-color: #6f5ce7;
+  font-weight: 600;
+  background: #f7f6ff;
+  border-radius: 8px 8px 0 0;
+}
+
+.performance-content { margin-top: 24px; }
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+/* On narrow screens collapse the group label so groups stay compact         */
+@media (max-width: 860px) {
+  .perf-nav-group-label { display: none; }
+  .perf-nav-group { padding-top: 0; }
+}
+
+/* ── Cards, KPIs, lists ──────────────────────────────────────────────────── */
 .performance-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 18px; }
 .performance-kpi, .performance-card { background: #fff; border: 1px solid #e3e5ed; border-radius: 16px; padding: 22px; box-shadow: 0 8px 24px rgba(39, 43, 72, .04); }
 .performance-kpi { display: grid; gap: 7px; }
@@ -26,6 +150,16 @@
 .performance-list-card { display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 14px 0; border-top: 1px solid #edf0f5; }
 .performance-list-card div { display: grid; gap: 4px; min-width: 0; }
 .performance-empty { display: grid; place-items: center; gap: 8px; min-height: 150px; color: #7b849b; text-align: center; }
+.performance-inline-message { padding: 10px 12px; border-radius: 9px; background: #eef8f3; color: #147b5b !important; }
+.performance-inline-error { color: #bd3f4c !important; }
+.performance-info-button { border: 0; cursor: pointer; font: inherit; transition: transform .15s ease, box-shadow .15s ease; }
+.performance-info-button:hover, .performance-info-button:focus-visible { transform: translateY(-1px); box-shadow: 0 0 0 3px #3d73cf26; outline: none; }
+.performance-info-summary { display: flex; flex-wrap: wrap; gap: 10px 18px; margin: 18px 0; color: #727a92; font-size: 13px; }
+.performance-info-members { display: grid; gap: 8px; max-height: 260px; overflow-y: auto; }
+.performance-info-members div { display: flex; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid #edf0f5; border-radius: 9px; }
+.performance-info-members strong { color: #6f5ce7; }
+
+/* ── Appraisal / My Performance ─────────────────────────────────────────── */
 .my-performance { display: grid; gap: 18px; }
 .appraisal-rating { display: grid; gap: 3px; margin: 18px 0; }
 .appraisal-rating strong { font-size: 38px; color: #6f5ce7; }
@@ -38,12 +172,8 @@
 .feedback-item { padding: 14px; border: 1px solid #edf0f5; border-radius: 12px; }
 .feedback-item p { margin: 8px 0; }
 .performance-list-card small { overflow-wrap: anywhere; }
-.performance-info-button { border: 0; cursor: pointer; font: inherit; transition: transform .15s ease, box-shadow .15s ease; }
-.performance-info-button:hover, .performance-info-button:focus-visible { transform: translateY(-1px); box-shadow: 0 0 0 3px #3d73cf26; outline: none; }
-.performance-info-summary { display: flex; flex-wrap: wrap; gap: 10px 18px; margin: 18px 0; color: #727a92; font-size: 13px; }
-.performance-info-members { display: grid; gap: 8px; max-height: 260px; overflow-y: auto; }
-.performance-info-members div { display: flex; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid #edf0f5; border-radius: 9px; }
-.performance-info-members strong { color: #6f5ce7; }
+
+/* ── FairRank toolbar ────────────────────────────────────────────────────── */
 .fairrank-toolbar { display: grid; gap: 12px; margin: 18px 0 4px; }
 .fairrank-toolbar label { display: grid; gap: 7px; max-width: 430px; color: #4e5872; font-size: 12px; }
 .fairrank-toolbar select { border: 1px solid #dfe2eb; border-radius: 9px; padding: 10px 12px; font: inherit; color: #4e5872; background: #fff; }
@@ -51,15 +181,20 @@
 .fairrank-actions button { border: 1px solid #dfe2eb; border-radius: 8px; padding: 9px 11px; color: #5e4ad8; background: #f8f7ff; cursor: pointer; font: inherit; font-size: 11px; }
 .fairrank-actions button:hover:not(:disabled), .fairrank-actions button:focus-visible { border-color: #6f5ce7; background: #eeeaff; outline: none; }
 .fairrank-actions button:disabled { opacity: .55; cursor: not-allowed; }
+.fairrank-view-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ── Comparison ──────────────────────────────────────────────────────────── */
 .comparison-picker { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 18px 0; }
 .comparison-picker label { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid #edf0f5; border-radius: 10px; cursor: pointer; }
 .comparison-picker span { display: grid; gap: 3px; }
 .comparison-conclusion { display: grid; gap: 5px; padding: 14px; margin-top: 18px; border-radius: 12px; background: #fff5e8; color: #8b5a15; }
 .comparison-conclusion.equivalent { background: #e7f8f0; color: #087a5a; }
 .comparison-conclusion span { font-size: 13px; }
-.performance-inline-error { color: #bd3f4c !important; }
+.comparison-result { margin-top: 18px; }
 .comparison-cycle { display: grid; gap: 7px; max-width: 420px; color: #4e5872; }
 .comparison-cycle select { border: 1px solid #dfe2eb; border-radius: 9px; padding: 10px 12px; font: inherit; }
+
+/* ── Continuity ──────────────────────────────────────────────────────────── */
 .continuity-workspace { display: grid; gap: 18px; }
 .continuity-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 20px 0; }
 .continuity-timeline { display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 10px; margin: 18px 0; }
@@ -70,20 +205,29 @@
 .continuity-year.missing { background: #fffaf2; border-color: #f3dfb9; }
 .continuity-year.missing span { color: #9b6b23; font-size: 14px; }
 .continuity-summary { display: flex; flex-wrap: wrap; gap: 10px 18px; margin: 12px 0 20px; color: #727a92; font-size: 13px; }
-.performance-inline-message { padding: 10px 12px; border-radius: 9px; background: #eef8f3; color: #147b5b !important; }
+
+/* ── TNA ─────────────────────────────────────────────────────────────────── */
 .tna-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 18px 0; }
 .tna-filters select { border: 1px solid #dfe2eb; border-radius: 9px; padding: 10px 12px; font: inherit; color: #4e5872; background: #fff; }
 .tna-card { align-items: flex-start; }
 .tna-card > div:last-child { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+
+/* ── Goals carry-forward ─────────────────────────────────────────────────── */
 .goal-continuity-card { align-items: flex-start; }
 .goal-carry-forward { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .goal-carry-forward select { border: 1px solid #dfe2eb; border-radius: 8px; padding: 8px 10px; font: inherit; color: #4e5872; background: #fff; }
 .goal-carry-forward button:disabled { opacity: .45; cursor: not-allowed; }
-@media (max-width: 560px) { .comparison-picker { grid-template-columns: 1fr; } }
+
+/* ── Modals / forms ──────────────────────────────────────────────────────── */
 .performance-modal { max-height: calc(100vh - 32px); overflow-y: auto; }
 .performance-modal label { display: grid; gap: 7px; margin: 14px 0; color: #4e5872; }
 .performance-modal input, .performance-modal select { width: 100%; box-sizing: border-box; border: 1px solid #dfe2eb; border-radius: 9px; padding: 11px 12px; font: inherit; }
 .performance-form-error { margin: 12px 0 !important; padding: 10px 12px; border-radius: 9px; background: #fff0f2; color: #bd3f4c !important; font-size: 12px; }
 .performance-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.performance-info-modal { min-width: min(480px, 96vw); }
+
+/* ── Breakpoints ─────────────────────────────────────────────────────────── */
 @media (max-width: 800px) { .performance-kpis, .performance-grid { grid-template-columns: 1fr; } .performance-workflow { grid-template-columns: repeat(2, 1fr); } .performance-heading { align-items: flex-start; gap: 18px; } }
-@media (max-width: 560px) { .performance-kpi, .performance-card { padding: 16px; } .performance-form-grid, .tna-filters { grid-template-columns: 1fr; } .continuity-kpis { grid-template-columns: 1fr; } .performance-heading { flex-direction: column; } }
+@media (max-width: 560px) { .performance-kpi, .performance-card { padding: 16px; } .performance-form-grid, .tna-filters { grid-template-columns: 1fr; } .continuity-kpis { grid-template-columns: 1fr; } .performance-heading { flex-direction: column; } .comparison-picker { grid-template-columns: 1fr; } }
+
+

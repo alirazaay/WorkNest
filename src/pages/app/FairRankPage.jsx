@@ -9,12 +9,51 @@ import StatusBadge from '../../components/common/StatusBadge.jsx';
 import Button from '../../components/common/Button.jsx';
 import api from '../../services/api.js';
 
-const tabs = [
-  ['overview', 'Overview', ['admin', 'manager']], ['my', 'My Performance', ['employee']], ['cycles', 'Cycles', ['admin', 'manager']],
-  ['criteria', 'Criteria', ['admin', 'manager']], ['goals', 'Goals', ['admin', 'manager', 'employee']],
-  ['evidence', 'Evidence', ['admin', 'manager', 'employee']], ['reviews', 'Reviews', ['admin', 'manager', 'employee']],
-  ['calibration', 'Calibration', ['admin', 'manager']], ['fairrank', 'FairRank', ['admin', 'manager']], ['continuity', 'Continuity', ['admin', 'manager', 'employee']], ['tna', 'TNA', ['admin', 'manager', 'employee']],
-  ['readiness', 'Readiness', ['admin', 'manager']], ['rewards', 'Rewards', ['admin', 'manager']], ['comparison', 'Compare', ['admin', 'manager']], ['audit', 'Audit log', ['admin']],
+// All role checks and tab keys are preserved exactly — only the visual grouping changes.
+const TAB_GROUPS = [
+  {
+    label: 'Setup',
+    tabs: [
+      ['cycles',   'Cycles',   ['admin', 'manager']],
+      ['criteria', 'Criteria', ['admin', 'manager']],
+    ],
+  },
+  {
+    label: 'Performance',
+    tabs: [
+      ['goals',    'Goals',    ['admin', 'manager', 'employee']],
+      ['evidence', 'Evidence', ['admin', 'manager', 'employee']],
+      ['reviews',  'Reviews',  ['admin', 'manager', 'employee']],
+    ],
+  },
+  {
+    label: 'Evaluation',
+    tabs: [
+      ['calibration', 'Calibration', ['admin', 'manager']],
+      ['fairrank',    'FairRank',    ['admin', 'manager']],
+      ['comparison',  'Compare',     ['admin', 'manager']],
+    ],
+  },
+  {
+    label: 'Decisions',
+    tabs: [
+      ['readiness', 'Readiness', ['admin', 'manager']],
+      ['rewards',   'Rewards',   ['admin', 'manager']],
+    ],
+  },
+  {
+    label: 'Development',
+    tabs: [
+      ['continuity', 'Continuity', ['admin', 'manager', 'employee']],
+      ['tna',        'TNA',        ['admin', 'manager', 'employee']],
+    ],
+  },
+  {
+    label: 'Governance',
+    tabs: [
+      ['audit', 'Audit log', ['admin']],
+    ],
+  },
 ];
 const endpoints = { cycles: '/performance/cycles', criteria: '/performance/templates', goals: '/performance/goals', evidence: '/performance/evidence', reviews: '/performance/reviews', readiness: '/performance/promotion-profiles', rewards: '/performance/rewards', audit: '/performance/audit' };
 
@@ -43,7 +82,10 @@ export default function FairRankPage({ user, onExit }) {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
 
-  const visibleTabs = tabs.filter(([, , roles]) => roles.includes(role));
+  // Filter each group down to tabs the current role can see; drop empty groups.
+  const visibleGroups = TAB_GROUPS
+    .map(group => ({ ...group, tabs: group.tabs.filter(([, , roles]) => roles.includes(role)) }))
+    .filter(group => group.tabs.length > 0);
 
   // Fixed: wrapped in useCallback([tab]) so the function reference is stable
   // and useEffect([load]) only fires when tab actually changes.
@@ -136,8 +178,46 @@ export default function FairRankPage({ user, onExit }) {
         </div>
         {canAdmin && <Button onClick={() => { setFormError(''); setModal(true); }}><Plus size={16} /> New cycle</Button>}
       </div>
-      <nav className="performance-tabs" aria-label="Performance sections">
-        {visibleTabs.map(([key, label]) => <button key={key} className={tab === key ? 'active' : ''} onClick={() => setTab(key)}>{label}</button>)}
+
+      {/* ── Grouped workflow navigation ───────────────────────────────── */}
+      <nav className="perf-grouped-nav" aria-label="Performance workflow sections">
+        {/* Home tab: Overview (admin/manager) or My Performance (employee) */}
+        {canManage && (
+          <button
+            className={`perf-home-tab${tab === 'overview' ? ' active' : ''}`}
+            onClick={() => setTab('overview')}
+          >
+            Overview
+          </button>
+        )}
+        {role === 'employee' && (
+          <button
+            className={`perf-home-tab${tab === 'my' ? ' active' : ''}`}
+            onClick={() => setTab('my')}
+          >
+            My Performance
+          </button>
+        )}
+
+        {/* Workflow groups */}
+        {visibleGroups.map((group, gi) => (
+          <div className="perf-nav-group" key={group.label}>
+            {gi === 0 && <span className="perf-nav-divider" aria-hidden="true" />}
+            <span className="perf-nav-group-label">{group.label}</span>
+            <div className="perf-nav-group-tabs" role="group" aria-label={group.label}>
+              {group.tabs.map(([key, label]) => (
+                <button
+                  key={key}
+                  className={tab === key ? 'active' : ''}
+                  onClick={() => setTab(key)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <span className="perf-nav-divider" aria-hidden="true" />
+          </div>
+        ))}
       </nav>
       {loading ? <LoadingState label="Loading performance data..." /> : error ? <ErrorState message={error} onRetry={load} /> : (
         <section className="performance-content">
