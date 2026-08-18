@@ -31,9 +31,12 @@ test('missing years are explicit and break adjacent continuity', () => {
 test('continuity uses finalized snapshots and deduplicates each cycle', async () => {
   const source = await readFile(new URL('../src/modules/performance/continuity.service.js', import.meta.url), 'utf8');
   assert.match(source, /PerformanceScoreSnapshot/);
+  assert.match(source, /PerformanceCalibrationDecision/);
+  assert.match(source, /confirmedCycleKeys/);
   assert.match(source, /\['completed', 'archived'\]/);
   assert.match(source, /const byCycle = new Map/);
   assert.match(source, /fairrank_snapshot/);
+  assert.match(source, /cycleName: row\.cycle\?\.name/);
 });
 
 test('FairRank snapshot ratings are deterministically represented on the five-point continuity scale', () => {
