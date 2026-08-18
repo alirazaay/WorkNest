@@ -375,6 +375,16 @@ function FairRankGroups({ items, cycles, cycle, canAdmin, onRetry }) {
         const createdCount = Array.isArray(result?.created) ? result.created.length : 0;
         const skippedCount = Array.isArray(result?.skipped) ? result.skipped.length : 0;
         setMessage(createdCount ? `Scores calculated for ${createdCount} employee${createdCount === 1 ? '' : 's'}.${skippedCount ? ` ${skippedCount} existing snapshot${skippedCount === 1 ? '' : 's'} remained unchanged.` : ''} Use Recalculate groups to update performance equivalents.` : `No new scores were created. ${skippedCount} existing snapshot${skippedCount === 1 ? '' : 's'} remained unchanged. Use Recalculate groups to update performance equivalents.`);
+      } else if (name === 'equivalence') {
+        const groupCount = Number(result?.groupCount ?? 0);
+        setMessage(groupCount
+          ? `${groupCount} performance-equivalent group${groupCount === 1 ? '' : 's'} rebuilt from the persisted scores.`
+          : 'No performance-equivalent groups match the configured score threshold and rating-band rules.');
+      } else if (name === 'signatures') {
+        const generated = Number(result?.generated ?? result?.count ?? 0);
+        setMessage(`Performance signatures generated for ${generated} employee${generated === 1 ? '' : 's'}.`);
+      } else if (name === 'fairness') {
+        setMessage(`Fairness review completed${result?.created != null ? `: ${result.created} flag${Number(result.created) === 1 ? '' : 's'} created` : ''}.`);
       } else setMessage('FairRank data refreshed successfully.');
       setGroupItems(responseData(await api.get(`/performance/cycles/${selectedCycleId}/equivalence-groups`)));
       await onRetry();
@@ -581,7 +591,7 @@ function ActionWorkspace({ tab, items, cycles, employees, criteria, profiles, on
   async function viewReadiness(employeeId) { try { setReadinessRows(responseData(await api.get(`/performance/employees/${employeeId}/promotion-readiness`))); } catch (err) { setMessage(err.response?.data?.error?.message || 'Unable to load promotion readiness.'); } }
   async function loadReviewCriteria(cycleId) {
     setReviewCriteria([]);
-    if (!cycleId || tab !== 'reviews') return;
+    if (!cycleId || !['reviews', 'evidence'].includes(tab)) return;
     setCriteriaLoading(true); setFormError('');
     try { setReviewCriteria(responseData(await api.get(`/performance/cycles/${cycleId}/review-criteria`))); }
     catch (err) { setFormError(err.response?.data?.error?.message || 'Unable to load criteria for this cycle.'); }
@@ -595,7 +605,7 @@ function ActionWorkspace({ tab, items, cycles, employees, criteria, profiles, on
     try {
       let payload = raw; let route = `/performance/${tab}`;
       if (tab === 'criteria') payload = { ...raw, weight: Number(raw.weight || 0), ratingScaleMin: Number(raw.ratingScaleMin || 0), ratingScaleMax: Number(raw.ratingScaleMax || 5), evidenceRequired: raw.evidenceRequired === 'on' };
-      if (tab === 'evidence') payload = { ...raw, cycleId: Number(raw.cycleId), employeeId: Number(raw.employeeId), eventDate: raw.eventDate, sourceType: raw.sourceType || 'manual' };
+      if (tab === 'evidence') payload = { ...raw, cycleId: Number(raw.cycleId), employeeId: Number(raw.employeeId), criterionId: raw.criterionId ? Number(raw.criterionId) : null, eventDate: raw.eventDate, sourceType: raw.sourceType || 'manual' };
       if (tab === 'reviews') {
         payload = { cycleId: Number(raw.cycleId), employeeId: Number(raw.employeeId), reviewType: raw.reviewType, strengths: raw.strengths || null, improvementAreas: raw.improvementAreas || null, comments: raw.comments || null, scores: reviewCriteria.map((criterion) => ({ criterionId: Number(criterion.id), rawScore: Number(raw[`score_${criterion.id}`]) })).filter((score) => Number.isFinite(score.rawScore)) };
       }
@@ -634,7 +644,7 @@ function ActionWorkspace({ tab, items, cycles, employees, criteria, profiles, on
     </article>)}</div> : <EmptyState text={`No ${title.toLowerCase()} records are available yet.`} />}
     {modal && <div className="modal-backdrop"><form className="modal performance-modal" onSubmit={submit}><button type="button" className="modal-close" onClick={() => setModal(false)}>×</button><h2>Add {title.slice(0, -1)}</h2><p>Save this step to continue the FairRank workflow.</p>
       {tab === 'criteria' && <><label>Name<input name="name" required minLength="2" /></label><label>Category<input name="category" required minLength="2" /></label><label>Weight (%)<input name="weight" type="number" min="0" max="100" defaultValue="0" /></label><label>Description<textarea name="description" /></label><label>Rating max<input name="ratingScaleMax" type="number" min="1" max="100" defaultValue="5" /></label><label><input name="evidenceRequired" type="checkbox" defaultChecked /> Evidence required</label></>}
-      {tab === 'evidence' && <><RecordSelectors cycles={cycles} employees={employees} /><label>Evidence type<select name="evidenceType" defaultValue="manager_observation"><option value="kpi_result">KPI result</option><option value="project_completion">Project completion</option><option value="manager_observation">Manager observation</option><option value="training_completion">Training completion</option><option value="quality_metric">Quality metric</option></select></label><label>Title<input name="title" required minLength="3" /></label><label>Event date<input name="eventDate" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} /></label><label>Description<textarea name="description" /></label></>}
+      {tab === 'evidence' && <><RecordSelectors cycles={cycles} employees={employees} onCycleChange={loadReviewCriteria} /><label>Criterion<select name="criterionId" required><option value="">Select criterion</option>{reviewCriteria.map((criterion) => <option value={criterion.id} key={criterion.id}>{criterion.name}</option>)}</select></label><label>Evidence type<select name="evidenceType" defaultValue="manager_observation"><option value="kpi_result">KPI result</option><option value="project_completion">Project completion</option><option value="manager_observation">Manager observation</option><option value="training_completion">Training completion</option><option value="quality_metric">Quality metric</option></select></label><label>Title<input name="title" required minLength="3" /></label><label>Event date<input name="eventDate" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} /></label><label>Description<textarea name="description" /></label></>}
       {tab === 'reviews' && <><RecordSelectors cycles={cycles} employees={employees} onCycleChange={loadReviewCriteria} /><label>Review type<select name="reviewType" defaultValue={canManage ? 'manager' : 'self'}><option value="self">Self</option>{canManage && <option value="manager">Manager</option>}</select></label><fieldset><legend>Criterion scores (0–100)</legend>{criteriaLoading ? <p className="performance-inline-message">Loading criteria for this cycle…</p> : reviewCriteria.length ? reviewCriteria.map((criterion) => <label key={criterion.id}>{criterion.name}<input name={`score_${criterion.id}`} type="number" min="0" max="100" /></label>) : <p className="performance-inline-message">Select a cycle to load its template criteria.</p>}</fieldset><label>Comments<textarea name="comments" /></label></>}
       {tab === 'readiness' && <><RecordSelectors cycles={cycles} employees={employees} /><label>Promotion profile<select name="promotionProfileId" required value={profileId} onChange={(event) => setProfileId(event.target.value)}><option value="">Select profile</option>{profiles.map((profile) => <option value={profile.id} key={profile.id}>{profile.name} → {profile.targetRole}</option>)}</select></label>{selectedProfile?.criteria?.map((criterion) => <label key={criterion.id}>{criterion.criterionName}<input name={`promotion_${criterion.id}`} type="number" min="0" max="100" /></label>)}<label>Comments<textarea name="comments" /></label></>}
       {tab === 'rewards' && <><RecordSelectors cycles={cycles} employees={employees} /><label>Reward type<select name="rewardType" defaultValue="recognition"><option value="salary_increment">Salary increment</option><option value="performance_bonus">Performance bonus</option><option value="promotion">Promotion</option><option value="recognition">Recognition</option><option value="development_opportunity">Development opportunity</option></select></label><label>Recommended value<input name="recommendedValue" type="number" min="0" defaultValue="0" /></label><label>Reason<textarea name="reason" required minLength="5" /></label></>}

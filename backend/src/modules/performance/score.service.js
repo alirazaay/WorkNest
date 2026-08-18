@@ -1,10 +1,11 @@
 import { Op } from 'sequelize';
-import { Employee, PerformanceCalibrationDecision, PerformanceCriterion, PerformanceCycle, PerformanceReview, PerformanceReviewScore, PerformanceScoreSnapshot, User } from '../../database/models/index.js';
+import { Employee, PerformanceCalibrationDecision, PerformanceCriterion, PerformanceCycle, PerformanceEvidence, PerformanceReview, PerformanceReviewScore, PerformanceScoreSnapshot, PerformanceTemplate, PerformanceTemplateCriterion, User } from '../../database/models/index.js';
 import { findRatingBand } from './rating-bands.service.js';
 import { sequelize } from '../../config/database.js';
 import { AppError } from '../../middleware/error.js';
 import { recordAudit } from '../../services/audit.service.js';
 import { assertEmployeeRelease } from './access.js';
+import { templateWeightsAreComplete } from './criteria.service.js';
 
 const reviewInclude = [{ model: PerformanceReviewScore, as: 'scores', include: [{ model: PerformanceCriterion, as: 'criterion', attributes: ['id', 'name', 'category', 'weight', 'ratingScaleMin', 'ratingScaleMax'] }] }];
 
@@ -76,6 +77,31 @@ export async function calculateCycleScores(auth, cycleId, force = false) {
     if (!confirmedReviewIds.length) throw new AppError('No confirmed reviews are available for score calculation. Confirm submitted reviews in Calibration first.', 422, 'NO_CONFIRMED_REVIEWS');
     const reviews = await PerformanceReview.findAll({ where: { tenantId: auth.tenantId, cycleId, id: { [Op.in]: confirmedReviewIds }, status: { [Op.in]: ['submitted', 'released'] } }, include: reviewInclude, transaction });
     if (!reviews.length) throw new AppError('The confirmed reviews are no longer available for this cycle.', 422, 'NO_CONFIRMED_REVIEWS');
+    const template = await PerformanceTemplate.findOne({ where: { tenantId: auth.tenantId, status: 'active' }, order: [['id', 'DESC']], transaction });
+    if (!template) throw new AppError('An active performance template is required before calculating scores.', 422, 'SCORE_TEMPLATE_REQUIRED');
+    const assignments = await PerformanceTemplateCriterion.findAll({ where: { tenantId: auth.tenantId, templateId: template.id }, include: [{ model: PerformanceCriterion, as: 'criterion', where: { tenantId: auth.tenantId, isActive: true }, required: true }], order: [['sortOrder', 'ASC'], ['id', 'ASC']], transaction });
+    if (!assignments.length || !templateWeightsAreComplete(assignments)) throw new AppError('Performance template criteria weights must total exactly 100% before calculating scores.', 422, 'INVALID_SCORE_WEIGHTS');
+    const assignmentByCriterion = new Map(assignments.map(assignment => [assignment.criterionId, assignment]));
+    for (const review of reviews) {
+      const scoreIds = new Set(review.scores.map(score => score.criterionId));
+      if (scoreIds.size !== assignments.length || assignments.some(assignment => !scoreIds.has(assignment.criterionId))) throw new AppError(`Review ${review.id} is missing one or more active template criteria.`, 422, 'INCOMPLETE_REVIEW_CRITERIA');
+      for (const score of review.scores) {
+        const assignment = assignmentByCriterion.get(score.criterionId);
+        score.criterion.weight = assignment.weight;
+      }
+    }
+    const employeeIds = [...new Set(reviews.map(review => review.employeeId))];
+    const evidenceRows = await PerformanceEvidence.findAll({ where: { tenantId: auth.tenantId, cycleId, employeeId: { [Op.in]: employeeIds }, verificationStatus: 'verified', criterionId: { [Op.ne]: null } }, attributes: ['employeeId', 'criterionId'], transaction });
+    const evidenceCounts = new Map();
+    for (const evidence of evidenceRows) {
+      const key = `${evidence.employeeId}:${evidence.criterionId}`;
+      evidenceCounts.set(key, (evidenceCounts.get(key) || 0) + 1);
+    }
+    for (const review of reviews) for (const score of review.scores) {
+      const count = evidenceCounts.get(`${review.employeeId}:${score.criterionId}`) || 0;
+      score.evidenceCount = count;
+      await score.update({ evidenceCount: count }, { transaction });
+    }
     const grouped = new Map();
     for (const review of reviews) {
       if (!grouped.has(review.employeeId)) grouped.set(review.employeeId, []);

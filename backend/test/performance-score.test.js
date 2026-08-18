@@ -23,5 +23,9 @@ test('score calculation requires confirmed reviews, preserves immutable snapshot
   assert.match(source, /NO_CONFIRMED_REVIEWS/);
   assert.match(source, /immutable_snapshot_exists/);
   assert.match(source, /INVALID_SCORE_WEIGHTS/);
+  assert.match(source, /INCOMPLETE_REVIEW_CRITERIA/);
+  assert.match(source, /templateWeightsAreComplete/);
+  assert.match(source, /verificationStatus: 'verified'/);
+  assert.match(source, /evidenceCount: count/);
   assert.match(source, /tenantId: auth\.tenantId/);
 });

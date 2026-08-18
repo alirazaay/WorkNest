@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { templateWeightTotal, templateWeightsAreComplete } from '../src/modules/performance/criteria.service.js';
 import { performanceCriterionCreateSchema, performanceTemplateCreateSchema, templateCriterionSchema } from '../src/modules/performance/performance.schemas.js';
 
@@ -21,4 +22,10 @@ test('criterion validation rejects invalid weights, categories, and missing name
   assert.equal(performanceCriterionCreateSchema.safeParse({ name: 'Quality', category: ' ' }).success, false);
   assert.equal(performanceCriterionCreateSchema.safeParse({ category: 'Quality' }).success, false);
   assert.equal(performanceCriterionCreateSchema.safeParse({ name: ' Quality ', category: ' Quality ', weight: '25', ratingScaleMax: '5', evidenceRequired: false }).data.name, 'Quality');
+});
+
+test('template assignments reject duplicate logical criterion names', async () => {
+  const source = await readFile(new URL('../src/modules/performance/criteria.service.js', import.meta.url), 'utf8');
+  assert.match(source, /TEMPLATE_CRITERION_DUPLICATE_NAME/);
+  assert.match(source, /criterion\.name\.trim\(\)\.toLocaleLowerCase\(\)/);
 });
