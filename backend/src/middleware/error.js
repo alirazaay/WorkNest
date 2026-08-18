@@ -21,8 +21,9 @@ export function errorHandler(error, req, res, next) {
   const statusCode = error.statusCode || (String(error.code || '').startsWith('LIMIT_') ? 413 : 500);
   const code = String(error.code || '').startsWith('LIMIT_') ? 'UPLOAD_LIMIT_EXCEEDED' : (error.code || 'INTERNAL_ERROR');
   const isPayrollRequest = req.originalUrl?.includes('/payroll');
+  const isPerformanceRequest = req.originalUrl?.includes('/performance');
   const userMessage = statusCode >= 500
-    ? (isPayrollRequest ? 'Payroll data could not be loaded. Please retry, and contact support if the problem continues.' : 'Internal server error')
+    ? (isPayrollRequest ? 'Payroll data could not be loaded. Please retry, and contact support if the problem continues.' : isPerformanceRequest ? 'Performance data could not be processed. Please retry, and contact support if the problem continues.' : 'Internal server error')
     : error.message;
   const payload = {
     success: false,

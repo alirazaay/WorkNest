@@ -511,3 +511,5 @@ Performance Continuity reads only finalized (`completed` or `archived`) cycles. 
 FairRank snapshots enter continuity only when the matching employee/cycle has a confirmed calibration decision. Cycle ID, cycle name, year, and status are loaded from the same cycle joined to that snapshot, preventing stale results from being displayed under another year.
 
 Performance cycle lifecycle updates use a status-only schema for transitions. Configuration remains frozen after activation, while the valid workflow remains `draft → active → review → calibration → completed`; status-only PATCH requests do not inherit create-form defaults.
+
+FairRank production hardening includes tenant-scoped audit filters, debounced server-side employee search for management review forms, active-template validation for criterion evidence, near-duplicate criterion protection, and safe performance-specific error messages. Full browser acceptance across every role and migration of the remaining Goals, Compare, and Continuity selectors are still required before a customer-ready release.

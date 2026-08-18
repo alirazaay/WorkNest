@@ -6,6 +6,8 @@ import { recordAudit } from '../../services/audit.service.js';
 
 function includeTemplate() { return [{ model: User, as: 'creator', attributes: ['id', 'name'] }, { model: PerformanceTemplateCriterion, as: 'criteria', include: [{ model: PerformanceCriterion, as: 'criterion' }], order: [['sortOrder', 'ASC']] }]; }
 function assertScale(min, max) { if (Number(min) >= Number(max)) throw new AppError('Rating scale maximum must be greater than minimum', 422, 'INVALID_RATING_SCALE'); }
+function normalizedName(value) { return String(value || '').trim().toLocaleLowerCase().replace(/[^a-z0-9]+/g, ''); }
+function editDistance(left, right) { const row = Array.from({ length: right.length + 1 }, (_, index) => index); for (let i = 1; i <= left.length; i += 1) { let diagonal = row[0]; row[0] = i; for (let j = 1; j <= right.length; j += 1) { const above = row[j]; row[j] = left[i - 1] === right[j - 1] ? diagonal : Math.min(row[j] + 1, row[j - 1] + 1, diagonal + 1); diagonal = above; } } return row[right.length]; }
 export function templateWeightTotal(rows) { return rows.reduce((total, row) => total + Math.round(Number(row.weight) * 1000), 0) / 1000; }
 function weightTotal(rows) { return Math.round(templateWeightTotal(rows) * 1000); }
 export function templateWeightsAreComplete(rows) { return weightTotal(rows) === 100000; }
@@ -19,6 +21,9 @@ export async function createCriterion(auth, input) {
   assertScale(input.ratingScaleMin, input.ratingScaleMax);
   try {
     return await sequelize.transaction(async transaction => {
+      const candidate = normalizedName(input.name);
+      const existing = await PerformanceCriterion.findAll({ where: { tenantId: auth.tenantId }, attributes: ['id', 'name'], transaction });
+      if (existing.some((row) => { const name = normalizedName(row.name); return name === candidate || (candidate.length >= 8 && name.length >= 8 && editDistance(name, candidate) <= 1); })) throw new AppError('A duplicate or near-duplicate criterion name already exists in this workspace', 409, 'PERFORMANCE_CRITERION_DUPLICATE_NAME');
       const criterion = await PerformanceCriterion.create({ tenantId: auth.tenantId, ...input }, { transaction });
       await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'performance_criterion_created', entityType: 'performance_criterion', entityId: criterion.id, afterData: criterion.toJSON(), transaction });
       return criterion;

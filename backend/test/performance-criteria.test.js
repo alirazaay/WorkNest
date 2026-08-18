@@ -28,4 +28,6 @@ test('template assignments reject duplicate logical criterion names', async () =
   const source = await readFile(new URL('../src/modules/performance/criteria.service.js', import.meta.url), 'utf8');
   assert.match(source, /TEMPLATE_CRITERION_DUPLICATE_NAME/);
   assert.match(source, /criterion\.name\.trim\(\)\.toLocaleLowerCase\(\)/);
+  assert.match(source, /PERFORMANCE_CRITERION_DUPLICATE_NAME/);
+  assert.match(source, /editDistance/);
 });

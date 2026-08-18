@@ -1,5 +1,5 @@
 import { Op } from 'sequelize';
-import { Employee, PerformanceCriterion, PerformanceCycle, PerformanceEvidence, PerformanceGoal, User } from '../../database/models/index.js';
+import { Employee, PerformanceCriterion, PerformanceCycle, PerformanceEvidence, PerformanceGoal, PerformanceTemplate, PerformanceTemplateCriterion, User } from '../../database/models/index.js';
 import { sequelize } from '../../config/database.js';
 import { AppError } from '../../middleware/error.js';
 import { recordAudit } from '../../services/audit.service.js';
@@ -50,7 +50,13 @@ async function assertReferences(auth, input) {
     const goal = await PerformanceGoal.findOne({ where: { id: input.goalId, tenantId: auth.tenantId, cycleId: input.cycleId, employeeId: input.employeeId } });
     if (!goal) throw new AppError('Goal does not belong to this employee and cycle', 422, 'INVALID_EVIDENCE_GOAL');
   }
-  if (input.criterionId && !(await PerformanceCriterion.findOne({ where: { id: input.criterionId, tenantId: auth.tenantId, isActive: true } }))) throw new AppError('Performance criterion not found or inactive', 404, 'PERFORMANCE_CRITERION_NOT_FOUND');
+  if (input.criterionId) {
+    const templateCriterion = await PerformanceTemplateCriterion.findOne({
+      where: { tenantId: auth.tenantId, criterionId: input.criterionId },
+      include: [{ model: PerformanceTemplate, as: 'template', where: { tenantId: auth.tenantId, status: 'active' }, required: true }]
+    });
+    if (!templateCriterion) throw new AppError('Criterion is not part of the active performance template for this workspace', 422, 'INVALID_EVIDENCE_CRITERION');
+  }
   return employee;
 }
 

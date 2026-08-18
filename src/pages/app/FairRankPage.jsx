@@ -84,6 +84,7 @@ export default function FairRankPage({ user, onExit }) {
   const [formError, setFormError] = useState('');
   const tabCache = useRef(new Map());
   const [page, setPage] = useState(1);
+  const [auditFilters, setAuditFilters] = useState({});
 
   // Filter each group down to tabs the current role can see; drop empty groups.
   const visibleGroups = TAB_GROUPS
@@ -93,7 +94,7 @@ export default function FairRankPage({ user, onExit }) {
   // Fixed: wrapped in useCallback([tab]) so the function reference is stable
   // and useEffect([load]) only fires when tab actually changes.
   const load = useCallback(async ({ force = false } = {}) => {
-    const cacheKey = `${tab}:${page}`;
+    const cacheKey = `${tab}:${page}:${tab === 'audit' ? JSON.stringify(auditFilters) : ''}`;
     const cached = tabCache.current.get(cacheKey);
     if (cached && !force && Date.now() - cached.timestamp < 30_000) {
       setData(cached.data);
@@ -167,6 +168,9 @@ export default function FairRankPage({ user, onExit }) {
         if (tab === 'reviews') next.criteria = [];
         if (tab === 'readiness') next.profiles = responseData(responses[index++]);
         commit(next, responsePagination(responses[0]));
+      } else if (tab === 'audit') {
+        const auditRes = await api.get('/performance/audit', { params: { limit: 100, ...auditFilters } });
+        commit({ items: responseData(auditRes) });
       } else {
         commit({ items: responseData(await api.get(endpoints[tab])) });
       }
@@ -176,7 +180,7 @@ export default function FairRankPage({ user, onExit }) {
       if (import.meta.env.DEV) console.debug(`[FairRank] ${tab} loaded in ${(performance.now() - startedAt).toFixed(0)}ms`);
       setLoading(false);
     }
-  }, [page, role, tab]);
+  }, [auditFilters, page, role, tab]);
 
   useEffect(() => { setPage(1); }, [tab]);
   useEffect(() => { load(); }, [load]);
@@ -290,7 +294,7 @@ export default function FairRankPage({ user, onExit }) {
 
 function PageContent({ tab, data, canManage, canAdmin, activeCycle, onRetry, onPageChange, setData }) {
   if (tab === 'my') return <MyPerformance data={data} />;
-  if (tab === 'audit') return <AuditList items={data.items || []} />;
+  if (tab === 'audit') return <AuditList items={data.items || []} filters={auditFilters} onFiltersChange={(next) => { setAuditFilters(next); setPage(1); }} />;
   if (tab === 'comparison') return <Comparison employees={data.employees || []} cycles={data.cycles || []} />;
   if (tab === 'cycles') return <CyclesWorkspace items={data.items || []} onRetry={onRetry} canAdmin={canAdmin} />;
   if (tab === 'fairrank') return <FairRankGroups items={data.items || []} scores={data.scores || []} cycles={data.cycles || []} cycle={data.cycle} canAdmin={canAdmin} onRetry={onRetry} />;
@@ -707,7 +711,25 @@ function ActionWorkspace({ tab, items, cycles, employees, criteria, profiles, on
   </article>;
 }
 
-function RecordSelectors({ cycles, employees, onCycleChange, defaultCycleId, defaultEmployeeId }) { return <><label>Performance cycle<select name="cycleId" required defaultValue={defaultCycleId || ''} onChange={(event) => onCycleChange?.(event.target.value)}><option value="">Select cycle</option>{cycles.map((cycle) => <option value={cycle.id} key={cycle.id}>{cycle.name}</option>)}</select></label><label>Employee<select name="employeeId" required defaultValue={defaultEmployeeId || ''}><option value="">Select employee</option>{employees.map((employee) => <option value={employee.id} key={employee.id}>{employee.user?.name || employee.employeeCode} ({employee.employeeCode})</option>)}</select></label></>; }
+function SearchableEmployeeSelect({ employees = [], defaultEmployeeId, canSearch }) {
+  const [query, setQuery] = useState('');
+  const [options, setOptions] = useState(employees.slice(0, 25));
+  const [searching, setSearching] = useState(false);
+  useEffect(() => {
+    if (!canSearch) { setOptions(employees.slice(0, 25)); return undefined; }
+    const timer = window.setTimeout(async () => {
+      setSearching(true);
+      try {
+        const result = await api.get('/employees', { params: { search: query || undefined, page: 1, pageSize: 25 } });
+        setOptions(responseData(result)?.items || responseData(result) || []);
+      } catch { setOptions([]); } finally { setSearching(false); }
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [canSearch, employees, query]);
+  const merged = [...(defaultEmployeeId && !options.some((employee) => Number(employee.id) === Number(defaultEmployeeId)) ? employees.filter((employee) => Number(employee.id) === Number(defaultEmployeeId)) : []), ...options];
+  return <label>Employee{canSearch && <input aria-label="Search employees" placeholder="Search name or employee ID" value={query} onChange={(event) => setQuery(event.target.value)} />}{searching && <small>Searching employees…</small>}<select name="employeeId" required defaultValue={defaultEmployeeId || ''}><option value="">Select employee</option>{merged.map((employee) => <option value={employee.id} key={employee.id}>{employee.user?.name || employee.employeeCode} ({employee.employeeCode})</option>)}</select></label>;
+}
+function RecordSelectors({ cycles, employees, onCycleChange, defaultCycleId, defaultEmployeeId, canSearch = employees.length > 1 }) { return <><label>Performance cycle<select name="cycleId" required defaultValue={defaultCycleId || ''} onChange={(event) => onCycleChange?.(event.target.value)}><option value="">Select cycle</option>{cycles.map((cycle) => <option value={cycle.id} key={cycle.id}>{cycle.name}</option>)}</select></label><SearchableEmployeeSelect employees={employees} defaultEmployeeId={defaultEmployeeId} canSearch={canSearch} /></>; }
 
 function TnaWorkspace({ items, onRetry }) {
   const [priority, setPriority] = useState(''); const [status, setStatus] = useState(''); const [signal, setSignal] = useState(''); const filtered = items.filter((item) => (!priority || item.priority === priority) && (!status || item.status === status) && (!signal || item.signalCode === signal));
@@ -761,10 +783,20 @@ function Pagination({ pagination, onPageChange }) {
   return <div className="performance-pagination"><span>Page {pagination.page} of {pagination.totalPages} · {pagination.total} records</span><div><button type="button" className="table-link" disabled={pagination.page <= 1} onClick={() => onPageChange(pagination.page - 1)}>Previous</button><button type="button" className="table-link" disabled={pagination.page >= pagination.totalPages} onClick={() => onPageChange(pagination.page + 1)}>Next</button></div></div>;
 }
 
-function AuditList({ items }) {
+function AuditList({ items, filters, onFiltersChange }) {
+  const updateFilter = (key, value) => onFiltersChange({ ...filters, [key]: value || undefined });
   return (
     <article className="performance-card">
       <div className="performance-card-heading"><div><h2>FairRank audit log</h2><p>Tenant-scoped sensitive performance actions. Private before/after payloads are intentionally not exposed here.</p></div></div>
+      <div className="tna-filters audit-filters">
+        <input aria-label="Filter audit action" placeholder="Action contains..." value={filters?.action || ''} onChange={(event) => updateFilter('action', event.target.value)} />
+        <input aria-label="Filter employee ID" type="number" min="1" placeholder="Employee ID" value={filters?.employeeId || ''} onChange={(event) => updateFilter('employeeId', event.target.value)} />
+        <input aria-label="Filter actor user ID" type="number" min="1" placeholder="Actor ID" value={filters?.actorUserId || ''} onChange={(event) => updateFilter('actorUserId', event.target.value)} />
+        <input aria-label="Filter cycle ID" type="number" min="1" placeholder="Cycle ID" value={filters?.cycleId || ''} onChange={(event) => updateFilter('cycleId', event.target.value)} />
+        <input aria-label="Audit from date" type="date" value={filters?.fromDate || ''} onChange={(event) => updateFilter('fromDate', event.target.value)} />
+        <input aria-label="Audit to date" type="date" value={filters?.toDate || ''} onChange={(event) => updateFilter('toDate', event.target.value)} />
+        <button type="button" className="table-link" onClick={() => onFiltersChange({})}>Clear filters</button>
+      </div>
       {items.length ? <div className="performance-list">{items.map((item) => <article className="performance-list-card" key={item.id}><div><strong>{titleCase(item.action)}</strong><small>{item.entityType} #{item.entityId || '—'} · {item.actor?.name || 'System'} · {item.createdAt ? new Date(item.createdAt).toLocaleString() : ''}</small></div><StatusBadge status="Recorded" /></article>)}</div> : <EmptyState text="No FairRank audit events have been recorded yet." />}
     </article>
   );

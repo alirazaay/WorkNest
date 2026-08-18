@@ -81,7 +81,15 @@ export const performanceCalibrationSettingsSchema = z.object({ blindReviewEnable
 export const performanceCalibrationRevealQuerySchema = z.object({ revealIdentity: z.coerce.boolean().optional().default(false) });
 export const performanceExplanationQuerySchema = z.object({ cycleId: z.coerce.number().int().positive() });
 export const performanceTransparencyQuerySchema = z.object({ cycleId: z.coerce.number().int().positive().optional() });
-export const performanceAuditQuerySchema = z.object({ limit: z.coerce.number().int().positive().max(100).optional() });
+export const performanceAuditQuerySchema = z.object({
+  limit: z.coerce.number().int().positive().max(100).optional(),
+  cycleId: z.coerce.number().int().positive().optional(),
+  employeeId: z.coerce.number().int().positive().optional(),
+  actorUserId: z.coerce.number().int().positive().optional(),
+  action: z.string().trim().max(100).optional(),
+  fromDate: date.optional(),
+  toDate: date.optional()
+}).superRefine((value, ctx) => { if (value.fromDate && value.toDate && value.fromDate > value.toDate) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['toDate'], message: 'toDate must be on or after fromDate' }); });
 export const performanceContinuityQuerySchema = z.object({ fromYear: z.coerce.number().int().min(2000).max(2200).optional(), toYear: z.coerce.number().int().min(2000).max(2200).optional() }).superRefine((value, ctx) => { if (value.fromYear && value.toYear && value.fromYear > value.toYear) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['toYear'], message: 'toYear must be greater than or equal to fromYear' }); });
 export const trainingNeedQuerySchema = z.object({ employeeId: z.coerce.number().int().positive().optional(), priority: z.enum(['low', 'medium', 'high', 'critical']).optional(), status: z.enum(['identified', 'reviewed', 'approved', 'planned', 'in_progress', 'completed', 'dismissed']).optional(), signalCode: z.string().max(80).optional(), ...listPaging });
 export const trainingNeedCreateSchema = z.object({ employeeId: z.coerce.number().int().positive(), cycleId: z.coerce.number().int().positive().optional().nullable(), sourceCycleId: z.coerce.number().int().positive().optional().nullable(), skillArea: z.string().min(2).max(150), priority: z.enum(['low', 'medium', 'high', 'critical']).default('medium'), reason: z.string().min(3).max(5000), recommendedTraining: z.string().max(5000).optional().nullable(), status: z.enum(['identified', 'reviewed', 'approved', 'planned', 'in_progress', 'completed', 'dismissed']).default('identified') });

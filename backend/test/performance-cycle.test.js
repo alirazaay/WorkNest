@@ -35,6 +35,12 @@ test('cycle lifecycle allows only the ordered workflow transitions', () => {
   assert.equal(canTransitionCycle('completed', 'review'), false);
 });
 
+test('audit filters validate bounded tenant-scoped review fields', async () => {
+  const { performanceAuditQuerySchema } = await import('../src/modules/performance/performance.schemas.js');
+  assert.deepEqual(performanceAuditQuerySchema.parse({ cycleId: '9', employeeId: '15012', actorUserId: '1', action: 'performance_', fromDate: '2026-01-01', toDate: '2026-12-31' }), { cycleId: 9, employeeId: 15012, actorUserId: 1, action: 'performance_', fromDate: '2026-01-01', toDate: '2026-12-31' });
+  assert.equal(performanceAuditQuerySchema.safeParse({ fromDate: '2026-12-31', toDate: '2026-01-01' }).success, false);
+});
+
 test('cycle activation rejects missing or incomplete active templates', () => {
   assert.throws(() => validateCycleActivation(null), error => error.code === 'CYCLE_ACTIVATION_TEMPLATE_REQUIRED' && error.statusCode === 422);
   assert.throws(() => validateCycleActivation({ criteria: [{ weight: 60 }] }), error => error.code === 'CYCLE_ACTIVATION_WEIGHTS_INCOMPLETE');
