@@ -513,3 +513,5 @@ FairRank snapshots enter continuity only when the matching employee/cycle has a 
 Performance cycle lifecycle updates use a status-only schema for transitions. Configuration remains frozen after activation, while the valid workflow remains `draft → active → review → calibration → completed`; status-only PATCH requests do not inherit create-form defaults.
 
 FairRank production hardening includes tenant-scoped audit filters, debounced server-side employee search for management review forms, active-template validation for criterion evidence, near-duplicate criterion protection, and safe performance-specific error messages. Full browser acceptance across every role and migration of the remaining Goals, Compare, and Continuity selectors are still required before a customer-ready release.
+
+The FairRank Audit Log tab passes its filter state explicitly into the page-content renderer. This prevents the runtime error that previously made the tab display the generic page-failure screen, while retaining tenant-scoped cycle, employee, actor, action, and date filtering.

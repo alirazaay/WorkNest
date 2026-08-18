@@ -267,7 +267,7 @@ export default function FairRankPage({ user, onExit }) {
       </nav>
       {loading ? <LoadingState label="Loading performance data..." /> : error ? <ErrorState message={error} onRetry={() => load({ force: true })} /> : (
         <section className="performance-content">
-          <PageContent tab={tab} data={data} canManage={canManage} canAdmin={canAdmin} activeCycle={activeCycle} onRetry={() => load({ force: true })} onPageChange={setPage} setData={setData} />
+          <PageContent tab={tab} data={data} canManage={canManage} canAdmin={canAdmin} activeCycle={activeCycle} onRetry={() => load({ force: true })} onPageChange={setPage} setData={setData} auditFilters={auditFilters} onAuditFiltersChange={(next) => { setAuditFilters(next); setPage(1); }} />
         </section>
       )}
       {modal && (
@@ -292,9 +292,9 @@ export default function FairRankPage({ user, onExit }) {
   );
 }
 
-function PageContent({ tab, data, canManage, canAdmin, activeCycle, onRetry, onPageChange, setData }) {
+function PageContent({ tab, data, canManage, canAdmin, activeCycle, onRetry, onPageChange, setData, auditFilters, onAuditFiltersChange }) {
   if (tab === 'my') return <MyPerformance data={data} />;
-  if (tab === 'audit') return <AuditList items={data.items || []} filters={auditFilters} onFiltersChange={(next) => { setAuditFilters(next); setPage(1); }} />;
+  if (tab === 'audit') return <AuditList items={data.items || []} filters={auditFilters} onFiltersChange={onAuditFiltersChange} />;
   if (tab === 'comparison') return <Comparison employees={data.employees || []} cycles={data.cycles || []} />;
   if (tab === 'cycles') return <CyclesWorkspace items={data.items || []} onRetry={onRetry} canAdmin={canAdmin} />;
   if (tab === 'fairrank') return <FairRankGroups items={data.items || []} scores={data.scores || []} cycles={data.cycles || []} cycle={data.cycle} canAdmin={canAdmin} onRetry={onRetry} />;
