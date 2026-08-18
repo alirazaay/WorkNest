@@ -1,5 +1,5 @@
 import { Op } from 'sequelize';
-import { Employee, PerformanceCriterion, PerformanceCycle, PerformanceReview, PerformanceReviewScore, PerformanceScoreSnapshot, User } from '../../database/models/index.js';
+import { Employee, PerformanceCalibrationDecision, PerformanceCriterion, PerformanceCycle, PerformanceReview, PerformanceReviewScore, PerformanceScoreSnapshot, User } from '../../database/models/index.js';
 import { findRatingBand } from './rating-bands.service.js';
 import { sequelize } from '../../config/database.js';
 import { AppError } from '../../middleware/error.js';
@@ -71,7 +71,11 @@ export async function calculateCycleScores(auth, cycleId, force = false) {
     throw new AppError('Completed or archived cycles cannot be recalculated', 409, 'PERFORMANCE_CYCLE_FROZEN');
   }
   return sequelize.transaction(async transaction => {
-    const reviews = await PerformanceReview.findAll({ where: { tenantId: auth.tenantId, cycleId, status: { [Op.in]: ['submitted', 'released'] } }, include: reviewInclude, transaction });
+    const confirmed = await PerformanceCalibrationDecision.findAll({ where: { tenantId: auth.tenantId, cycleId, status: 'confirmed' }, attributes: ['reviewId'], transaction });
+    const confirmedReviewIds = confirmed.map(row => row.reviewId);
+    if (!confirmedReviewIds.length) throw new AppError('No confirmed reviews are available for score calculation. Confirm submitted reviews in Calibration first.', 422, 'NO_CONFIRMED_REVIEWS');
+    const reviews = await PerformanceReview.findAll({ where: { tenantId: auth.tenantId, cycleId, id: { [Op.in]: confirmedReviewIds }, status: { [Op.in]: ['submitted', 'released'] } }, include: reviewInclude, transaction });
+    if (!reviews.length) throw new AppError('The confirmed reviews are no longer available for this cycle.', 422, 'NO_CONFIRMED_REVIEWS');
     const grouped = new Map();
     for (const review of reviews) {
       if (!grouped.has(review.employeeId)) grouped.set(review.employeeId, []);
@@ -87,6 +91,7 @@ export async function calculateCycleScores(auth, cycleId, force = false) {
       }
       const review = chooseReview(employeeReviews);
       const calculation = calculateWeightedScore(review.scores);
+      if (!calculation.totalWeight) throw new AppError('The confirmed review has no usable criterion weights. Complete the cycle template before calculating scores.', 422, 'INVALID_SCORE_WEIGHTS');
       const band = await findRatingBand(auth.tenantId, calculation.finalScore, transaction);
       const evidenceCoveragePercentage = calculation.lines.length
         ? Math.round((calculation.lines.filter(line => Number(line.evidenceCount) > 0).length / calculation.lines.length) * 10000) / 100

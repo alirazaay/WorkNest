@@ -370,8 +370,12 @@ function FairRankGroups({ items, cycles, cycle, canAdmin, onRetry }) {
         explanations: `/performance/cycles/${selectedCycleId}/generate-explanations`,
         fairness: `/performance/cycles/${selectedCycleId}/generate-fairness-flags`,
       };
-      await api.post(actions[name], {});
-      setMessage('FairRank data refreshed successfully.');
+      const result = responseData(await api.post(actions[name], {}));
+      if (name === 'calculate' || name === 'forceRecalculate') {
+        const createdCount = Array.isArray(result?.created) ? result.created.length : 0;
+        const skippedCount = Array.isArray(result?.skipped) ? result.skipped.length : 0;
+        setMessage(createdCount ? `Scores calculated for ${createdCount} employee${createdCount === 1 ? '' : 's'}.${skippedCount ? ` ${skippedCount} existing snapshot${skippedCount === 1 ? '' : 's'} remained unchanged.` : ''} Use Recalculate groups to update performance equivalents.` : `No new scores were created. ${skippedCount} existing snapshot${skippedCount === 1 ? '' : 's'} remained unchanged. Use Recalculate groups to update performance equivalents.`);
+      } else setMessage('FairRank data refreshed successfully.');
       setGroupItems(responseData(await api.get(`/performance/cycles/${selectedCycleId}/equivalence-groups`)));
       await onRetry();
     } catch (err) {

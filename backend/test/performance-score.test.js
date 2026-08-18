@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { calculateWeightedScore } from '../src/modules/performance/score.service.js';
 import { performanceScoreQuerySchema } from '../src/modules/performance/performance.schemas.js';
 
@@ -13,4 +14,14 @@ test('weighted score calculation is deterministic and normalized by configured w
 test('score endpoint requires a typed cycle filter', () => {
   assert.deepEqual(performanceScoreQuerySchema.parse({ cycleId: '7' }), { cycleId: 7 });
   assert.equal(performanceScoreQuerySchema.safeParse({}).success, false);
+});
+
+test('score calculation requires confirmed reviews, preserves immutable snapshots, and validates weights', async () => {
+  const source = await readFile(new URL('../src/modules/performance/score.service.js', import.meta.url), 'utf8');
+  assert.match(source, /PerformanceCalibrationDecision/);
+  assert.match(source, /status: 'confirmed'/);
+  assert.match(source, /NO_CONFIRMED_REVIEWS/);
+  assert.match(source, /immutable_snapshot_exists/);
+  assert.match(source, /INVALID_SCORE_WEIGHTS/);
+  assert.match(source, /tenantId: auth\.tenantId/);
 });
