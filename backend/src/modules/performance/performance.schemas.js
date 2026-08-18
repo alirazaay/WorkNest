@@ -13,7 +13,21 @@ export const performanceCycleCreateSchema = z.object({
   reviewStart: date.optional().nullable(),
   reviewEnd: date.optional().nullable()
 });
-export const performanceCycleUpdateSchema = performanceCycleCreateSchema.partial().extend({ status: z.enum(['draft', 'active', 'review', 'calibration', 'completed', 'archived']).optional() });
+// Keep lifecycle updates separate from create defaults. In particular, a
+// status-only PATCH must not gain cycleType='annual' from the create schema,
+// otherwise a valid active -> review transition looks like configuration edit.
+export const performanceCycleUpdateSchema = z.object({
+  name: z.string().trim().min(3).max(180).optional(),
+  cycleType: cycleType.optional(),
+  year: z.coerce.number().int().min(2000).max(2200).optional(),
+  startDate: date.optional(),
+  endDate: date.optional(),
+  goalSettingStart: date.optional().nullable(),
+  goalSettingEnd: date.optional().nullable(),
+  reviewStart: date.optional().nullable(),
+  reviewEnd: date.optional().nullable(),
+  status: z.enum(['draft', 'active', 'review', 'calibration', 'completed', 'archived']).optional()
+});
 export const performanceCycleQuerySchema = z.object({ status: z.enum(['draft', 'active', 'review', 'calibration', 'completed', 'archived']).optional(), year: z.coerce.number().int().min(2000).max(2200).optional(), cycleType: cycleType.optional() });
 const weight = z.coerce.number().min(0).max(100);
 export const performanceCriterionCreateSchema = z.object({ name: z.string().trim().min(2).max(150), description: z.string().max(2000).optional().nullable(), category: z.string().trim().min(2).max(80), weight: weight.default(0), ratingScaleMin: z.coerce.number().min(0).max(100).default(0), ratingScaleMax: z.coerce.number().positive().max(100).default(5), evidenceRequired: z.boolean().default(true) });

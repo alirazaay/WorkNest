@@ -509,3 +509,5 @@ Compare uses persisted FairRank snapshots and equivalence groups. It reports the
 Performance Continuity reads only finalized (`completed` or `archived`) cycles. It merges historical fixture records with authoritative FairRank snapshots, preferring one valid snapshot per cycle/year, and excludes active or in-progress cycles until they are completed/released. FairRank scores are represented deterministically on the five-point continuity scale as `finalScore / 20`; the original normalized score remains available in the timeline.
 
 FairRank snapshots enter continuity only when the matching employee/cycle has a confirmed calibration decision. Cycle ID, cycle name, year, and status are loaded from the same cycle joined to that snapshot, preventing stale results from being displayed under another year.
+
+Performance cycle lifecycle updates use a status-only schema for transitions. Configuration remains frozen after activation, while the valid workflow remains `draft → active → review → calibration → completed`; status-only PATCH requests do not inherit create-form defaults.
