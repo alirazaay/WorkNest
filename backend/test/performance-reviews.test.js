@@ -42,3 +42,15 @@ test('nonexistent review updates remain a safe not-found error', async () => {
   assert.match(source, /Performance review not found/);
   assert.match(source, /where: \{ id, tenantId: auth\.tenantId \}/);
 });
+
+test('confirmed reviews use an audited revision workflow instead of direct editing', async () => {
+  const source = await readFile(new URL('../src/modules/performance/reviews.service.js', import.meta.url), 'utf8');
+  const routes = await readFile(new URL('../src/modules/performance/performance.routes.js', import.meta.url), 'utf8');
+  assert.match(routes, /router\.post\('\/reviews\/:id\/reopen'/);
+  assert.match(routes, /router\.patch\('\/reviews\/:id'/);
+  assert.match(source, /PerformanceReviewRevision/);
+  assert.match(source, /REVIEW_EDIT_LOCKED/);
+  assert.match(source, /REVIEW_CORRECTION_DENIED/);
+  assert.match(source, /performance_review_reopened_for_correction/);
+  assert.match(source, /status: 'correction_required'/);
+});

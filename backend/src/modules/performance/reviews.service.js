@@ -1,5 +1,5 @@
 import { Op } from 'sequelize';
-import { Employee, PerformanceCriterion, PerformanceCycle, PerformanceEvidence, PerformanceReview, PerformanceReviewScore, PerformanceTemplate, PerformanceTemplateCriterion, User } from '../../database/models/index.js';
+import { Employee, PerformanceCalibrationDecision, PerformanceCriterion, PerformanceCycle, PerformanceEvidence, PerformanceReview, PerformanceReviewRevision, PerformanceReviewScore, PerformanceTemplate, PerformanceTemplateCriterion, User } from '../../database/models/index.js';
 import { sequelize } from '../../config/database.js';
 import { AppError } from '../../middleware/error.js';
 import { recordAudit } from '../../services/audit.service.js';
@@ -149,4 +149,42 @@ export async function submitReview(auth, id) {
     await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'performance_review_submitted', entityType: 'performance_review', entityId: id, beforeData: before, afterData: review.toJSON(), transaction });
   });
   return reviewFor(auth, id);
+}
+
+export async function updateReview(auth, id, input) {
+  const review = await reviewFor(auth, id);
+  if (!['draft', 'in_progress'].includes(review.status)) throw new AppError('Only draft reviews can be edited. Reopen a confirmed review for correction first.', 409, 'REVIEW_EDIT_LOCKED');
+  if (review.reviewerId !== auth.userId && auth.role !== 'admin') throw new AppError('Only the assigned reviewer can edit this review', 403, 'REVIEW_EDIT_DENIED');
+  return sequelize.transaction(async transaction => {
+    const criteria = await listCycleReviewCriteria(auth, review.cycleId, transaction);
+    const applicableIds = new Set(criteria.map(criterion => criterion.id));
+    if (input.scores.some(score => !applicableIds.has(score.criterionId)) || criteria.length !== input.scores.length) throw new AppError('One or more review criteria are invalid or inactive', 422, 'INVALID_REVIEW_CRITERIA');
+    const before = { ...review.toJSON(), scores: review.scores.map(score => score.toJSON()) };
+    await review.update({ strengths: input.strengths ?? null, improvementAreas: input.improvementAreas ?? null, comments: input.comments ?? null }, { transaction });
+    await PerformanceReviewScore.destroy({ where: { tenantId: auth.tenantId, reviewId: id }, transaction });
+    for (const score of input.scores) {
+      const evidenceCount = await PerformanceEvidence.count({ where: { tenantId: auth.tenantId, cycleId: review.cycleId, employeeId: review.employeeId, criterionId: score.criterionId, verificationStatus: 'verified' }, transaction });
+      await PerformanceReviewScore.create({ tenantId: auth.tenantId, reviewId: id, criterionId: score.criterionId, rawScore: score.rawScore, reviewerComment: score.reviewerComment ?? null, evidenceCount }, { transaction });
+    }
+    await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'performance_review_edited', entityType: 'performance_review', entityId: id, beforeData: before, afterData: { ...review.toJSON(), scores: input.scores }, transaction });
+    return reviewFor(auth, id, transaction);
+  });
+}
+
+export async function reopenReviewForCorrection(auth, id, input) {
+  if (auth.role !== 'admin') throw new AppError('Only authorized HR administrators can reopen confirmed reviews', 403, 'REVIEW_CORRECTION_DENIED');
+  const review = await reviewFor(auth, id);
+  if (['completed', 'archived'].includes(review.cycle?.status)) throw new AppError('Completed-cycle reviews require a privileged revision workflow', 409, 'REVIEW_REVISION_REQUIRED');
+  return sequelize.transaction(async transaction => {
+    const locked = await reviewFor(auth, id, transaction);
+    const decision = await PerformanceCalibrationDecision.findOne({ where: { tenantId: auth.tenantId, reviewId: id, status: 'confirmed' }, transaction, lock: transaction.LOCK.UPDATE });
+    if (!decision) throw new AppError('Only confirmed reviews can be reopened for correction', 409, 'REVIEW_NOT_CONFIRMED');
+    const priorRevisionCount = await PerformanceReviewRevision.count({ where: { tenantId: auth.tenantId, reviewId: id }, transaction });
+    const snapshot = { review: locked.toJSON(), scores: locked.scores.map(score => score.toJSON()), calibration: decision.toJSON() };
+    const revision = await PerformanceReviewRevision.create({ tenantId: auth.tenantId, reviewId: id, version: priorRevisionCount + 1, reason: input.reason, status: 'original_confirmed', snapshot, createdBy: auth.userId }, { transaction });
+    await locked.update({ status: 'draft', overallScore: null, ratingBand: null, submittedAt: null }, { transaction });
+    await decision.update({ status: 'correction_required', justification: input.reason, decidedBy: auth.userId, decidedAt: new Date() }, { transaction });
+    await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'performance_review_reopened_for_correction', entityType: 'performance_review', entityId: id, beforeData: snapshot, afterData: { revisionId: revision.id, version: revision.version, reason: input.reason, status: 'draft' }, transaction });
+    return reviewFor(auth, id, transaction);
+  });
 }

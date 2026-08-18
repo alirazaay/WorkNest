@@ -501,3 +501,5 @@ Score calculation requires confirmed calibration decisions. `POST /api/v1/perfor
 Verified criterion-linked evidence is counted during calculation and exposed in each snapshot's evidence coverage; the Evidence form requires a criterion from the selected cycle template.
 
 The FairRank tab loads persisted cycle score snapshots separately from equivalence groups. Zero groups is a valid result: calculated employee scores remain visible, while grouping requires the same rating band and the configured threshold. Later FairRank actions are enabled only after scores exist.
+
+Confirmed reviews are corrected through an audited revision workflow: an authorized administrator reopens the review with a reason, the original confirmed version is preserved, the draft revision is edited and resubmitted, and Calibration must confirm it again before an explicit force recalculation can update snapshots.
