@@ -590,7 +590,12 @@ function ActionWorkspace({ tab, items, cycles, employees, criteria, profiles, on
       if (tab === 'reviews' && !payload.scores.length) throw new Error('Enter at least one criterion score.');
       if (tab === 'readiness' && !payload.scores.length) throw new Error('Enter at least one readiness score.');
       await api.post(route, payload); setModal(false); setProfileId(''); setMessage(`${title} record saved successfully.`); await onRetry();
-    } catch (err) { setFormError(err.response?.data?.error?.message || err.message || `Unable to save ${title.toLowerCase()}.`); }
+    } catch (err) {
+      const apiError = err.response?.data?.error;
+      const fields = apiError?.fields;
+      const fieldMessage = fields ? Object.entries(fields).flatMap(([field, messages]) => (Array.isArray(messages) ? messages : [messages]).filter(Boolean).map((message) => `${titleCase(field)}: ${message}`)).join(' ') : '';
+      setFormError([apiError?.message || err.message || `Unable to save ${title.toLowerCase()}.`, fieldMessage].filter(Boolean).join(' '));
+    }
     finally { setSaving(false); }
   }
 

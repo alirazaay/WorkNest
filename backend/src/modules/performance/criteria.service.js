@@ -15,7 +15,20 @@ async function templateFor(auth, id) { const template = await PerformanceTemplat
 function assertEditable(template) { if (template.status !== 'draft') throw new AppError('Template criteria are frozen after activation', 409, 'PERFORMANCE_TEMPLATE_FROZEN'); }
 
 export async function listCriteria(auth) { return PerformanceCriterion.findAll({ where: { tenantId: auth.tenantId, ...(auth.role === 'employee' ? { isActive: true } : {}) }, order: [['category', 'ASC'], ['name', 'ASC']] }); }
-export async function createCriterion(auth, input) { assertScale(input.ratingScaleMin, input.ratingScaleMax); const criterion = await PerformanceCriterion.create({ tenantId: auth.tenantId, ...input }); await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'performance_criterion_created', entityType: 'performance_criterion', entityId: criterion.id, afterData: criterion.toJSON() }); return criterion; }
+export async function createCriterion(auth, input) {
+  assertScale(input.ratingScaleMin, input.ratingScaleMax);
+  try {
+    return await sequelize.transaction(async transaction => {
+      const criterion = await PerformanceCriterion.create({ tenantId: auth.tenantId, ...input }, { transaction });
+      await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'performance_criterion_created', entityType: 'performance_criterion', entityId: criterion.id, afterData: criterion.toJSON(), transaction });
+      return criterion;
+    });
+  } catch (error) {
+    if (error.name === 'SequelizeUniqueConstraintError') throw new AppError('A criterion with this name already exists in this workspace', 409, 'PERFORMANCE_CRITERION_EXISTS');
+    if (error.name === 'SequelizeValidationError') throw new AppError('Criterion data is invalid', 422, 'INVALID_CRITERION', { criterion: error.errors?.map(item => item.message) || [] });
+    throw error;
+  }
+}
 export async function updateCriterion(auth, id, input) { const criterion = await PerformanceCriterion.findOne({ where: { id, tenantId: auth.tenantId } }); if (!criterion) throw new AppError('Performance criterion not found', 404, 'PERFORMANCE_CRITERION_NOT_FOUND'); const activeUse = await PerformanceTemplateCriterion.findOne({ where: { tenantId: auth.tenantId, criterionId: id }, include: [{ model: PerformanceTemplate, as: 'template', where: { status: { [Op.ne]: 'draft' } }, attributes: ['id'] }] }); if (activeUse) throw new AppError('A criterion used by an active template cannot be changed', 409, 'PERFORMANCE_CRITERION_FROZEN'); assertScale(input.ratingScaleMin ?? criterion.ratingScaleMin, input.ratingScaleMax ?? criterion.ratingScaleMax); const before = criterion.toJSON(); await criterion.update(input); await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'performance_criterion_updated', entityType: 'performance_criterion', entityId: id, beforeData: before, afterData: criterion.toJSON() }); return criterion; }
 
 export async function listTemplates(auth) { return PerformanceTemplate.findAll({ where: { tenantId: auth.tenantId }, include: includeTemplate(), order: [['name', 'ASC']] }); }

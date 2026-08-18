@@ -15,3 +15,10 @@ test('criteria, templates, and assignments validate their configuration', () => 
   assert.equal(performanceTemplateCreateSchema.safeParse({ name: 'Engineer Review', jobRole: 'Software Engineer' }).success, true);
   assert.equal(templateCriterionSchema.safeParse({ criterionId: 1, weight: 50 }).success, true);
 });
+
+test('criterion validation rejects invalid weights, categories, and missing names', () => {
+  assert.equal(performanceCriterionCreateSchema.safeParse({ name: 'Quality', category: 'Quality', weight: 101 }).success, false);
+  assert.equal(performanceCriterionCreateSchema.safeParse({ name: 'Quality', category: ' ' }).success, false);
+  assert.equal(performanceCriterionCreateSchema.safeParse({ category: 'Quality' }).success, false);
+  assert.equal(performanceCriterionCreateSchema.safeParse({ name: ' Quality ', category: ' Quality ', weight: '25', ratingScaleMax: '5', evidenceRequired: false }).data.name, 'Quality');
+});
