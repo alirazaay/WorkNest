@@ -147,7 +147,6 @@ export default function FairRankPage({ user, onExit }) {
         if (['evidence', 'reviews', 'readiness', 'rewards'].includes(tab)) requests.push(api.get('/performance/cycles'));
         if (['evidence', 'reviews'].includes(tab) && !canManage) requests.push(api.get('/performance/me'));
         else if (['evidence', 'reviews', 'readiness', 'rewards'].includes(tab) && canManage) requests.push(api.get('/employees', { params: { page: 1, pageSize: 100 } }));
-        if (tab === 'reviews') requests.push(api.get('/performance/criteria'));
         if (tab === 'readiness') requests.push(api.get('/performance/promotion-profiles'));
         const responses = await Promise.all(requests);
         const next = { items: responseData(responses[0]) };
@@ -155,7 +154,10 @@ export default function FairRankPage({ user, onExit }) {
         if (['evidence', 'reviews', 'readiness', 'rewards'].includes(tab)) next.cycles = responseData(responses[index++]);
         if (['evidence', 'reviews'].includes(tab) && !canManage) { const selfData = responseData(responses[index++]); next.employees = selfData?.employee ? [selfData.employee] : []; }
         else if (['evidence', 'reviews', 'readiness', 'rewards'].includes(tab) && canManage) { const employeeData = responseData(responses[index++]); next.employees = employeeData?.items || employeeData || []; }
-        if (tab === 'reviews') next.criteria = responseData(responses[index++]);
+        // Review criteria are loaded from the selected cycle's active template
+        // when the Add Review form selects a cycle. Do not preload the global
+        // tenant criteria list: it includes criteria from unrelated templates.
+        if (tab === 'reviews') next.criteria = [];
         if (tab === 'readiness') next.profiles = responseData(responses[index++]);
         commit(next, responsePagination(responses[0]));
       } else {
@@ -565,11 +567,21 @@ function ActionWorkspace({ tab, items, cycles, employees, criteria, profiles, on
   const [profileId, setProfileId] = useState('');
   const [readinessRows, setReadinessRows] = useState([]);
   const [editId, setEditId] = useState('');
+  const [reviewCriteria, setReviewCriteria] = useState(criteria);
+  const [criteriaLoading, setCriteriaLoading] = useState(false);
   const selectedProfile = profiles.find((profile) => String(profile.id) === String(profileId));
   const title = { criteria: 'Criteria', evidence: 'Evidence', reviews: 'Reviews', readiness: 'Readiness', rewards: 'Rewards' }[tab];
   const actionLabel = { criteria: 'criterion', evidence: 'evidence', reviews: 'review', readiness: 'assessment', rewards: 'reward' }[tab];
   const canCreate = tab === 'criteria' ? canAdmin : (['evidence', 'reviews'].includes(tab) ? (canManage || canSelfServe) : canManage);
   async function viewReadiness(employeeId) { try { setReadinessRows(responseData(await api.get(`/performance/employees/${employeeId}/promotion-readiness`))); } catch (err) { setMessage(err.response?.data?.error?.message || 'Unable to load promotion readiness.'); } }
+  async function loadReviewCriteria(cycleId) {
+    setReviewCriteria([]);
+    if (!cycleId || tab !== 'reviews') return;
+    setCriteriaLoading(true); setFormError('');
+    try { setReviewCriteria(responseData(await api.get(`/performance/cycles/${cycleId}/review-criteria`))); }
+    catch (err) { setFormError(err.response?.data?.error?.message || 'Unable to load criteria for this cycle.'); }
+    finally { setCriteriaLoading(false); }
+  }
   async function editRecord() { const item = items.find((row) => String(row.id) === String(editId)); if (!item) return; const value = window.prompt(tab === 'criteria' ? 'Criterion name:' : 'Goal progress (0-100):', tab === 'criteria' ? item.name : item.progressPercentage); if (value === null) return; try { const payload = tab === 'criteria' ? { name: value.trim() } : { progressPercentage: Number(value) }; await api.patch(`/performance/${tab}/${item.id}`, payload); setMessage(`${title} updated successfully.`); await onRetry(); } catch (err) { setMessage(err.response?.data?.error?.message || `Unable to update ${title.toLowerCase()}.`); } }
 
   async function submit(event) {
@@ -580,7 +592,7 @@ function ActionWorkspace({ tab, items, cycles, employees, criteria, profiles, on
       if (tab === 'criteria') payload = { ...raw, weight: Number(raw.weight || 0), ratingScaleMin: Number(raw.ratingScaleMin || 0), ratingScaleMax: Number(raw.ratingScaleMax || 5), evidenceRequired: raw.evidenceRequired === 'on' };
       if (tab === 'evidence') payload = { ...raw, cycleId: Number(raw.cycleId), employeeId: Number(raw.employeeId), eventDate: raw.eventDate, sourceType: raw.sourceType || 'manual' };
       if (tab === 'reviews') {
-        payload = { cycleId: Number(raw.cycleId), employeeId: Number(raw.employeeId), reviewType: raw.reviewType, strengths: raw.strengths || null, improvementAreas: raw.improvementAreas || null, comments: raw.comments || null, scores: criteria.map((criterion) => ({ criterionId: Number(criterion.id), rawScore: Number(raw[`score_${criterion.id}`]) })).filter((score) => Number.isFinite(score.rawScore)) };
+        payload = { cycleId: Number(raw.cycleId), employeeId: Number(raw.employeeId), reviewType: raw.reviewType, strengths: raw.strengths || null, improvementAreas: raw.improvementAreas || null, comments: raw.comments || null, scores: reviewCriteria.map((criterion) => ({ criterionId: Number(criterion.id), rawScore: Number(raw[`score_${criterion.id}`]) })).filter((score) => Number.isFinite(score.rawScore)) };
       }
       if (tab === 'readiness') {
         payload = { cycleId: Number(raw.cycleId), employeeId: Number(raw.employeeId), promotionProfileId: Number(raw.promotionProfileId), comments: raw.comments || null, scores: (selectedProfile?.criteria || []).map((criterion) => ({ criterionId: Number(criterion.id), score: Number(raw[`promotion_${criterion.id}`]) })).filter((score) => Number.isFinite(score.score)) };
@@ -618,7 +630,7 @@ function ActionWorkspace({ tab, items, cycles, employees, criteria, profiles, on
     {modal && <div className="modal-backdrop"><form className="modal performance-modal" onSubmit={submit}><button type="button" className="modal-close" onClick={() => setModal(false)}>×</button><h2>Add {title.slice(0, -1)}</h2><p>Save this step to continue the FairRank workflow.</p>
       {tab === 'criteria' && <><label>Name<input name="name" required minLength="2" /></label><label>Category<input name="category" required minLength="2" /></label><label>Weight (%)<input name="weight" type="number" min="0" max="100" defaultValue="0" /></label><label>Description<textarea name="description" /></label><label>Rating max<input name="ratingScaleMax" type="number" min="1" max="100" defaultValue="5" /></label><label><input name="evidenceRequired" type="checkbox" defaultChecked /> Evidence required</label></>}
       {tab === 'evidence' && <><RecordSelectors cycles={cycles} employees={employees} /><label>Evidence type<select name="evidenceType" defaultValue="manager_observation"><option value="kpi_result">KPI result</option><option value="project_completion">Project completion</option><option value="manager_observation">Manager observation</option><option value="training_completion">Training completion</option><option value="quality_metric">Quality metric</option></select></label><label>Title<input name="title" required minLength="3" /></label><label>Event date<input name="eventDate" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} /></label><label>Description<textarea name="description" /></label></>}
-      {tab === 'reviews' && <><RecordSelectors cycles={cycles} employees={employees} /><label>Review type<select name="reviewType" defaultValue={canManage ? 'manager' : 'self'}><option value="self">Self</option>{canManage && <option value="manager">Manager</option>}</select></label><fieldset><legend>Criterion scores (0–100)</legend>{criteria.map((criterion) => <label key={criterion.id}>{criterion.name}<input name={`score_${criterion.id}`} type="number" min="0" max="100" /></label>)}</fieldset><label>Comments<textarea name="comments" /></label></>}
+      {tab === 'reviews' && <><RecordSelectors cycles={cycles} employees={employees} onCycleChange={loadReviewCriteria} /><label>Review type<select name="reviewType" defaultValue={canManage ? 'manager' : 'self'}><option value="self">Self</option>{canManage && <option value="manager">Manager</option>}</select></label><fieldset><legend>Criterion scores (0–100)</legend>{criteriaLoading ? <p className="performance-inline-message">Loading criteria for this cycle…</p> : reviewCriteria.length ? reviewCriteria.map((criterion) => <label key={criterion.id}>{criterion.name}<input name={`score_${criterion.id}`} type="number" min="0" max="100" /></label>) : <p className="performance-inline-message">Select a cycle to load its template criteria.</p>}</fieldset><label>Comments<textarea name="comments" /></label></>}
       {tab === 'readiness' && <><RecordSelectors cycles={cycles} employees={employees} /><label>Promotion profile<select name="promotionProfileId" required value={profileId} onChange={(event) => setProfileId(event.target.value)}><option value="">Select profile</option>{profiles.map((profile) => <option value={profile.id} key={profile.id}>{profile.name} → {profile.targetRole}</option>)}</select></label>{selectedProfile?.criteria?.map((criterion) => <label key={criterion.id}>{criterion.criterionName}<input name={`promotion_${criterion.id}`} type="number" min="0" max="100" /></label>)}<label>Comments<textarea name="comments" /></label></>}
       {tab === 'rewards' && <><RecordSelectors cycles={cycles} employees={employees} /><label>Reward type<select name="rewardType" defaultValue="recognition"><option value="salary_increment">Salary increment</option><option value="performance_bonus">Performance bonus</option><option value="promotion">Promotion</option><option value="recognition">Recognition</option><option value="development_opportunity">Development opportunity</option></select></label><label>Recommended value<input name="recommendedValue" type="number" min="0" defaultValue="0" /></label><label>Reason<textarea name="reason" required minLength="5" /></label></>}
       {formError && <p className="performance-form-error" role="alert">{formError}</p>}<Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save record'} <ArrowRight size={16} /></Button>
@@ -626,7 +638,7 @@ function ActionWorkspace({ tab, items, cycles, employees, criteria, profiles, on
   </article>;
 }
 
-function RecordSelectors({ cycles, employees }) { return <><label>Performance cycle<select name="cycleId" required><option value="">Select cycle</option>{cycles.map((cycle) => <option value={cycle.id} key={cycle.id}>{cycle.name}</option>)}</select></label><label>Employee<select name="employeeId" required><option value="">Select employee</option>{employees.map((employee) => <option value={employee.id} key={employee.id}>{employee.user?.name || employee.employeeCode} ({employee.employeeCode})</option>)}</select></label></>; }
+function RecordSelectors({ cycles, employees, onCycleChange }) { return <><label>Performance cycle<select name="cycleId" required onChange={(event) => onCycleChange?.(event.target.value)}><option value="">Select cycle</option>{cycles.map((cycle) => <option value={cycle.id} key={cycle.id}>{cycle.name}</option>)}</select></label><label>Employee<select name="employeeId" required><option value="">Select employee</option>{employees.map((employee) => <option value={employee.id} key={employee.id}>{employee.user?.name || employee.employeeCode} ({employee.employeeCode})</option>)}</select></label></>; }
 
 function TnaWorkspace({ items, onRetry }) {
   const [priority, setPriority] = useState(''); const [status, setStatus] = useState(''); const [signal, setSignal] = useState(''); const filtered = items.filter((item) => (!priority || item.priority === priority) && (!status || item.status === status) && (!signal || item.signalCode === signal));

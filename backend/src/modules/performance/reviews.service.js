@@ -1,5 +1,5 @@
 import { Op } from 'sequelize';
-import { Employee, PerformanceCriterion, PerformanceCycle, PerformanceEvidence, PerformanceReview, PerformanceReviewScore, User } from '../../database/models/index.js';
+import { Employee, PerformanceCriterion, PerformanceCycle, PerformanceEvidence, PerformanceReview, PerformanceReviewScore, PerformanceTemplate, PerformanceTemplateCriterion, User } from '../../database/models/index.js';
 import { sequelize } from '../../config/database.js';
 import { AppError } from '../../middleware/error.js';
 import { recordAudit } from '../../services/audit.service.js';
@@ -29,12 +29,55 @@ async function assertEmployeeScope(auth, employee) {
   if (auth.role === 'manager' && (await managerFor(auth)).departmentId !== employee.departmentId) throw new AppError('Managers may only access reviews for their department', 403, 'REVIEW_ACCESS_DENIED');
 }
 
-async function reviewFor(auth, id) {
-  const review = await PerformanceReview.findOne({ where: { id, tenantId: auth.tenantId }, include });
+async function reviewFor(auth, id, transaction) {
+  const review = await PerformanceReview.findOne({ where: { id, tenantId: auth.tenantId }, include, ...(transaction ? { transaction } : {}) });
   if (!review) throw new AppError('Performance review not found', 404, 'PERFORMANCE_REVIEW_NOT_FOUND');
   await assertEmployeeScope(auth, review.employee);
   if (auth.role === 'employee' && review.reviewType !== 'self' && !releasedCycleStatuses.includes(review.cycle?.status)) throw new AppError('This manager feedback has not been released yet', 403, 'REVIEW_NOT_RELEASED');
   return review;
+}
+
+/**
+ * Resolve the criteria that are applicable to a review cycle.
+ * Criteria are selected through the active tenant template's assignments,
+ * never from the global tenant criteria list. The assignment table has a
+ * unique (tenant, template, criterion) key, and the defensive Set also keeps
+ * malformed legacy rows from being returned twice.
+ */
+export function selectApplicableReviewCriteria(assignments, templateId) {
+  const seen = new Set();
+  return assignments
+    .slice()
+    .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0) || a.id - b.id)
+    .filter((assignment) => !seen.has(assignment.criterionId) && seen.add(assignment.criterionId))
+    .map((assignment) => ({
+      ...assignment.criterion.toJSON(),
+      weight: assignment.weight,
+      ratingScaleMin: assignment.ratingScaleMin ?? assignment.criterion.ratingScaleMin,
+      ratingScaleMax: assignment.ratingScaleMax ?? assignment.criterion.ratingScaleMax,
+      evidenceRequired: assignment.evidenceRequired ?? assignment.criterion.evidenceRequired,
+      templateId,
+      assignmentId: assignment.id,
+      sortOrder: assignment.sortOrder
+    }));
+}
+
+export async function listCycleReviewCriteria(auth, cycleId, transaction) {
+  const cycle = await PerformanceCycle.findOne({ where: { id: cycleId, tenantId: auth.tenantId }, attributes: ['id'], ...(transaction ? { transaction } : {}) });
+  if (!cycle) throw new AppError('Performance cycle not found', 404, 'PERFORMANCE_CYCLE_NOT_FOUND');
+  const template = await PerformanceTemplate.findOne({
+    where: { tenantId: auth.tenantId, status: 'active' },
+    include: [{
+      model: PerformanceTemplateCriterion,
+      as: 'criteria',
+      required: true,
+      include: [{ model: PerformanceCriterion, as: 'criterion', where: { tenantId: auth.tenantId, isActive: true }, required: true }]
+    }],
+    order: [['id', 'DESC']],
+    ...(transaction ? { transaction } : {})
+  });
+  if (!template) throw new AppError('Activate a performance template before creating reviews', 422, 'REVIEW_TEMPLATE_REQUIRED');
+  return selectApplicableReviewCriteria(template.criteria, template.id);
 }
 
 function assertReviewType(auth, type) {
@@ -73,10 +116,12 @@ export async function createReview(auth, input) {
   const employee = await employeeFor(auth, input.employeeId);
   await assertEmployeeScope(auth, employee);
   if (auth.role === 'manager' && input.reviewType === 'manager' && employee.userId === auth.userId) throw new AppError('Managers cannot submit a manager review for themselves', 403, 'REVIEW_SELF_DENIED');
-  const duplicate = await PerformanceReview.findOne({ where: { tenantId: auth.tenantId, cycleId: input.cycleId, employeeId: input.employeeId, reviewType: input.reviewType } });
-  if (duplicate) throw new AppError('A review of this type already exists for this employee and cycle', 409, 'PERFORMANCE_REVIEW_EXISTS');
   return sequelize.transaction(async transaction => {
-    const criteria = await PerformanceCriterion.findAll({ where: { tenantId: auth.tenantId, id: { [Op.in]: input.scores.map(score => score.criterionId) }, isActive: true }, transaction });
+    const duplicate = await PerformanceReview.findOne({ where: { tenantId: auth.tenantId, cycleId: input.cycleId, employeeId: input.employeeId, reviewType: input.reviewType }, transaction, lock: transaction.LOCK.UPDATE });
+    if (duplicate) throw new AppError('A review of this type already exists for this employee and cycle', 409, 'PERFORMANCE_REVIEW_EXISTS');
+    const criteria = await listCycleReviewCriteria(auth, input.cycleId, transaction);
+    const applicableIds = new Set(criteria.map((criterion) => criterion.id));
+    if (input.scores.some((score) => !applicableIds.has(score.criterionId))) throw new AppError('One or more review criteria are not assigned to this cycle template', 422, 'INVALID_REVIEW_CRITERIA');
     if (criteria.length !== input.scores.length) throw new AppError('One or more review criteria are invalid or inactive', 422, 'INVALID_REVIEW_CRITERIA');
     const review = await PerformanceReview.create({ tenantId: auth.tenantId, cycleId: input.cycleId, employeeId: input.employeeId, reviewerId: auth.userId, reviewType: input.reviewType, strengths: input.strengths ?? null, improvementAreas: input.improvementAreas ?? null, comments: input.comments ?? null, status: 'draft' }, { transaction });
     for (const score of input.scores) {
@@ -84,7 +129,9 @@ export async function createReview(auth, input) {
       await PerformanceReviewScore.create({ tenantId: auth.tenantId, reviewId: review.id, criterionId: score.criterionId, rawScore: score.rawScore, reviewerComment: score.reviewerComment ?? null, evidenceCount }, { transaction });
     }
     await recordAudit({ tenantId: auth.tenantId, actorUserId: auth.userId, action: 'performance_review_created', entityType: 'performance_review', entityId: review.id, afterData: { ...review.toJSON(), scores: input.scores }, transaction });
-    return reviewFor(auth, review.id);
+    // The row is still uncommitted. Reload using the same transaction so the
+    // newly-created draft is visible and returned to the POST caller.
+    return reviewFor(auth, review.id, transaction);
   });
 }
 

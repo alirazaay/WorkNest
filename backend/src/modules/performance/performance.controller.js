@@ -2,7 +2,7 @@ import { createPerformanceCycle, getPerformanceCycle, listPerformanceCycles, upd
 import { addTemplateCriterion, createCriterion, createTemplate, getTemplate, listCriteria, listTemplates, removeTemplateCriterion, updateCriterion, updateTemplate, updateTemplateCriterion } from './criteria.service.js';
 import { carryForwardGoal, createGoal, getGoal, listGoals, updateGoal } from './goals.service.js';
 import { createEvidence, listEvidence, verifyEvidence } from './evidence.service.js';
-import { createReview, getReview, listReviews, submitReview } from './reviews.service.js';
+import { createReview, getReview, listCycleReviewCriteria, listReviews, submitReview } from './reviews.service.js';
 import { calculateCycleScores, getEmployeeScore } from './score.service.js';
 import { createRatingBand, listRatingBands, updateRatingBand } from './rating-bands.service.js';
 import { getEquivalenceSettings, listEquivalenceGroups, recalculateEquivalence, updateEquivalenceSettings } from './equivalence.service.js';
@@ -46,6 +46,7 @@ export async function evidenceVerify(req, res, next) { try { send(res, await ver
 export async function reviewsList(req, res, next) { try { send(res, await listReviews(req.auth, req.validated.query)); } catch (error) { next(error); } }
 export async function reviewGet(req, res, next) { try { send(res, await getReview(req.auth, Number(req.params.id))); } catch (error) { next(error); } }
 export async function reviewCreate(req, res, next) { try { send(res, await createReview(req.auth, req.validated.body), 201); } catch (error) { next(error); } }
+export async function cycleReviewCriteriaGet(req, res, next) { try { send(res, await listCycleReviewCriteria(req.auth, Number(req.params.cycleId))); } catch (error) { next(error); } }
 export async function reviewSubmit(req, res, next) { try { send(res, await submitReview(req.auth, Number(req.params.id))); } catch (error) { next(error); } }
 export async function employeeScoreGet(req, res, next) { try { send(res, await getEmployeeScore(req.auth, req.validated.query.cycleId, Number(req.params.employeeId))); } catch (error) { next(error); } }
 export async function cycleScoresCalculate(req, res, next) { try { send(res, await calculateCycleScores(req.auth, Number(req.params.cycleId), Boolean(req.validated?.query?.force))); } catch (error) { next(error); } }
