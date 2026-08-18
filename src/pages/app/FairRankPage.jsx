@@ -84,6 +84,7 @@ export default function FairRankPage({ user, onExit }) {
   const [formError, setFormError] = useState('');
   const tabCache = useRef(new Map());
   const [page, setPage] = useState(1);
+  const [actionResult, setActionResult] = useState(null);
 
   // Filter each group down to tabs the current role can see; drop empty groups.
   const visibleGroups = TAB_GROUPS
@@ -360,7 +361,7 @@ function FairRankGroups({ items, cycles, cycle, canAdmin, onRetry }) {
 
   async function runAction(name) {
     if (!selectedCycleId) return;
-    setAction(name); setMessage('');
+    setAction(name); setMessage(''); setActionResult(null);
     try {
       const actions = {
         calculate: `/performance/cycles/${selectedCycleId}/calculate`,
@@ -371,23 +372,29 @@ function FairRankGroups({ items, cycles, cycle, canAdmin, onRetry }) {
         fairness: `/performance/cycles/${selectedCycleId}/generate-fairness-flags`,
       };
       const result = responseData(await api.post(actions[name], {}));
+      let nextMessage = 'FairRank data refreshed successfully.';
+      let nextResult = null;
       if (name === 'calculate' || name === 'forceRecalculate') {
         const createdCount = Array.isArray(result?.created) ? result.created.length : 0;
         const skippedCount = Array.isArray(result?.skipped) ? result.skipped.length : 0;
-        setMessage(createdCount ? `Scores calculated for ${createdCount} employee${createdCount === 1 ? '' : 's'}.${skippedCount ? ` ${skippedCount} existing snapshot${skippedCount === 1 ? '' : 's'} remained unchanged.` : ''} Use Recalculate groups to update performance equivalents.` : `No new scores were created. ${skippedCount} existing snapshot${skippedCount === 1 ? '' : 's'} remained unchanged. Use Recalculate groups to update performance equivalents.`);
+        nextMessage = createdCount ? `Scores calculated for ${createdCount} employee${createdCount === 1 ? '' : 's'}.${skippedCount ? ` ${skippedCount} existing snapshot${skippedCount === 1 ? '' : 's'} remained unchanged.` : ''} Use Recalculate groups to update performance equivalents.` : `No new scores were created. ${skippedCount} existing snapshot${skippedCount === 1 ? '' : 's'} remained unchanged. Use Force recalculate only when deliberate recomputation is required.`;
+        nextResult = { type: 'calculation', createdCount, skippedCount, forced: Boolean(result?.forced) };
       } else if (name === 'equivalence') {
         const groupCount = Number(result?.groupCount ?? 0);
-        setMessage(groupCount
+        nextMessage = groupCount
           ? `${groupCount} performance-equivalent group${groupCount === 1 ? '' : 's'} rebuilt from the persisted scores.`
-          : 'No performance-equivalent groups match the configured score threshold and rating-band rules.');
+          : 'No performance-equivalent groups match the configured score threshold and rating-band rules.';
+        nextResult = { type: 'equivalence', groupCount, snapshotCount: Number(result?.snapshotCount ?? 0) };
       } else if (name === 'signatures') {
         const generated = Number(result?.generated ?? result?.count ?? 0);
-        setMessage(`Performance signatures generated for ${generated} employee${generated === 1 ? '' : 's'}.`);
+        nextMessage = `Performance signatures generated for ${generated} employee${generated === 1 ? '' : 's'}.`;
       } else if (name === 'fairness') {
-        setMessage(`Fairness review completed${result?.created != null ? `: ${result.created} flag${Number(result.created) === 1 ? '' : 's'} created` : ''}.`);
-      } else setMessage('FairRank data refreshed successfully.');
+        nextMessage = `Fairness review completed${result?.created != null ? `: ${result.created} flag${Number(result.created) === 1 ? '' : 's'} created` : ''}.`;
+      }
       setGroupItems(responseData(await api.get(`/performance/cycles/${selectedCycleId}/equivalence-groups`)));
       await onRetry();
+      setMessage(nextMessage);
+      setActionResult(nextResult);
     } catch (err) {
       setMessage(err.response?.data?.error?.message || err.response?.data?.message || 'Unable to complete this FairRank action.');
     } finally { setAction(''); }
@@ -451,6 +458,12 @@ function FairRankGroups({ items, cycles, cycle, canAdmin, onRetry }) {
       </div>
       {action && <p className="performance-inline-message">Running FairRank action…</p>}
       {message && <p className="performance-inline-message">{message}</p>}
+      {actionResult?.type === 'calculation' && <p className="performance-inline-message" role="status">
+        <strong>Calculation completed.</strong> {actionResult.createdCount} new snapshot{actionResult.createdCount === 1 ? '' : 's'} persisted; {actionResult.skippedCount} existing snapshot{actionResult.skippedCount === 1 ? '' : 's'} left unchanged.
+      </p>}
+      {actionResult?.type === 'equivalence' && <p className="performance-inline-message" role="status">
+        {actionResult.groupCount} equivalent group{actionResult.groupCount === 1 ? '' : 's'} generated from {actionResult.snapshotCount} calculated snapshot{actionResult.snapshotCount === 1 ? '' : 's'}.
+      </p>}
       {groupItems.length ? <div className="performance-list">{groupItems.map((group) => {
         const members = group.members || [];
         const scores = members.map((member) => Number(member.finalScore)).filter(Number.isFinite);
