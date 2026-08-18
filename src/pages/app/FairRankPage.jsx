@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, BarChart3, CheckCircle2, CircleAlert, ClipboardList, FileText, LineChart, Plus, RefreshCw, Target, Users, Award, Lightbulb } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AppShell from '../../components/common/AppShell.jsx';
@@ -57,7 +57,8 @@ const TAB_GROUPS = [
 ];
 const endpoints = { cycles: '/performance/cycles', criteria: '/performance/criteria', goals: '/performance/goals', evidence: '/performance/evidence', reviews: '/performance/reviews', readiness: '/performance/promotion-profiles', rewards: '/performance/rewards', audit: '/performance/audit' };
 
-function responseData(res) { return res?.data?.data ?? res?.data ?? []; }
+function responseData(res) { const payload = res?.data?.data ?? res?.data ?? []; return payload?.items ?? payload; }
+function responsePagination(res) { const payload = res?.data?.data ?? res?.data ?? {}; return payload?.pagination || null; }
 function titleCase(v) { return String(v || '').replaceAll('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase()); }
 
 function SummaryCard({ label, value, icon: Icon, tone = 'violet' }) { return <article className={`performance-kpi ${tone}`}><span className="performance-kpi-icon"><Icon size={17} /></span><small>{label}</small><strong>{value}</strong></article>; }
@@ -81,6 +82,8 @@ export default function FairRankPage({ user, onExit }) {
   const [modal, setModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  const tabCache = useRef(new Map());
+  const [page, setPage] = useState(1);
 
   // Filter each group down to tabs the current role can see; drop empty groups.
   const visibleGroups = TAB_GROUPS
@@ -89,49 +92,58 @@ export default function FairRankPage({ user, onExit }) {
 
   // Fixed: wrapped in useCallback([tab]) so the function reference is stable
   // and useEffect([load]) only fires when tab actually changes.
-  const load = useCallback(async () => {
+  const load = useCallback(async ({ force = false } = {}) => {
+    const cacheKey = `${tab}:${page}`;
+    const cached = tabCache.current.get(cacheKey);
+    if (cached && !force && Date.now() - cached.timestamp < 30_000) {
+      setData(cached.data);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError('');
+    const startedAt = performance.now();
+    const commit = (next, pagination = null) => { const value = pagination ? { ...next, pagination } : next; tabCache.current.set(cacheKey, { data: value, timestamp: Date.now() }); setData(value); };
     try {
       if (tab === 'my') {
-        setData(responseData(await api.get('/performance/me')));
+        commit(responseData(await api.get('/performance/me')));
       } else if (tab === 'comparison') {
         const [empRes, cycleRes] = await Promise.all([api.get('/employees', { params: { page: 1, pageSize: 100 } }), api.get('/performance/cycles')]);
         const empData = responseData(empRes);
-        setData({ employees: empData?.items || empData || [], cycles: responseData(cycleRes) });
+        commit({ employees: empData?.items || empData || [], cycles: responseData(cycleRes) });
       } else if (tab === 'overview') {
         const results = await Promise.allSettled([
           api.get('/performance/cycles'), api.get('/performance/rating-bands'), api.get('/performance/equivalence-settings'),
           api.get('/performance/signature-rules'), api.get('/performance/promotion-profiles'),
         ]);
         if (results.every((r) => r.status === 'rejected')) throw results[0].reason;
-        setData({ overview: results.map((r) => r.status === 'fulfilled' ? responseData(r.value) : null) });
+        commit({ overview: results.map((r) => r.status === 'fulfilled' ? responseData(r.value) : null) });
       } else if (tab === 'continuity') {
         // FIX: Don't auto-fetch the first employee's history — that causes a wasted sequential
         // API call. Just load the employee list; history is fetched lazily on employee selection.
         if (role === 'employee') {
-          setData({ employees: [], history: responseData(await api.get('/performance/me/continuity')) });
+          commit({ employees: [], history: responseData(await api.get('/performance/me/continuity')) });
         } else {
           const empData = responseData(await api.get('/employees', { params: { page: 1, pageSize: 100 } }));
           const employees = empData?.items || empData || [];
           // Intentionally NOT pre-fetching employees[0] history here.
-          setData({ employees, history: null });
+          commit({ employees, history: null });
         }
       } else if (tab === 'tna') {
-        if (role === 'employee') { const result = responseData(await api.get('/performance/me/development-signals')); setData({ items: (result.signals || []).map((item) => ({ ...item, signalCode: item.code, employee: result.employee, status: 'identified', priority: item.code === 'MISSING_REVIEW_DATA' ? 'low' : 'high', recommendedTraining: 'Review this development signal with your manager.' })) }); }
-        else setData({ items: responseData(await api.get('/performance/training-needs')) });
+        if (role === 'employee') { const result = responseData(await api.get('/performance/me/development-signals')); commit({ items: (result.signals || []).map((item) => ({ ...item, signalCode: item.code, employee: result.employee, status: 'identified', priority: item.code === 'MISSING_REVIEW_DATA' ? 'low' : 'high', recommendedTraining: 'Review this development signal with your manager.' })) }); }
+        else { const result = await api.get('/performance/training-needs', { params: { page, pageSize: 50 } }); commit({ items: responseData(result) }, responsePagination(result)); }
       } else if (tab === 'calibration' || tab === 'fairrank') {
         const cycles = responseData(await api.get('/performance/cycles'));
         const cycle = cycles.find((c) => ['active', 'in_progress'].includes(c.status)) || cycles[0];
-        if (!cycle) setData({ items: [], cycles: [] });
-        else setData({ items: responseData(await api.get(`/performance/cycles/${cycle.id}/${tab === 'calibration' ? 'calibration' : 'equivalence-groups'}`)), cycles, cycle });
+        if (!cycle) commit({ items: [], cycles: [] });
+        else commit({ items: responseData(await api.get(`/performance/cycles/${cycle.id}/${tab === 'calibration' ? 'calibration' : 'equivalence-groups'}`)), cycles, cycle });
       } else if (tab === 'goals') {
-        const requests = [api.get(endpoints[tab]), api.get('/performance/cycles')];
+        const requests = [api.get(endpoints[tab], { params: { page, pageSize: 50 } }), api.get('/performance/cycles')];
         if (canManage) requests.push(api.get('/employees', { params: { page: 1, pageSize: 100 } }));
         const [goalsRes, cyclesRes, employeeRes] = await Promise.all(requests); const employeeData = employeeRes ? responseData(employeeRes) : [];
-        setData({ items: responseData(goalsRes), cycles: responseData(cyclesRes), employees: employeeData?.items || employeeData || [] });
+        commit({ items: responseData(goalsRes), cycles: responseData(cyclesRes), employees: employeeData?.items || employeeData || [] }, responsePagination(goalsRes));
       } else if (['criteria', 'evidence', 'reviews', 'readiness', 'rewards'].includes(tab)) {
-        const requests = [api.get(endpoints[tab])];
+        const requests = [api.get(endpoints[tab], { params: { page, pageSize: 50 } })];
         if (['evidence', 'reviews', 'readiness', 'rewards'].includes(tab)) requests.push(api.get('/performance/cycles'));
         if (['evidence', 'reviews'].includes(tab) && !canManage) requests.push(api.get('/performance/me'));
         else if (['evidence', 'reviews', 'readiness', 'rewards'].includes(tab) && canManage) requests.push(api.get('/employees', { params: { page: 1, pageSize: 100 } }));
@@ -145,17 +157,19 @@ export default function FairRankPage({ user, onExit }) {
         else if (['evidence', 'reviews', 'readiness', 'rewards'].includes(tab) && canManage) { const employeeData = responseData(responses[index++]); next.employees = employeeData?.items || employeeData || []; }
         if (tab === 'reviews') next.criteria = responseData(responses[index++]);
         if (tab === 'readiness') next.profiles = responseData(responses[index++]);
-        setData(next);
+        commit(next, responsePagination(responses[0]));
       } else {
-        setData({ items: responseData(await api.get(endpoints[tab])) });
+        commit({ items: responseData(await api.get(endpoints[tab])) });
       }
     } catch (err) {
-      setError(err.response?.data?.error?.message || err.response?.data?.message || `Unable to load ${tab}. Please try again.`);
+      if (!cached) setError(err.response?.data?.error?.message || err.response?.data?.message || `Unable to load ${tab}. Please try again.`);
     } finally {
+      if (import.meta.env.DEV) console.debug(`[FairRank] ${tab} loaded in ${(performance.now() - startedAt).toFixed(0)}ms`);
       setLoading(false);
     }
-  }, [role, tab]);
+  }, [page, role, tab]);
 
+  useEffect(() => { setPage(1); }, [tab]);
   useEffect(() => { load(); }, [load]);
 
   // FIX: activeCycle for Overview tab — derive from data.overview[0] (the cycles array).
@@ -178,7 +192,7 @@ export default function FairRankPage({ user, onExit }) {
     try {
       await api.post('/performance/cycles', { ...Object.fromEntries(form), name });
       setModal(false);
-      await load();
+      await load({ force: true });
     } catch (err) {
       setFormError(err.response?.data?.error?.message || err.response?.data?.message || 'Unable to create the performance cycle.');
     } finally {
@@ -238,9 +252,9 @@ export default function FairRankPage({ user, onExit }) {
           </div>
         ))}
       </nav>
-      {loading ? <LoadingState label="Loading performance data..." /> : error ? <ErrorState message={error} onRetry={load} /> : (
+      {loading ? <LoadingState label="Loading performance data..." /> : error ? <ErrorState message={error} onRetry={() => load({ force: true })} /> : (
         <section className="performance-content">
-          <PageContent tab={tab} data={data} canManage={canManage} canAdmin={canAdmin} activeCycle={activeCycle} onRetry={load} setData={setData} />
+          <PageContent tab={tab} data={data} canManage={canManage} canAdmin={canAdmin} activeCycle={activeCycle} onRetry={() => load({ force: true })} onPageChange={setPage} setData={setData} />
         </section>
       )}
       {modal && (
@@ -265,7 +279,7 @@ export default function FairRankPage({ user, onExit }) {
   );
 }
 
-function PageContent({ tab, data, canManage, canAdmin, activeCycle, onRetry, setData }) {
+function PageContent({ tab, data, canManage, canAdmin, activeCycle, onRetry, onPageChange, setData }) {
   if (tab === 'my') return <MyPerformance data={data} />;
   if (tab === 'audit') return <AuditList items={data.items || []} />;
   if (tab === 'comparison') return <Comparison employees={data.employees || []} cycles={data.cycles || []} />;
@@ -273,9 +287,9 @@ function PageContent({ tab, data, canManage, canAdmin, activeCycle, onRetry, set
   if (tab === 'fairrank') return <FairRankGroups items={data.items || []} cycles={data.cycles || []} cycle={data.cycle} canAdmin={canAdmin} onRetry={onRetry} />;
   if (tab === 'calibration') return <CalibrationWorkspace items={data.items || []} cycles={data.cycles || []} cycle={data.cycle} canAdmin={canAdmin} onRetry={onRetry} />;
   if (tab === 'continuity') return <ContinuityWorkspace data={data} onRetry={onRetry} setData={setData} canManage={canManage} />;
-  if (tab === 'tna') return <TnaWorkspace items={data.items || []} onRetry={onRetry} />;
-  if (tab === 'goals') return <><div className="performance-action-bar">{canManage && <><GoalCreateButton cycles={data.cycles || []} employees={data.employees || []} onSaved={onRetry} /><GoalEditButton items={data.items || []} onSaved={onRetry} /></>}</div><GoalsWorkspace items={data.items || []} cycles={data.cycles || []} employees={data.employees || []} onRetry={onRetry} canManage={canManage} /></>;
-  if (['criteria', 'evidence', 'reviews', 'readiness', 'rewards'].includes(tab)) return <ActionWorkspace tab={tab} items={data.items || []} cycles={data.cycles || []} employees={data.employees || []} criteria={data.criteria || []} profiles={data.profiles || []} onRetry={onRetry} canManage={canManage} canAdmin={canAdmin} canSelfServe={!canManage && !canAdmin} />;
+  if (tab === 'tna') return <><TnaWorkspace items={data.items || []} onRetry={onRetry} /><Pagination pagination={data.pagination} onPageChange={onPageChange} /></>;
+  if (tab === 'goals') return <><div className="performance-action-bar">{canManage && <><GoalCreateButton cycles={data.cycles || []} employees={data.employees || []} onSaved={onRetry} /><GoalEditButton items={data.items || []} onSaved={onRetry} /></>}</div><GoalsWorkspace items={data.items || []} cycles={data.cycles || []} employees={data.employees || []} onRetry={onRetry} canManage={canManage} /><Pagination pagination={data.pagination} onPageChange={onPageChange} /></>;
+  if (['criteria', 'evidence', 'reviews', 'readiness', 'rewards'].includes(tab)) return <><ActionWorkspace tab={tab} items={data.items || []} cycles={data.cycles || []} employees={data.employees || []} criteria={data.criteria || []} profiles={data.profiles || []} onRetry={onRetry} canManage={canManage} canAdmin={canAdmin} canSelfServe={!canManage && !canAdmin} /><Pagination pagination={data.pagination} onPageChange={onPageChange} /></>;
   if (tab === 'overview') {
     const values = data.overview || [];
     return <>
@@ -655,6 +669,11 @@ function GoalEditButton({ items, onSaved }) {
 }
 
 function EmptyState({ text }) { return <div className="performance-empty"><CircleAlert size={22} /><p>{text}</p></div>; }
+
+function Pagination({ pagination, onPageChange }) {
+  if (!pagination || pagination.totalPages <= 1) return null;
+  return <div className="performance-pagination"><span>Page {pagination.page} of {pagination.totalPages} · {pagination.total} records</span><div><button type="button" className="table-link" disabled={pagination.page <= 1} onClick={() => onPageChange(pagination.page - 1)}>Previous</button><button type="button" className="table-link" disabled={pagination.page >= pagination.totalPages} onClick={() => onPageChange(pagination.page + 1)}>Next</button></div></div>;
+}
 
 function AuditList({ items }) {
   return (

@@ -65,8 +65,9 @@ export async function listEvidence(auth, query = {}) {
     where.employeeId = { [Op.in]: employees.map(row => row.id) };
   }
   if (auth.role === 'employee' && query.employeeId && where.employeeId !== query.employeeId) throw new AppError('You may only access your own evidence', 403, 'EVIDENCE_ACCESS_DENIED');
-  const rows = await PerformanceEvidence.findAll({ where, include, order: [['event_date', 'DESC'], ['created_at', 'DESC']] });
-  return rows.map(safeEvidence);
+  const page = query.page || 1; const pageSize = query.pageSize || 50;
+  const result = await PerformanceEvidence.findAndCountAll({ where, include, order: [['event_date', 'DESC'], ['created_at', 'DESC']], limit: pageSize, offset: (page - 1) * pageSize, distinct: true });
+  return { items: result.rows.map(safeEvidence), pagination: { page, pageSize, total: result.count, totalPages: Math.ceil(result.count / pageSize) } };
 }
 
 export async function createEvidence(auth, input, file) {

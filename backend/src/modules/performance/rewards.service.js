@@ -30,7 +30,9 @@ export async function listRewards(auth, query = {}) {
     const employees = await Employee.findAll({ where: { tenantId: auth.tenantId, departmentId: manager.departmentId }, attributes: ['id'] });
     where.employeeId = { [Op.in]: employees.map(row => row.id) };
   }
-  return PerformanceReward.findAll({ where, include, order: [['created_at', 'DESC']] });
+  const page = query.page || 1; const pageSize = query.pageSize || 50;
+  const result = await PerformanceReward.findAndCountAll({ where, include, order: [['created_at', 'DESC']], limit: pageSize, offset: (page - 1) * pageSize, distinct: true });
+  return { items: result.rows, pagination: { page, pageSize, total: result.count, totalPages: Math.ceil(result.count / pageSize) } };
 }
 
 export async function createReward(auth, input) {

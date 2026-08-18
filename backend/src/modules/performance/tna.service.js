@@ -70,7 +70,9 @@ export async function listTrainingNeeds(auth, query = {}) {
   const where = { tenantId: auth.tenantId, ...(query.employeeId ? { employeeId: query.employeeId } : {}), ...(query.priority ? { priority: query.priority } : {}), ...(query.status ? { status: query.status } : {}), ...(query.signalCode ? { signalCode: query.signalCode } : {}) };
   if (auth.role === 'employee') { const employee = query.employeeId ? await employeeFor(auth, query.employeeId) : await Employee.findOne({ where: { tenantId: auth.tenantId, userId: auth.userId } }); if (!employee) throw new AppError('Employee not found', 404, 'EMPLOYEE_NOT_FOUND'); where.employeeId = employee.id; }
   if (auth.role === 'manager') { const manager = await Employee.findOne({ where: { tenantId: auth.tenantId, userId: auth.userId }, attributes: ['departmentId'] }); if (!manager?.departmentId) throw new AppError('Manager is not assigned to a department', 403, 'NO_MANAGER_DEPARTMENT'); const employees = await Employee.findAll({ where: { tenantId: auth.tenantId, departmentId: manager.departmentId }, attributes: ['id'] }); where.employeeId = { [Op.in]: employees.map(row => row.id) }; }
-  return TrainingNeed.findAll({ where, include: signalInclude, order: [['priority', 'DESC'], ['created_at', 'DESC']] });
+  const page = query.page || 1; const pageSize = query.pageSize || 50;
+  const result = await TrainingNeed.findAndCountAll({ where, include: signalInclude, order: [['priority', 'DESC'], ['created_at', 'DESC']], limit: pageSize, offset: (page - 1) * pageSize, distinct: true });
+  return { items: result.rows, pagination: { page, pageSize, total: result.count, totalPages: Math.ceil(result.count / pageSize) } };
 }
 
 export async function createTrainingNeed(auth, input) { const employee = await employeeFor(auth, input.employeeId); if (auth.role === 'employee') throw new AppError('Employees cannot create training needs', 403, 'TNA_WRITE_DENIED'); return TrainingNeed.create({ tenantId: auth.tenantId, createdBy: auth.userId, sourceType: 'manual', ...input, employeeId: employee.id }); }

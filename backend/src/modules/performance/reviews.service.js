@@ -60,7 +60,9 @@ export async function listReviews(auth, query = {}) {
     where.employeeId = { [Op.in]: employees.map(row => row.id) };
   }
   if (auth.role === 'employee' && query.employeeId && where.employeeId !== query.employeeId) throw new AppError('You may only access your own reviews', 403, 'REVIEW_ACCESS_DENIED');
-  return PerformanceReview.findAll({ where, include, order: [['created_at', 'DESC']] });
+  const page = query.page || 1; const pageSize = query.pageSize || 50;
+  const result = await PerformanceReview.findAndCountAll({ where, include, order: [['created_at', 'DESC']], limit: pageSize, offset: (page - 1) * pageSize, distinct: true });
+  return { items: result.rows, pagination: { page, pageSize, total: result.count, totalPages: Math.ceil(result.count / pageSize) } };
 }
 
 export async function getReview(auth, id) { return reviewFor(auth, id); }

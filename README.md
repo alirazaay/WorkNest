@@ -440,6 +440,10 @@ The FairRank equivalence-group view now exposes a functional Info action for eac
 
 ## Using FairRank
 
+### Performance loading and large tenants
+
+FairRank records are loaded tenant-scoped and paginated at 50 records per request for goals, evidence, reviews, rewards, and TNA. The workspace caches a recently opened tab for 30 seconds and forces a fresh request after a mutation. In development, the browser console records `[FairRank API]` endpoint durations and `[FairRank]` tab totals to make slow database or authentication requests visible; this is diagnostic output only and does not alter scoring or authorization.
+
 1. Sign in as an administrator or manager and open **FairRank** from the sidebar.
 2. Create a cycle as an administrator, configure criteria and a template whose weights total exactly 100%, then activate the cycle.
 3. Add goals and evidence, create the permitted self/manager reviews, and submit them.

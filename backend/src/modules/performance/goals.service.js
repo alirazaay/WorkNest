@@ -49,7 +49,9 @@ export async function listGoals(auth, query = {}) {
     where.employeeId = { [Op.in]: employees.map(row => row.id) };
   }
   if (auth.role === 'employee' && query.employeeId && where.employeeId !== query.employeeId) throw new AppError('You may only access your own goals', 403, 'GOAL_ACCESS_DENIED');
-  return PerformanceGoal.findAll({ where, include: goalInclude, order: [['due_date', 'ASC'], ['created_at', 'DESC']] });
+  const page = query.page || 1; const pageSize = query.pageSize || 50;
+  const result = await PerformanceGoal.findAndCountAll({ where, include: goalInclude, order: [['due_date', 'ASC'], ['created_at', 'DESC']], limit: pageSize, offset: (page - 1) * pageSize, distinct: true });
+  return { items: result.rows, pagination: { page, pageSize, total: result.count, totalPages: Math.ceil(result.count / pageSize) } };
 }
 
 export async function getGoal(auth, id) { return goalFor(auth, id); }
