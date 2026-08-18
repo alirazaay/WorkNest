@@ -67,17 +67,21 @@ export async function listCycleReviewCriteria(auth, cycleId, transaction) {
   if (!cycle) throw new AppError('Performance cycle not found', 404, 'PERFORMANCE_CYCLE_NOT_FOUND');
   const template = await PerformanceTemplate.findOne({
     where: { tenantId: auth.tenantId, status: 'active' },
-    include: [{
-      model: PerformanceTemplateCriterion,
-      as: 'criteria',
-      required: true,
-      include: [{ model: PerformanceCriterion, as: 'criterion', where: { tenantId: auth.tenantId, isActive: true }, required: true }]
-    }],
     order: [['id', 'DESC']],
     ...(transaction ? { transaction } : {})
   });
   if (!template) throw new AppError('Activate a performance template before creating reviews', 422, 'REVIEW_TEMPLATE_REQUIRED');
-  return selectApplicableReviewCriteria(template.criteria, template.id);
+  // Keep the template lookup and assignment lookup separate. A required
+  // nested include under Sequelize findOne can generate a MySQL subquery that
+  // references the outer assignment alias before it exists. Two scoped reads
+  // are deterministic, portable, and avoid that invalid SQL shape.
+  const assignments = await PerformanceTemplateCriterion.findAll({
+    where: { tenantId: auth.tenantId, templateId: template.id },
+    include: [{ model: PerformanceCriterion, as: 'criterion', where: { tenantId: auth.tenantId, isActive: true }, required: true }],
+    order: [['sortOrder', 'ASC'], ['id', 'ASC']],
+    ...(transaction ? { transaction } : {})
+  });
+  return selectApplicableReviewCriteria(assignments, template.id);
 }
 
 function assertReviewType(auth, type) {
