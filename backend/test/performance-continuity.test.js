@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { buildTimeline, trendFor } from '../src/modules/performance/continuity.service.js';
 
 test('continuity classifies baseline, stable, improvement, and decline', () => {
@@ -25,4 +26,20 @@ test('missing years are explicit and break adjacent continuity', () => {
   assert.equal(timeline[1].status, 'no_review_data');
   assert.equal(timeline[2].trend, 'insufficient_history');
   assert.equal(timeline[2].changeFromPreviousYear, null);
+});
+
+test('continuity uses finalized snapshots and deduplicates each cycle', async () => {
+  const source = await readFile(new URL('../src/modules/performance/continuity.service.js', import.meta.url), 'utf8');
+  assert.match(source, /PerformanceScoreSnapshot/);
+  assert.match(source, /\['completed', 'archived'\]/);
+  assert.match(source, /const byCycle = new Map/);
+  assert.match(source, /fairrank_snapshot/);
+});
+
+test('FairRank snapshot ratings are deterministically represented on the five-point continuity scale', () => {
+  const timeline = buildTimeline([{ id: 10, cycleId: 9, year: 2027, originalRating: 4.735, normalizedScore: 94.7, finalScore: 94.7, source: 'fairrank_snapshot' }]);
+  assert.equal(timeline[0].originalRating, 4.735);
+  assert.equal(timeline[0].normalizedScore, 94.7);
+  assert.equal(timeline[0].finalScore, 94.7);
+  assert.equal(timeline[0].source, 'fairrank_snapshot');
 });

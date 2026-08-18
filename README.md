@@ -505,3 +505,5 @@ The FairRank tab loads persisted cycle score snapshots separately from equivalen
 Confirmed reviews are corrected through an audited revision workflow: an authorized administrator reopens the review with a reason, the original confirmed version is preserved, the draft revision is edited and resubmitted, and Calibration must confirm it again before an explicit force recalculation can update snapshots.
 
 Compare uses persisted FairRank snapshots and equivalence groups. It reports the overall comparison separately from selected-employee equivalent subgroups, including each subgroup's spread versus the configured threshold and employees outside the threshold.
+
+Performance Continuity reads only finalized (`completed` or `archived`) cycles. It merges historical fixture records with authoritative FairRank snapshots, preferring one valid snapshot per cycle/year, and excludes active or in-progress cycles until they are completed/released. FairRank scores are represented deterministically on the five-point continuity scale as `finalScore / 20`; the original normalized score remains available in the timeline.
