@@ -499,3 +499,5 @@ Reviews are created with `POST /api/v1/performance/reviews` and initially persis
 Score calculation requires confirmed calibration decisions. `POST /api/v1/performance/cycles/:cycleId/calculate` is idempotent and leaves existing immutable snapshots unchanged; the UI reports created and skipped counts. `?force=true` is an explicit recomputation. After calculation, use the separate Recalculate groups action to rebuild performance-equivalent groups from the persisted snapshots.
 
 Verified criterion-linked evidence is counted during calculation and exposed in each snapshot's evidence coverage; the Evidence form requires a criterion from the selected cycle template.
+
+The FairRank tab loads persisted cycle score snapshots separately from equivalence groups. Zero groups is a valid result: calculated employee scores remain visible, while grouping requires the same rating band and the configured threshold. Later FairRank actions are enabled only after scores exist.

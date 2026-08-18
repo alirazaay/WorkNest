@@ -56,6 +56,19 @@ export async function getEmployeeScore(auth, cycleId, employeeId) {
   return snapshot;
 }
 
+export async function listCycleScores(auth, cycleId) {
+  const cycle = await cycleFor(auth, cycleId);
+  const snapshots = await PerformanceScoreSnapshot.findAll({
+    where: { tenantId: auth.tenantId, cycleId: cycle.id },
+    include: [{ model: Employee, as: 'employee', attributes: ['id', 'employeeCode', 'departmentId'], include: [{ model: User, as: 'user', attributes: ['id', 'name'] }] }],
+    order: [['finalScore', 'DESC'], ['employeeId', 'ASC']]
+  });
+  if (auth.role !== 'manager') return snapshots;
+  const manager = await Employee.findOne({ where: { tenantId: auth.tenantId, userId: auth.userId }, attributes: ['departmentId'] });
+  if (!manager?.departmentId) throw new AppError('Manager is not assigned to a department', 403, 'NO_MANAGER_DEPARTMENT');
+  return snapshots.filter(snapshot => snapshot.employee?.departmentId === manager.departmentId);
+}
+
 /**
  * Calculate (or force-recalculate) scores for all employees in a cycle.
  *

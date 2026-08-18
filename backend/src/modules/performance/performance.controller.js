@@ -3,7 +3,7 @@ import { addTemplateCriterion, createCriterion, createTemplate, getTemplate, lis
 import { carryForwardGoal, createGoal, getGoal, listGoals, updateGoal } from './goals.service.js';
 import { createEvidence, listEvidence, verifyEvidence } from './evidence.service.js';
 import { createReview, getReview, listCycleReviewCriteria, listReviews, submitReview } from './reviews.service.js';
-import { calculateCycleScores, getEmployeeScore } from './score.service.js';
+import { calculateCycleScores, getEmployeeScore, listCycleScores } from './score.service.js';
 import { createRatingBand, listRatingBands, updateRatingBand } from './rating-bands.service.js';
 import { getEquivalenceSettings, listEquivalenceGroups, recalculateEquivalence, updateEquivalenceSettings } from './equivalence.service.js';
 import { createSignatureRule, generateCycleSignatures, getEmployeeSignature, listSignatureRules, selectPerformanceSignature, updateSignatureRule } from './signature.service.js';
@@ -49,6 +49,7 @@ export async function reviewCreate(req, res, next) { try { send(res, await creat
 export async function cycleReviewCriteriaGet(req, res, next) { try { send(res, await listCycleReviewCriteria(req.auth, Number(req.params.cycleId))); } catch (error) { next(error); } }
 export async function reviewSubmit(req, res, next) { try { send(res, await submitReview(req.auth, Number(req.params.id))); } catch (error) { next(error); } }
 export async function employeeScoreGet(req, res, next) { try { send(res, await getEmployeeScore(req.auth, req.validated.query.cycleId, Number(req.params.employeeId))); } catch (error) { next(error); } }
+export async function cycleScoresList(req, res, next) { try { send(res, await listCycleScores(req.auth, Number(req.params.cycleId))); } catch (error) { next(error); } }
 export async function cycleScoresCalculate(req, res, next) { try { send(res, await calculateCycleScores(req.auth, Number(req.params.cycleId), Boolean(req.validated?.query?.force))); } catch (error) { next(error); } }
 export async function ratingBandsList(req, res, next) { try { send(res, await listRatingBands(req.auth)); } catch (error) { next(error); } }
 export async function ratingBandCreate(req, res, next) { try { send(res, await createRatingBand(req.auth, req.validated.body), 201); } catch (error) { next(error); } }

@@ -136,7 +136,14 @@ export default function FairRankPage({ user, onExit }) {
         const cycles = responseData(await api.get('/performance/cycles'));
         const cycle = cycles.find((c) => ['active', 'in_progress'].includes(c.status)) || cycles[0];
         if (!cycle) commit({ items: [], cycles: [] });
-        else commit({ items: responseData(await api.get(`/performance/cycles/${cycle.id}/${tab === 'calibration' ? 'calibration' : 'equivalence-groups'}`)), cycles, cycle });
+        else if (tab === 'calibration') commit({ items: responseData(await api.get(`/performance/cycles/${cycle.id}/calibration`)), cycles, cycle });
+        else {
+          const [groupsResponse, scoresResponse] = await Promise.all([
+            api.get(`/performance/cycles/${cycle.id}/equivalence-groups`),
+            api.get(`/performance/cycles/${cycle.id}/scores`),
+          ]);
+          commit({ items: responseData(groupsResponse), scores: responseData(scoresResponse), cycles, cycle });
+        }
       } else if (tab === 'goals') {
         const requests = [api.get(endpoints[tab], { params: { page, pageSize: 50 } }), api.get('/performance/cycles')];
         if (canManage) requests.push(api.get('/employees', { params: { page: 1, pageSize: 100 } }));
@@ -286,7 +293,7 @@ function PageContent({ tab, data, canManage, canAdmin, activeCycle, onRetry, onP
   if (tab === 'audit') return <AuditList items={data.items || []} />;
   if (tab === 'comparison') return <Comparison employees={data.employees || []} cycles={data.cycles || []} />;
   if (tab === 'cycles') return <CyclesWorkspace items={data.items || []} onRetry={onRetry} canAdmin={canAdmin} />;
-  if (tab === 'fairrank') return <FairRankGroups items={data.items || []} cycles={data.cycles || []} cycle={data.cycle} canAdmin={canAdmin} onRetry={onRetry} />;
+  if (tab === 'fairrank') return <FairRankGroups items={data.items || []} scores={data.scores || []} cycles={data.cycles || []} cycle={data.cycle} canAdmin={canAdmin} onRetry={onRetry} />;
   if (tab === 'calibration') return <CalibrationWorkspace items={data.items || []} cycles={data.cycles || []} cycle={data.cycle} canAdmin={canAdmin} onRetry={onRetry} />;
   if (tab === 'continuity') return <ContinuityWorkspace data={data} onRetry={onRetry} setData={setData} canManage={canManage} />;
   if (tab === 'tna') return <><TnaWorkspace items={data.items || []} onRetry={onRetry} /><Pagination pagination={data.pagination} onPageChange={onPageChange} /></>;
@@ -330,10 +337,11 @@ function PageContent({ tab, data, canManage, canAdmin, activeCycle, onRetry, onP
 // ---------------------------------------------------------------------------
 // FairRank tab — Equivalence Groups + Signatures + Explanations inline views
 // ---------------------------------------------------------------------------
-function FairRankGroups({ items, cycles, cycle, canAdmin, onRetry }) {
+function FairRankGroups({ items, scores, cycles, cycle, canAdmin, onRetry }) {
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [selectedCycleId, setSelectedCycleId] = useState(cycle?.id || '');
-  const [groupItems, setGroupItems] = useState(items);
+  const [groupItems, setGroupItems] = useState(Array.isArray(items) ? items : []);
+  const [scoreItems, setScoreItems] = useState(Array.isArray(scores) ? scores : []);
   const [action, setAction] = useState('');
   const [message, setMessage] = useState('');
   const [actionResult, setActionResult] = useState(null);
@@ -345,16 +353,24 @@ function FairRankGroups({ items, cycles, cycle, canAdmin, onRetry }) {
   const [expPanel, setExpPanel] = useState(false);
   const [expLoading, setExpLoading] = useState(false);
   const [explanations, setExplanations] = useState([]);
+  const hasCalculatedScores = scoreItems.length > 0;
 
-  useEffect(() => { setSelectedCycleId(cycle?.id || ''); setGroupItems(items); }, [cycle?.id, items]);
+  useEffect(() => { setSelectedCycleId(cycle?.id || ''); setGroupItems(Array.isArray(items) ? items : []); setScoreItems(Array.isArray(scores) ? scores : []); }, [cycle?.id, items, scores]);
 
   async function selectCycle(event) {
     const id = event.target.value;
     setSelectedCycleId(id); setMessage('');
     setSigPanel(false); setExpPanel(false);
-    if (!id) { setGroupItems([]); return; }
+    if (!id) { setGroupItems([]); setScoreItems([]); return; }
     setAction('load');
-    try { setGroupItems(responseData(await api.get(`/performance/cycles/${id}/equivalence-groups`))); }
+    try {
+      const [groupsResponse, scoresResponse] = await Promise.all([
+        api.get(`/performance/cycles/${id}/equivalence-groups`),
+        api.get(`/performance/cycles/${id}/scores`),
+      ]);
+      setGroupItems(responseData(groupsResponse));
+      setScoreItems(responseData(scoresResponse));
+    }
     catch (err) { setMessage(err.response?.data?.error?.message || 'Unable to load equivalence groups for this cycle.'); }
     finally { setAction(''); }
   }
@@ -391,7 +407,12 @@ function FairRankGroups({ items, cycles, cycle, canAdmin, onRetry }) {
       } else if (name === 'fairness') {
         nextMessage = `Fairness review completed${result?.created != null ? `: ${result.created} flag${Number(result.created) === 1 ? '' : 's'} created` : ''}.`;
       }
-      setGroupItems(responseData(await api.get(`/performance/cycles/${selectedCycleId}/equivalence-groups`)));
+      const [groupsResponse, scoresResponse] = await Promise.all([
+        api.get(`/performance/cycles/${selectedCycleId}/equivalence-groups`),
+        api.get(`/performance/cycles/${selectedCycleId}/scores`),
+      ]);
+      setGroupItems(responseData(groupsResponse));
+      setScoreItems(responseData(scoresResponse));
       await onRetry();
       setMessage(nextMessage);
       setActionResult(nextResult);
@@ -446,10 +467,10 @@ function FairRankGroups({ items, cycles, cycle, canAdmin, onRetry }) {
         {canAdmin && <div className="fairrank-actions">
           <button type="button" onClick={() => runAction('calculate')} disabled={!selectedCycleId || action}>Calculate scores</button>
           <button type="button" onClick={() => runAction('forceRecalculate')} disabled={!selectedCycleId || action} title="Force-recalculate even if snapshots already exist">Force recalculate</button>
-          <button type="button" onClick={() => runAction('equivalence')} disabled={!selectedCycleId || action}>Recalculate groups</button>
-          <button type="button" onClick={() => runAction('signatures')} disabled={!selectedCycleId || action}>Generate signatures</button>
-          <button type="button" onClick={() => runAction('explanations')} disabled={!selectedCycleId || action}>Generate explanations</button>
-          <button type="button" onClick={() => runAction('fairness')} disabled={!selectedCycleId || action}>Check fairness</button>
+          <button type="button" onClick={() => runAction('equivalence')} disabled={!selectedCycleId || action || !hasCalculatedScores}>Recalculate groups</button>
+          <button type="button" onClick={() => runAction('signatures')} disabled={!selectedCycleId || action || !hasCalculatedScores}>Generate signatures</button>
+          <button type="button" onClick={() => runAction('explanations')} disabled={!selectedCycleId || action || !hasCalculatedScores}>Generate explanations</button>
+          <button type="button" onClick={() => runAction('fairness')} disabled={!selectedCycleId || action || !hasCalculatedScores}>Check fairness</button>
         </div>}
         {canAdmin && selectedCycleId && <div className="fairrank-view-actions">
           <button type="button" className={`table-link${sigPanel ? ' active' : ''}`} onClick={loadSignatures} disabled={!selectedCycleId}><Award size={14} /> View signature rules</button>
@@ -464,15 +485,29 @@ function FairRankGroups({ items, cycles, cycle, canAdmin, onRetry }) {
       {actionResult?.type === 'equivalence' && <p className="performance-inline-message" role="status">
         {actionResult.groupCount} equivalent group{actionResult.groupCount === 1 ? '' : 's'} generated from {actionResult.snapshotCount} calculated snapshot{actionResult.snapshotCount === 1 ? '' : 's'}.
       </p>}
-      {groupItems.length ? <div className="performance-list">{groupItems.map((group) => {
-        const members = group.members || [];
+      {scoreItems.length > 0 && <section className="performance-card fairrank-score-results">
+        <div className="performance-card-heading"><div><h3>Calculated employee scores</h3><p>Persisted snapshots for the selected cycle.</p></div><span className="status-badge info">{scoreItems.length} evaluated</span></div>
+        <div className="performance-list">{scoreItems.map((snapshot) => {
+          const employee = snapshot.employee || {};
+          const employeeName = employee.user?.name || employee.employeeCode || `Employee #${snapshot.employeeId}`;
+          return <article className="performance-list-card" key={snapshot.id || `${snapshot.cycleId}-${snapshot.employeeId}`}>
+            <div><strong>{employeeName}</strong><small>{employee.employeeCode || `ID ${snapshot.employeeId}`} · {snapshot.ratingBand || 'Unrated'}</small></div>
+            <div className="fairrank-score-summary"><strong>{Number(snapshot.finalScore ?? 0).toFixed(2)}</strong><small>{Number(snapshot.evidenceCoveragePercentage ?? 0).toFixed(2)}% evidence · {snapshot.evidenceConfidence || 'low'} confidence · Calculated</small></div>
+          </article>;
+        })}</div>
+      </section>}
+      <section className="performance-card">
+        <div className="performance-card-heading"><div><h3>Performance-equivalent groups</h3><p>{groupItems.length ? `${groupItems.length} equivalent group${groupItems.length === 1 ? '' : 's'} found.` : 'Groups require employees in the same rating band within the configured score threshold.'}</p></div></div>
+        {groupItems.length ? <div className="performance-list">{groupItems.map((group) => {
+        const members = Array.isArray(group.members) ? group.members : [];
         const scores = members.map((member) => Number(member.finalScore)).filter(Number.isFinite);
         const spread = scores.length ? (Math.max(...scores) - Math.min(...scores)).toFixed(2) : '—';
         return <article className="performance-list-card" key={group.id}>
           <div><strong>Equivalent group #{group.id}</strong><small>{members.length} employees · score spread {spread} points</small></div>
           <button type="button" className="status-badge info performance-info-button" onClick={() => setSelectedGroup(group)} aria-label={`View details for equivalent group ${group.id}`}>Info</button>
         </article>;
-      })}</div> : <EmptyState text="No performance-equivalent groups are available for the selected cycle." />}
+      })}</div> : <EmptyState text="No equivalence groups were created because no employees are within the configured threshold. Calculated scores remain available above." />}
+      </section>
     </article>
 
     {/* Signature Rules inline panel */}

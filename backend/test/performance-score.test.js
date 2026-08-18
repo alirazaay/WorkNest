@@ -28,4 +28,6 @@ test('score calculation requires confirmed reviews, preserves immutable snapshot
   assert.match(source, /verificationStatus: 'verified'/);
   assert.match(source, /evidenceCount: count/);
   assert.match(source, /tenantId: auth\.tenantId/);
+  assert.match(source, /export async function listCycleScores/);
+  assert.match(source, /PerformanceScoreSnapshot\.findAll/);
 });
